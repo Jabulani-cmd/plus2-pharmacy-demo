@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { HERO_SLIDES } from "@/data/categories";
 import { AnimatePresence, motion } from "framer-motion";
