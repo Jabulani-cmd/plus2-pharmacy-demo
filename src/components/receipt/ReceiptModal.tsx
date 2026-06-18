@@ -131,15 +131,15 @@ function EmailModal({ receipt, onClose, onSent }: { receipt: Receipt; onClose: (
           <div className="mt-3 overflow-hidden rounded-md border border-border bg-[#F3F4F6] text-[11px]">
             <div className="bg-[#1F2937] px-3 py-1.5 text-[10px] text-white/70">mail.google.com</div>
             <div className="border-b border-border bg-white px-3 py-2 text-[10px] text-muted-foreground">
-              <div>From: noreply@plus2pharmacy.co.zw</div>
+              <div>From: noreply@kingspharmacy.co.zw</div>
               <div>To: {email}</div>
-              <div>Subject: Your Plus2 Pharmacy Receipt — Order #{receipt.orderNumber}</div>
+              <div>Subject: Your Kings Pharmacy Receipt — Order #{receipt.orderNumber}</div>
             </div>
-            <div className="bg-[#00853F] py-2 text-center text-xs font-bold text-white">Plus2 Pharmacy</div>
+            <div className="bg-[#0EA5E9] py-2 text-center text-xs font-bold text-white">Kings Pharmacy</div>
             <div className="bg-white p-3">
               <p className="font-semibold">Hi {receipt.customer.name.split(" ")[0]},</p>
               <p className="mt-1 text-muted-foreground">Thank you for your order. Your receipt for Order #{receipt.orderNumber} is ready.</p>
-              <div className="mt-2 rounded bg-[#F0F9F4] px-2 py-1 text-[10px] text-[#00853F]">📎 Receipt_{receipt.receiptNumber}.pdf attached</div>
+              <div className="mt-2 rounded bg-[#F0F9F4] px-2 py-1 text-[10px] text-[#0EA5E9]">📎 Receipt_{receipt.receiptNumber}.pdf attached</div>
             </div>
           </div>
         )}
@@ -156,13 +156,13 @@ function EmailModal({ receipt, onClose, onSent }: { receipt: Receipt; onClose: (
 function SmsModal({ receipt, onClose, onSent }: { receipt: Receipt; onClose: () => void; onSent: (phone: string) => void }) {
   const [phone, setPhone] = useState(receipt.customer.phone);
   const [sending, setSending] = useState(false);
-  const msg = `Plus2 Pharmacy: Your receipt for Order #${receipt.orderNumber} (US$${receipt.pricing.total.toFixed(2)}) is ready. View: plus2pharm.co/r/${receipt.receiptNumber.slice(-6)} Reply STOP to opt out.`;
+  const msg = `Kings Pharmacy: Your receipt for Order #${receipt.orderNumber} (US$${receipt.pricing.total.toFixed(2)}) is ready. View: kingspharm.co/r/${receipt.receiptNumber.slice(-6)} Reply STOP to opt out.`;
   const send = () => {
     setSending(true);
     setTimeout(() => {
       setSending(false);
       onSent(phone);
-      toast.success(`📱 Receipt SMS sent to ${phone}`, { description: "Message delivered via Plus2 Notify" });
+      toast.success(`📱 Receipt SMS sent to ${phone}`, { description: "Message delivered via Kings Notify" });
       onClose();
     }, 1200);
   };
@@ -202,7 +202,7 @@ function printReceipt(receipt: Receipt) {
     toast.error("Pop-ups blocked. Enable pop-ups to print.");
     return;
   }
-  w.document.write(`<!doctype html><html><head><title>Plus2 Receipt ${receipt.receiptNumber}</title>
+  w.document.write(`<!doctype html><html><head><title>Kings Receipt ${receipt.receiptNumber}</title>
     <style>
       @page { size: A5 portrait; margin: 0; }
       html, body { margin:0; padding:0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -239,7 +239,7 @@ async function downloadReceiptPdf(receipt: Receipt, el: HTMLDivElement | null) {
         if (y < pdfH) pdf.addPage();
       }
     }
-    const filename = `Plus2_Receipt_${receipt.receiptNumber}_${receipt.orderNumber}.pdf`;
+    const filename = `Kings_Receipt_${receipt.receiptNumber}_${receipt.orderNumber}.pdf`;
     pdf.save(filename);
     toast.success("⬇️ Receipt downloaded", { description: filename });
   } catch (e) {

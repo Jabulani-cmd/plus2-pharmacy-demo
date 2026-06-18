@@ -28,11 +28,11 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
       style={{ background: "#fff", color: "#111827", fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif", maxWidth: 480, width: "100%", margin: "0 auto" }}
     >
       {/* HEADER */}
-      <div style={{ background: "#00853F", padding: "24px 32px", color: "#fff" }}>
+      <div style={{ background: "#0EA5E9", padding: "24px 32px", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 4, background: "#fff", color: "#00853F", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16 }}>+</span>
-            <span style={{ fontWeight: 700, fontSize: 18 }}>Plus2 Pharmacy</span>
+            <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 4, background: "#fff", color: "#0EA5E9", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16 }}>+</span>
+            <span style={{ fontWeight: 700, fontSize: 18 }}>Kings Pharmacy</span>
           </div>
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Tax Invoice / Receipt</span>
         </div>
@@ -106,7 +106,7 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
         <div style={{ borderTop: "1px solid #E5E7EB", margin: "8px 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontWeight: 700, fontSize: 16 }}>TOTAL</span>
-          <span style={{ fontWeight: 700, fontSize: 18, color: "#00853F" }}>{formatUSD(r.pricing.total)}</span>
+          <span style={{ fontWeight: 700, fontSize: 18, color: "#0EA5E9" }}>{formatUSD(r.pricing.total)}</span>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
         <div style={{ fontSize: 13, color: "#111827", fontWeight: 500 }}>{r.delivery.method}</div>
         <div style={{ fontSize: 12, color: "#374151", marginTop: 2 }}>{r.delivery.address}</div>
         <div style={{ fontSize: 12, color: "#111827", fontWeight: 600, marginTop: 4 }}>Estimated: {r.delivery.estimatedDate}</div>
-        <div style={{ marginTop: 6, fontSize: 12, color: "#00853F", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <div style={{ marginTop: 6, fontSize: 12, color: "#0EA5E9", display: "inline-flex", alignItems: "center", gap: 6 }}>
           <Package size={14} /> Tracking: {r.delivery.trackingRef}
         </div>
       </div>
@@ -153,8 +153,8 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
       )}
 
       {/* FOOTER */}
-      <div style={{ background: "#00853F", padding: "16px 32px", textAlign: "center", color: "#fff" }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Thank you for choosing Plus2 Pharmacy</div>
+      <div style={{ background: "#0EA5E9", padding: "16px 32px", textAlign: "center", color: "#fff" }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Thank you for choosing Kings Pharmacy</div>
         <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>Your health is our priority</div>
         <div style={{ height: 1, background: "rgba(255,255,255,0.2)", margin: "10px 0" }} />
         <div style={{ fontSize: 10, opacity: 0.7 }}>This is a valid VAT invoice. Please retain for your records.</div>

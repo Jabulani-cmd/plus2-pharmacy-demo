@@ -6,7 +6,7 @@ import { DEMO_STAFF, ROLE_BADGE_BG } from "@/data/demoAccounts";
 import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/staff/login")({
-  head: () => ({ meta: [{ title: "Staff Sign-in — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Staff Sign-in — Kings Pharmacy" }] }),
   component: StaffLogin,
 });
 
@@ -14,7 +14,7 @@ function StaffLogin() {
   const staff = useStaffAuth((s) => s.staff);
   const login = useStaffAuth((s) => s.login);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@plus2pharmacy.co.zw");
+  const [email, setEmail] = useState("admin@kingspharmacy.co.zw");
   const [password, setPassword] = useState("Admin1234!");
   const [loading, setLoading] = useState(false);
 
@@ -76,7 +76,7 @@ function StaffLogin() {
             <Lock className="h-3 w-3" /> Staff Access Only
           </div>
           <h2 className="mt-4 text-2xl font-extrabold text-foreground">Sign in to your workspace</h2>
-          <p className="text-sm text-muted-foreground">Use your Plus2 staff email and password.</p>
+          <p className="text-sm text-muted-foreground">Use your Kings staff email and password.</p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">

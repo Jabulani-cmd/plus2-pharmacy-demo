@@ -24,7 +24,7 @@ import {
 
 export const Route = createFileRoute("/prescriptions")({
   head: () => ({
-    meta: [{ title: "Upload Prescription — Plus2 Pharmacy" }],
+    meta: [{ title: "Upload Prescription — Kings Pharmacy" }],
   }),
   component: PrescriptionsPage,
 });
@@ -38,14 +38,14 @@ const isMobileDevice = () =>
   /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 const ZIMBABWE_CITIES = [
-  "Harare","Bulawayo","Chitungwiza","Mutare","Gweru",
+  "Bulawayo","Bulawayo","Chitungwiza","Mutare","Gweru",
   "Kwekwe","Kadoma","Masvingo","Chinhoyi","Marondera",
   "Norton","Chegutu","Bindura","Beitbridge","Redcliff",
   "Victoria Falls","Hwange","Rusape","Zvishavane","Kariba",
 ];
 
 const ZIMBABWE_PROVINCES = [
-  "Harare Metropolitan","Bulawayo Metropolitan","Manicaland",
+  "Bulawayo Metropolitan","Bulawayo Metropolitan","Manicaland",
   "Mashonaland Central","Mashonaland East","Mashonaland West",
   "Masvingo","Matabeleland North","Matabeleland South",
   "Midlands",
@@ -54,10 +54,10 @@ const ZIMBABWE_PROVINCES = [
 const COLLECTION_BRANCHES = [
   {
     id: "harare_cbd",
-    name: "Harare CBD Branch",
+    name: "Bulawayo CBD Branch",
     address:
       "Shop 14, Joina City Mall, Corner Jason Moyo Ave " +
-      "& Inez Terrace, Harare CBD",
+      "& Inez Terrace, Bulawayo CBD",
     hours: "Mon–Fri 8am–6pm | Sat 8am–2pm",
     phone: "+263 24 2 756 100",
   },
@@ -66,7 +66,7 @@ const COLLECTION_BRANCHES = [
     name: "Borrowdale Branch",
     address:
       "Shop 6, Borrowdale Village, Borrowdale Road, " +
-      "Borrowdale, Harare",
+      "Borrowdale, Bulawayo",
     hours: "Mon–Fri 8am–6pm | Sat 8am–2pm",
     phone: "+263 24 2 885 200",
   },
@@ -154,12 +154,12 @@ function PrescriptionsPage() {
           className="mb-4 rounded-lg p-4 flex items-start gap-3"
           style={{
             background: "#F0F9F4",
-            border: "2px solid #00853F",
+            border: "2px solid #0EA5E9",
           }}
         >
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{ background: "#00853F" }}
+            style={{ background: "#0EA5E9" }}
           >
             <CheckCircle2 className="h-5 w-5 text-white" />
           </div>
@@ -183,7 +183,7 @@ function PrescriptionsPage() {
                     {rx.quotation.deliveryFee.toFixed(2)}
                   </span>
                 )}
-                <span className="font-bold text-[#00853F]">
+                <span className="font-bold text-[#0EA5E9]">
                   Total: ${rx.quotation.total.toFixed(2)}
                 </span>
               </div>
@@ -197,7 +197,7 @@ function PrescriptionsPage() {
           <button
             onClick={() => setPayingRx(rx)}
             className="shrink-0 rounded-md px-4 py-2 text-sm font-bold text-white"
-            style={{ background: "#00853F" }}
+            style={{ background: "#0EA5E9" }}
           >
             Pay Now
           </button>
@@ -213,7 +213,7 @@ function PrescriptionsPage() {
           Upload Your Prescription
         </h1>
         <p className="mt-1 text-sm text-[#6B7280]">
-          A registered Plus2 pharmacist will review your script
+          A registered Kings pharmacist will review your script
           within 2 hours (Mon–Sat 8am–6pm).
         </p>
       </div>
@@ -292,8 +292,8 @@ function UploadWizard({
     phone: user.phone ?? "",
     streetAddress: "",
     suburb: "",
-    city: "Harare",
-    province: "Harare Metropolitan",
+    city: "Bulawayo",
+    province: "Bulawayo Metropolitan",
     postalCode: "",
     specialInstructions: "",
   });
@@ -907,7 +907,7 @@ function Step3Delivery({
             </button>
           ))}
           <div className="rounded-lg p-3 text-xs" style={{ background: "#F0F9F4", border: "1px solid #BBF7D0" }}>
-            <p className="font-semibold text-[#00853F]">Collection ready within 2–4 hours after payment</p>
+            <p className="font-semibold text-[#0EA5E9]">Collection ready within 2–4 hours after payment</p>
             <p className="text-[#374151] mt-0.5">Bring your National ID and order reference number when collecting.</p>
           </div>
         </div>
@@ -982,7 +982,7 @@ function Step4Address({
           <Truck className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-[#111827]">Home Delivery Fee</span>
         </div>
-        <span className="text-lg font-bold" style={{ color: "#00853F" }}>$15.00</span>
+        <span className="text-lg font-bold" style={{ color: "#0EA5E9" }}>$15.00</span>
       </div>
     </div>
   );
@@ -1010,7 +1010,7 @@ function Step5Review(props: {
       </div>
 
       <div className="rounded-lg p-4" style={{ background: "#F0F9F4", border: "1px solid #BBF7D0" }}>
-        <p className="font-semibold text-sm text-[#00853F] mb-2">What happens after you submit?</p>
+        <p className="font-semibold text-sm text-[#0EA5E9] mb-2">What happens after you submit?</p>
         <ol className="space-y-1.5 text-xs text-[#374151]">
           {[
             "Our pharmacist reviews your script (within 2 hours)",
@@ -1063,7 +1063,7 @@ function Step5Review(props: {
             ]} />
             <div className="flex items-center justify-between rounded-md p-2 mt-2" style={{ background: "#F0F9F4" }}>
               <span className="text-xs text-[#6B7280]">Delivery fee</span>
-              <span className="text-sm font-bold text-[#00853F]">$15.00</span>
+              <span className="text-sm font-bold text-[#0EA5E9]">$15.00</span>
             </div>
           </div>
         ) : (
@@ -1089,7 +1089,7 @@ function Step5Review(props: {
       </div>
 
       <label className="flex cursor-pointer items-start gap-2 rounded-md border border-[#E5E7EB] bg-[#F9FAFB] p-3 text-sm">
-        <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#00853F]" />
+        <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0EA5E9]" />
         <span className="text-[#374151]">I confirm this is a genuine, valid prescription issued by a registered healthcare professional in Zimbabwe.</span>
       </label>
     </div>
@@ -1127,7 +1127,7 @@ function Step6Success({
       </div>
 
       <div className="mx-auto max-w-sm rounded-lg p-4 text-left" style={{ background: "#F0F9F4", border: "1px solid #BBF7D0" }}>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#00853F" }}>What Happens Next</p>
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#0EA5E9" }}>What Happens Next</p>
         <ol className="space-y-2 text-xs text-[#374151]">
           {[
             "Pharmacist reviews your script within 2 hours (Mon–Sat 8am–6pm)",
@@ -1238,7 +1238,7 @@ function DeliveryOption({ active, onClick, icon: Icon, title, subtitle, badge }:
       <span className="flex-1">
         <span className="block text-sm font-semibold text-[#111827]">{title}</span>
         <span className="block text-xs text-[#6B7280] mt-0.5">{subtitle}</span>
-        {badge && <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ background: "#00853F" }}>{badge}</span>}
+        {badge && <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ background: "#0EA5E9" }}>{badge}</span>}
       </span>
     </button>
   );

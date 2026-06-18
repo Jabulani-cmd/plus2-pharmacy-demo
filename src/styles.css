@@ -73,15 +73,15 @@
   --card-foreground: #111827;
   --popover: #FFFFFF;
   --popover-foreground: #111827;
-  /* Plus2: pharmacy green + white */
-  --primary: #00853F;
+  /* Kings Pharmacy: sky blue + white */
+  --primary: #0EA5E9;
   --primary-foreground: #FFFFFF;
-  --primary-dark: #006B32;
-  --secondary: #F0F9F4;
-  --secondary-foreground: #006B32;
+  --primary-dark: #0284C7;
+  --secondary: #F0F9FF;
+  --secondary-foreground: #0284C7;
   --muted: #F9FAFB;
   --muted-foreground: #6B7280;
-  --accent: #00853F;
+  --accent: #0EA5E9;
   --accent-foreground: #FFFFFF;
   --surface: #F9FAFB;
   --success: #059669;
@@ -90,7 +90,7 @@
   --destructive-foreground: #FFFFFF;
   --border: #E5E7EB;
   --input: #E5E7EB;
-  --ring: #00853F;
+  --ring: #0EA5E9;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);

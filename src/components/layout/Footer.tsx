@@ -12,7 +12,7 @@ const COLS = [
   },
   {
     title: "Help & Info",
-    links: ["Contact Us", "FAQs", "Delivery Information", "Returns Policy", "Privacy Policy", "Terms & Conditions", "Careers at Plus2"],
+    links: ["Contact Us", "FAQs", "Delivery Information", "Returns Policy", "Privacy Policy", "Terms & Conditions", "Careers at Kings"],
   },
 ];
 
@@ -29,7 +29,7 @@ export function Footer() {
                   <path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z" />
                 </svg>
               </div>
-              <div className="text-[17px] font-bold tracking-tight">Plus2 Pharmacy</div>
+              <div className="text-[17px] font-bold tracking-tight">Kings Pharmacy</div>
             </div>
             <p className="mt-3 text-sm text-white/85">Your Health, Our Priority</p>
             <p className="mt-3 text-[13px] leading-6 text-white/75">
@@ -58,7 +58,7 @@ export function Footer() {
       <div className="bg-primary-dark text-white">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-[12px] md:flex-row">
           <div className="text-center text-white/70 md:text-left">
-            <p>© 2026 Plus2 Pharmacy (Private) Limited. All Rights Reserved.</p>
+            <p>© 2026 Kings Pharmacy (Private) Limited. All Rights Reserved.</p>
             <p>
               Licensed by the Pharmacists Council of Zimbabwe (PCZ) · MCAZ Accredited ·
               ZIMRA VAT Reg No. 10045821 · BP No. 2001234567
@@ -76,7 +76,7 @@ export function Footer() {
           <div className="flex flex-wrap items-center gap-3 text-white/85">
             <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-[#1A1F71]">VISA</span>
             <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-[#EB001B]">MC</span>
-            <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-[#00853F]">EcoCash</span>
+            <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-[#0EA5E9]">EcoCash</span>
             <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-[#374151]">ZIG</span>
             <span className="inline-flex items-center gap-1.5 text-[11px] text-white/85">
               <Lock className="h-3 w-3" /> SSL Secured

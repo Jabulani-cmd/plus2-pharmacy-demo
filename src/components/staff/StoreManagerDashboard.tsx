@@ -22,9 +22,9 @@ function Overview() {
 
   return (
     <div>
-      <PageHeader title="Harare CBD — Today" subtitle="Branch performance &amp; alerts" />
+      <PageHeader title="Bulawayo CBD — Today" subtitle="Branch performance &amp; alerts" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPI label="Revenue" value={fmtUSD(totals.sales)} delta={12} accent="#00853F" icon={<DollarSign className="h-5 w-5" />} />
+        <KPI label="Revenue" value={fmtUSD(totals.sales)} delta={12} accent="#0EA5E9" icon={<DollarSign className="h-5 w-5" />} />
         <KPI label="Orders" value={String(totals.orders)} delta={8} accent="#0EA5E9" icon={<ShoppingBag className="h-5 w-5" />} />
         <KPI label="Low stock" value={String(lowStock.length)} hint="items at/below reorder" accent="#DC2626" icon={<AlertTriangle className="h-5 w-5" />} />
         <KPI label="Pending expenses" value={String(pendingExp.length)} hint={fmtUSD(pendingExp.reduce((a, e) => a + e.amount, 0))} accent="#F59E0B" icon={<ReceiptIcon className="h-5 w-5" />} />
@@ -132,7 +132,7 @@ function InventoryView() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <KPI label="SKUs" value={String(STAFF_INVENTORY.length)} accent="#0EA5E9" />
         <KPI label="Low stock" value={String(low.length)} accent="#DC2626" icon={<AlertTriangle className="h-5 w-5" />} />
-        <KPI label="Stock value (cost)" value={fmtUSD(value)} accent="#00853F" icon={<DollarSign className="h-5 w-5" />} />
+        <KPI label="Stock value (cost)" value={fmtUSD(value)} accent="#0EA5E9" icon={<DollarSign className="h-5 w-5" />} />
       </div>
       <div className="mt-6">
         <Card title="All inventory">
@@ -161,10 +161,10 @@ function InventoryView() {
 function StaffView() {
   return (
     <div>
-      <PageHeader title="Branch staff" subtitle="Harare CBD" />
+      <PageHeader title="Branch staff" subtitle="Bulawayo CBD" />
       <Card>
         <ul className="divide-y divide-border text-sm">
-          {STAFF_SYSTEM_USERS.filter((u) => u.branch === "Harare CBD").map((u) => (
+          {STAFF_SYSTEM_USERS.filter((u) => u.branch === "Bulawayo CBD").map((u) => (
             <li key={u.id} className="flex items-center justify-between py-3">
               <div>
                 <div className="font-bold">{u.name}</div>

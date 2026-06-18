@@ -56,13 +56,13 @@ export type Receipt = {
   };
 };
 
-export const PLUS2_BUSINESS = {
-  name: "Plus2 Pharmacy (Pvt) Ltd",
-  branch: "Avondale Branch",
-  address: "Shop 14, Avondale Shopping Centre, King George Rd, Harare",
+export const KINGS_BUSINESS = {
+  name: "Kings Pharmacy (Pvt) Ltd",
+  branch: "Hillside Branch",
+  address: "Shop 14, Hillside Shopping Centre, Cecil Avenue, Bulawayo",
   phone: "+263 78 200 0100",
-  email: "avondale@plus2pharmacy.co.zw",
-  website: "www.plus2pharmacy.co.zw",
+  email: "hillside@kingspharmacy.co.zw",
+  website: "www.kingspharmacy.co.zw",
   vatNumber: "10045678-2",
   sapcReg: "MCAZ-PHM-00441",
 };
@@ -113,7 +113,7 @@ export function buildReceipt(opts: {
     transactionRef: `TXN-${rand8()}`,
     timestamp: new Date().toISOString(),
     type,
-    business: PLUS2_BUSINESS,
+    business: KINGS_BUSINESS,
     customer: opts.customer,
     items: opts.items,
     pricing: {

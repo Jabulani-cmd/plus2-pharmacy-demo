@@ -247,6 +247,6 @@ export const useSharedPrescriptions = create<SharedState>()(
         }));
       },
     }),
-    { name: "plus2-shared-prescriptions" }
+    { name: "kings-shared-prescriptions" }
   )
 );

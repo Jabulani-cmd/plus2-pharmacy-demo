@@ -17,7 +17,7 @@ import { ReceiptModal } from "@/components/receipt/ReceiptModal";
 import { buildReceipt, type Receipt } from "@/lib/receipts";
 
 export const Route = createFileRoute("/account")({
-  head: () => ({ meta: [{ title: "My Account — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "My Account — Kings Pharmacy" }] }),
   component: AccountPage,
 });
 
@@ -70,7 +70,7 @@ function PrescriptionTracker({
     <div
       className="rounded-xl border p-4 shadow-sm"
       style={{
-        borderColor: isDelivered ? "#00853F" : isOutForDelivery ? "#7C3AED" : "#E5E7EB",
+        borderColor: isDelivered ? "#0EA5E9" : isOutForDelivery ? "#7C3AED" : "#E5E7EB",
         background: isOutForDelivery ? "#F5F3FF" : "white",
       }}
     >
@@ -81,7 +81,7 @@ function PrescriptionTracker({
             <span className="font-mono text-xs font-bold text-foreground">{rx.id}</span>
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-              style={{ background: isDelivered ? "#00853F" : isOutForDelivery ? "#7C3AED" : "#F59E0B" }}
+              style={{ background: isDelivered ? "#0EA5E9" : isOutForDelivery ? "#7C3AED" : "#F59E0B" }}
             >
               {rx.status}
             </span>
@@ -94,14 +94,14 @@ function PrescriptionTracker({
         </div>
         <div className="flex flex-col items-end gap-1">
           {rx.quotation && (
-            <div className="text-base font-black" style={{ color: "#00853F" }}>
+            <div className="text-base font-black" style={{ color: "#0EA5E9" }}>
               ${rx.quotation.total.toFixed(2)}
             </div>
           )}
           <button
             onClick={() => onTrack(rx.id)}
             className="flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
-            style={{ background: isOutForDelivery ? "#7C3AED" : "#00853F" }}
+            style={{ background: isOutForDelivery ? "#7C3AED" : "#0EA5E9" }}
           >
             <Navigation className="h-3 w-3" />
             {isOutForDelivery ? "Track Live" : "Track Order"}
@@ -121,7 +121,7 @@ function PrescriptionTracker({
                   <div
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
                     style={{
-                      background: done ? "#00853F" : "#E5E7EB",
+                      background: done ? "#0EA5E9" : "#E5E7EB",
                       color: done ? "white" : "#9CA3AF",
                       boxShadow: active ? "0 0 0 3px #BBF7D0" : "none",
                     }}
@@ -130,7 +130,7 @@ function PrescriptionTracker({
                   </div>
                   <span
                     className="mt-1 whitespace-nowrap text-[9px] font-semibold"
-                    style={{ color: active ? "#00853F" : done ? "#374151" : "#9CA3AF" }}
+                    style={{ color: active ? "#0EA5E9" : done ? "#374151" : "#9CA3AF" }}
                   >
                     {stage.label}
                   </span>
@@ -138,7 +138,7 @@ function PrescriptionTracker({
                 {i < RX_STAGES.length - 1 && (
                   <div
                     className="mx-1 h-0.5 flex-1"
-                    style={{ background: i < stageIdx ? "#00853F" : "#E5E7EB" }}
+                    style={{ background: i < stageIdx ? "#0EA5E9" : "#E5E7EB" }}
                   />
                 )}
               </div>
@@ -158,7 +158,7 @@ function PrescriptionTracker({
         >
           <p
             className="mb-2 text-[10px] font-bold uppercase tracking-wide"
-            style={{ color: isDelivered ? "#00853F" : "#7C3AED" }}
+            style={{ color: isDelivered ? "#0EA5E9" : "#7C3AED" }}
           >
             {isDelivered ? "Delivered By" : "Your Driver — On the way"}
           </p>
@@ -166,7 +166,7 @@ function PrescriptionTracker({
             <div className="flex items-center gap-2">
               <div
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ background: isDelivered ? "#00853F" : "#7C3AED" }}
+                style={{ background: isDelivered ? "#0EA5E9" : "#7C3AED" }}
               >
                 {rx.driverName.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
               </div>
@@ -177,7 +177,7 @@ function PrescriptionTracker({
             </div>
             {rx.driverVehicle && (
               <div className="flex items-center gap-2">
-                <Car className="h-4 w-4 shrink-0" style={{ color: isDelivered ? "#00853F" : "#7C3AED" }} />
+                <Car className="h-4 w-4 shrink-0" style={{ color: isDelivered ? "#0EA5E9" : "#7C3AED" }} />
                 <div>
                   <p className="text-sm font-semibold text-[#111827]">{rx.driverVehicle}</p>
                   <p className="text-[10px] text-muted-foreground">Vehicle</p>
@@ -186,13 +186,13 @@ function PrescriptionTracker({
             )}
             {rx.driverPhone && (
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0" style={{ color: isDelivered ? "#00853F" : "#7C3AED" }} />
+                <Phone className="h-4 w-4 shrink-0" style={{ color: isDelivered ? "#0EA5E9" : "#7C3AED" }} />
                 <div>
                   {/* ✅ Fixed: missing <a tag */}
                   <a
                     href={"tel:" + rx.driverPhone}
                     className="text-sm font-semibold"
-                    style={{ color: isDelivered ? "#00853F" : "#7C3AED" }}
+                    style={{ color: isDelivered ? "#0EA5E9" : "#7C3AED" }}
                   >
                     {rx.driverPhone}
                   </a>
@@ -345,7 +345,7 @@ function AccountPage() {
               className="relative rounded-xl p-4 shadow-sm"
               style={{
                 background: "linear-gradient(135deg, #F0F9F4 0%, #DCFCE7 100%)",
-                border: "2px solid #00853F",
+                border: "2px solid #0EA5E9",
               }}
             >
               <button
@@ -358,13 +358,13 @@ function AccountPage() {
               <div className="flex items-start gap-4 pr-6">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-sm"
-                  style={{ background: "#00853F" }}
+                  style={{ background: "#0EA5E9" }}
                 >
                   <Bell className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#00853F" }}>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#0EA5E9" }}>
                       ACTION REQUIRED
                     </span>
                     <span className="text-[10px] text-[#6B7280]">Ref: {rx.id}</span>
@@ -402,7 +402,7 @@ function AccountPage() {
                       <div className="self-center text-[#D1D5DB]">=</div>
                       <div className="text-center">
                         <div className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7280]">Total Due</div>
-                        <div className="text-lg font-black" style={{ color: "#00853F" }}>${rx.quotation.total.toFixed(2)}</div>
+                        <div className="text-lg font-black" style={{ color: "#0EA5E9" }}>${rx.quotation.total.toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -414,7 +414,7 @@ function AccountPage() {
                 <button
                   onClick={() => setPayingRx(rx)}
                   className="shrink-0 self-center rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-                  style={{ background: "#00853F" }}
+                  style={{ background: "#0EA5E9" }}
                 >
                   Pay Now
                 </button>
@@ -677,20 +677,20 @@ function AccountPage() {
                       <div
                         key={rx.id}
                         className="flex items-center gap-3 rounded-lg p-3"
-                        style={{ background: "#F0F9F4", border: "1.5px solid #00853F" }}
+                        style={{ background: "#F0F9F4", border: "1.5px solid #0EA5E9" }}
                       >
                         <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-[#111827]">{rx.quotation?.medicationName}</p>
                           <p className="text-xs text-[#6B7280]">
                             Approved &middot; Total due:{" "}
-                            <strong className="text-[#00853F]">${rx.quotation?.total.toFixed(2)}</strong>
+                            <strong className="text-[#0EA5E9]">${rx.quotation?.total.toFixed(2)}</strong>
                           </p>
                         </div>
                         <button
                           onClick={() => setPayingRx(rx)}
                           className="shrink-0 rounded-md px-3 py-1.5 text-xs font-bold text-white"
-                          style={{ background: "#00853F" }}
+                          style={{ background: "#0EA5E9" }}
                         >
                           Pay Now
                         </button>
@@ -731,7 +731,7 @@ function AccountPage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 {user.firstName} {user.lastName}<br />
                 18 Sam Nujoma Street, Avondale<br />
-                Harare, Zimbabwe
+                Bulawayo, Zimbabwe
               </p>
               <button className="mt-4 rounded-md border border-border px-4 py-2 text-sm font-bold hover:bg-muted">Edit</button>
             </div>

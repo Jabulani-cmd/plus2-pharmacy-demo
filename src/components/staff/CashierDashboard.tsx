@@ -45,7 +45,7 @@ function POSView() {
 
   return (
     <div>
-      <PageHeader title="Point of Sale" subtitle="Walk-in counter · Harare CBD" />
+      <PageHeader title="Point of Sale" subtitle="Walk-in counter · Bulawayo CBD" />
       {paid !== null && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
           <DollarSign className="h-5 w-5" />
@@ -129,7 +129,7 @@ function SalesView() {
     <div>
       <PageHeader title="Today's Sales" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <KPI label="Revenue" value={fmtUSD(totals.sales)} accent="#00853F" />
+        <KPI label="Revenue" value={fmtUSD(totals.sales)} accent="#0EA5E9" />
         <KPI label="Orders" value={String(totals.orders)} accent="#0EA5E9" />
         <KPI label="Average" value={fmtUSD(totals.avg)} accent="#7C3AED" />
       </div>

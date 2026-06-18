@@ -139,7 +139,7 @@ const DEMO_ORDERS: Order[] = [
       { name: "Centrum Multivitamin 30s", qty: 1, price: 209.99 },
       { name: "Nivea Body Lotion 400ml", qty: 1, price: 99.99 },
     ],
-    address: "14 Samora Machel Ave, Harare",
+    address: "14 Samora Machel Ave, Bulawayo",
     tracking: [
       { label: "Order placed", at: "12 May, 09:14", done: true },
       { label: "Packed at pharmacy", at: "12 May, 10:42", done: true },
@@ -156,7 +156,7 @@ const DEMO_ORDERS: Order[] = [
       { name: "Allergex 30s", qty: 1, price: 64.99 },
       { name: "Vicks VapoRub 50g", qty: 1, price: 79.99 },
     ],
-    address: "14 Samora Machel Ave, Harare",
+    address: "14 Samora Machel Ave, Bulawayo",
     tracking: [
       { label: "Order placed", at: "07 Jun, 08:02", done: true },
       { label: "Packed at pharmacy", at: "07 Jun, 09:31", done: true },
@@ -175,7 +175,7 @@ const DEMO_ORDERS: Order[] = [
     total: 1289.0,
     status: "Packed",
     items: [{ name: "Omron Blood Pressure Monitor", qty: 1, price: 1289.0 }],
-    address: "14 Samora Machel Ave, Harare",
+    address: "14 Samora Machel Ave, Bulawayo",
     tracking: [
       { label: "Order placed", at: "06 Jun, 19:47", done: true },
       { label: "Packed at pharmacy", at: "07 Jun, 07:21", done: true },
@@ -208,9 +208,9 @@ const DEMO_PRESCRIPTIONS: Prescription[] = [
       lastName: "Nkosi",
       phone: "+263 77 123 4567",
       streetAddress: "14 Samora Machel Ave",
-      suburb: "Harare CBD",
-      city: "Harare",
-      province: "Harare Metropolitan",
+      suburb: "Bulawayo CBD",
+      city: "Bulawayo",
+      province: "Bulawayo Metropolitan",
       postalCode: "263",
       specialInstructions: "",
     },
@@ -238,7 +238,7 @@ const DEMO_PRESCRIPTIONS: Prescription[] = [
 
 const DEMO_USER: User = {
   id: "u_demo",
-  email: "demo@plus2pharmacy.co.za",
+  email: "demo@kingspharmacy.co.za",
   firstName: "Thandi",
   lastName: "Nkosi",
   phone: "+27 82 123 4567",
@@ -372,7 +372,7 @@ export const useAuth = create<AuthState>()(
       },
     }),
     {
-      name: "plus2-auth",
+      name: "kings-auth",
       partialize: (s) => ({
         user: s.user,
         prescriptions: s.prescriptions,

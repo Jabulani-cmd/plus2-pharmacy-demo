@@ -31,7 +31,7 @@ import {
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
-    meta: [{ title: "Staff Portal — Plus2 Pharmacy" }],
+    meta: [{ title: "Staff Portal — Kings Pharmacy" }],
   }),
   component: StaffLayout,
 });
@@ -218,7 +218,7 @@ function NotificationBell() {
         (p.quotation?.total.toFixed(2) ?? "0.00") +
         " — ready to dispatch",
       sub: p.paidAt ?? "Just now",
-      dot: "#00853F",
+      dot: "#0EA5E9",
     })),
   ];
 
@@ -331,7 +331,7 @@ function StaffLayout() {
 
   if (isLogin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#003a1c] via-[#00853F] to-[#00b855]">
+      <div className="min-h-screen bg-gradient-to-br from-[#003a1c] via-[#0EA5E9] to-[#00b855]">
         <Outlet />
       </div>
     );
@@ -358,7 +358,7 @@ function StaffLayout() {
             </div>
             <div>
               <div className="text-sm font-extrabold leading-tight text-foreground">
-                Plus2 Pharmacy
+                Kings Pharmacy
               </div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Staff Portal

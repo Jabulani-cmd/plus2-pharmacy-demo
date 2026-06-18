@@ -128,7 +128,7 @@ export function PharmacistDashboard(_props: { view?: string } = {}) {
         <KPI
           label="Approved today"
           value={String(counts.approvedToday)}
-          accent="#00853F"
+          accent="#0EA5E9"
           icon={<CheckCircle2 className="h-5 w-5" />}
         />
         <KPI
@@ -357,7 +357,7 @@ function RxReviewModal({
                 <div className="border-b pb-3 text-center">
                   <div className="text-sm font-extrabold">{rx.doctor}</div>
                   <div className="text-[10px] text-muted-foreground">
-                    MBChB · Suite 12, Avondale Medical Centre · Harare
+                    MBChB · Suite 12, Avondale Medical Centre · Bulawayo
                   </div>
                   <div className="text-[10px] text-muted-foreground">
                     MCZ Reg: MCZ-GP-004521
@@ -647,7 +647,7 @@ function RxReviewModal({
                     style={{ background: "white", border: "1px solid #E5E7EB" }}
                   >
                     <span className="text-sm text-[#374151]">Total patient will pay</span>
-                    <span className="text-lg font-bold" style={{ color: "#00853F" }}>
+                    <span className="text-lg font-bold" style={{ color: "#0EA5E9" }}>
                       ${totalAmount.toFixed(2)}
                     </span>
                   </div>
@@ -705,7 +705,7 @@ function RxReviewModal({
                   className="rounded-lg p-3 text-xs"
                   style={{ background: "#F0F9F4", border: "1px solid #BBF7D0" }}
                 >
-                  <p className="font-semibold text-[#00853F]">Awaiting patient payment</p>
+                  <p className="font-semibold text-[#0EA5E9]">Awaiting patient payment</p>
                   <p className="text-[#374151] mt-0.5">
                     Quotation sent. Once paid, mark as dispensed to notify the dispatcher.
                   </p>

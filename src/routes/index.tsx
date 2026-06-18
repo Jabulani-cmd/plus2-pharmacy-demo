@@ -9,9 +9,9 @@ import { Truck, ShieldCheck, Clock, HeartPulse } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Plus2 Pharmacy — Your Health, Our Priority" },
+      { title: "Kings Pharmacy — Your Health, Our Priority" },
       { name: "description", content: "Shop pharmacy, beauty, baby, vitamins and more. Free delivery over US$30 across Zimbabwe." },
-      { property: "og:title", content: "Plus2 Pharmacy" },
+      { property: "og:title", content: "Kings Pharmacy" },
       { property: "og:description", content: "Zimbabwe's trusted pharmacy — quality healthcare for every family." },
     ],
   }),
@@ -28,7 +28,7 @@ function Home() {
       <section className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#E5E7EB] bg-[#E5E7EB] md:grid-cols-4">
         {[
           { Icon: Truck, t: "Free Delivery", s: "On orders over US$50" },
-          { Icon: Clock, t: "Same-Day Delivery", s: "Available in Harare" },
+          { Icon: Clock, t: "Same-Day Delivery", s: "Available in Bulawayo" },
           { Icon: ShieldCheck, t: "Secure Checkout", s: "EcoCash, ZIG, USD Card" },
           { Icon: HeartPulse, t: "Registered Pharmacists", s: "Trusted health advice" },
         ].map(({ Icon, t, s }) => (
@@ -87,7 +87,7 @@ function Home() {
       </section>
 
       <section className="mt-12">
-        <SectionHeader eyebrow="Plus2 Wellness" title="Health Tips & Articles" />
+        <SectionHeader eyebrow="Kings Wellness" title="Health Tips & Articles" />
         <div className="grid gap-4 md:grid-cols-3">
           {BLOG_POSTS.map((b) => (
             <article key={b.id} className="overflow-hidden rounded-lg border border-[#E5E7EB] bg-white transition hover:shadow-md">

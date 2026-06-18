@@ -60,7 +60,7 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
 }
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in or Register — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Sign in or Register — Kings Pharmacy" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
@@ -106,7 +106,7 @@ function AuthPage() {
         </ul>
         <div className="mt-10 rounded-lg border border-white/20 bg-white/10 p-4 text-sm backdrop-blur">
           <div className="font-bold">Demo account</div>
-          <div className="mt-1 text-white/90"><span>demo@plus2pharmacy.co.za</span> <span>/</span> <span className="font-mono">Demo1234!</span></div>
+          <div className="mt-1 text-white/90"><span>demo@kingspharmacy.co.za</span> <span>/</span> <span className="font-mono">Demo1234!</span></div>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ function AuthPage() {
         </Link>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          By continuing you agree to Plus2's <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy Policy</a>.
+          By continuing you agree to Kings's <a href="#" className="underline">Terms</a> & <a href="#" className="underline">Privacy Policy</a>.
         </p>
       </div>
     </div>
@@ -216,7 +216,7 @@ function Field({ label, ...rest }: { label: string } & React.InputHTMLAttributes
 
 function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: () => void }) {
   const login = useAuth((s) => s.login);
-  const [email, setEmail] = useState("demo@plus2pharmacy.co.za");
+  const [email, setEmail] = useState("demo@kingspharmacy.co.za");
   const [password, setPassword] = useState("Demo1234!");
   const [loading, setLoading] = useState(false);
   const submit = async (e: React.FormEvent) => {
@@ -255,13 +255,13 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     const r = await register(f);
     setLoading(false);
     if (!r.ok) return toast.error(r.error ?? "Registration failed");
-    toast.success("Account created. Welcome to Plus2!");
+    toast.success("Account created. Welcome to Kings!");
     onSuccess();
   };
   return (
     <form onSubmit={submit} className="space-y-4">
       <h1 className="text-2xl font-extrabold">Create your account</h1>
-      <p className="-mt-2 text-sm text-muted-foreground">Join thousands of Zimbabwean families who trust Plus2.</p>
+      <p className="-mt-2 text-sm text-muted-foreground">Join thousands of Zimbabwean families who trust Kings.</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name" required value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} />
         <Field label="Last name" required value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} />
@@ -350,7 +350,7 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
         <p className="text-sm text-muted-foreground">We sent a 6-digit reset code to <strong>{email}</strong>.</p>
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-left">
           <div className="text-[10px] font-bold uppercase tracking-widest text-primary">Demo Inbox</div>
-          <div className="mt-1 text-sm text-foreground">Your Plus2 password reset code is:</div>
+          <div className="mt-1 text-sm text-foreground">Your Kings password reset code is:</div>
           <div className="mt-2 font-mono text-3xl font-extrabold tracking-[0.4em] text-primary">{demoToken}</div>
           <div className="mt-2 text-xs text-muted-foreground">Code expires in 10 minutes.</div>
         </div>

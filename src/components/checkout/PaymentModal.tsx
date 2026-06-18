@@ -242,7 +242,7 @@ export default function PaymentModal({
               <p
                 className="text-xs font-semibold uppercase
                   tracking-wide mb-1"
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               >
                 Order Summary
               </p>
@@ -273,13 +273,13 @@ export default function PaymentModal({
               <p
                 className="text-xs font-semibold uppercase
                   tracking-wide mt-1"
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               >
                 Total
               </p>
               <p
                 className="text-lg font-bold"
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               >
                 {formatAmount(amount)}
               </p>
@@ -299,7 +299,7 @@ export default function PaymentModal({
             >
               <CheckCircle2
                 size={40}
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               />
             </div>
             <h3 className="text-xl font-bold text-gray-900
@@ -353,7 +353,7 @@ export default function PaymentModal({
               }
               className="w-full py-3 rounded-lg text-white
                 font-bold text-sm"
-              style={{ background: "#00853F" }}
+              style={{ background: "#0EA5E9" }}
             >
               View Order Confirmation
             </button>
@@ -371,13 +371,13 @@ export default function PaymentModal({
               <Loader2
                 size={48}
                 className="animate-spin mx-auto mb-4"
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               />
             ) : (
               <Smartphone
                 size={48}
                 className="mx-auto mb-4"
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               />
             )}
             <h3 className="text-base font-bold text-gray-900
@@ -431,7 +431,7 @@ export default function PaymentModal({
             <div className="flex items-center gap-2 mb-4">
               <Building2
                 size={20}
-                style={{ color: "#00853F" }}
+                style={{ color: "#0EA5E9" }}
               />
               <h3 className="font-bold text-gray-900 text-sm">
                 ZIPIT Transfer Details
@@ -490,7 +490,7 @@ export default function PaymentModal({
                     {copied === label ? (
                       <Check
                         size={12}
-                        style={{ color: "#00853F" }}
+                        style={{ color: "#0EA5E9" }}
                       />
                     ) : (
                       <Copy
@@ -526,7 +526,7 @@ export default function PaymentModal({
               }
               className="w-full mt-4 py-3 rounded-lg
                 text-white font-bold text-sm"
-              style={{ background: "#00853F" }}
+              style={{ background: "#0EA5E9" }}
             >
               I Have Made the Transfer
             </button>
@@ -559,7 +559,7 @@ export default function PaymentModal({
               }}
               className="w-full py-3 rounded-lg text-white
                 font-bold text-sm"
-              style={{ background: "#00853F" }}
+              style={{ background: "#0EA5E9" }}
             >
               Try Again
             </button>
@@ -592,7 +592,7 @@ export default function PaymentModal({
                     }}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-colors ${
                       isSelected
-                        ? "border-[#00853F] bg-[#F0F9F4]"
+                        ? "border-[#0EA5E9] bg-[#F0F9F4]"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -639,7 +639,7 @@ export default function PaymentModal({
                   </p>
                   <button
                     onClick={fillDemo}
-                    className="text-xs font-semibold text-[#00853F] hover:underline"
+                    className="text-xs font-semibold text-[#0EA5E9] hover:underline"
                   >
                     Use demo data
                   </button>
@@ -659,7 +659,7 @@ export default function PaymentModal({
                           [field.id]: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-[#00853F]"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-[#0EA5E9]"
                     />
                     <p className="text-[11px] text-gray-400 mt-1">
                       {field.hint}
@@ -679,7 +679,7 @@ export default function PaymentModal({
               onClick={handlePay}
               disabled={!isFormValid()}
               className="w-full py-3 rounded-lg text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{ background: "#00853F" }}
+              style={{ background: "#0EA5E9" }}
             >
               <ShieldCheck size={16} />
               Pay {formatAmount(amount)}

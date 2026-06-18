@@ -9,7 +9,7 @@ import { buildReceipt, type Receipt } from "@/lib/receipts";
 import PaymentModal from "@/components/checkout/PaymentModal";
 
 export const Route = createFileRoute("/checkout")({
-  head: () => ({ meta: [{ title: "Checkout — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Checkout — Kings Pharmacy" }] }),
   component: Checkout,
 });
 
@@ -42,8 +42,8 @@ function Checkout() {
     email: "",
     street: "",
     suburb: "",
-    city: "Harare",
-    province: "Harare",
+    city: "Bulawayo",
+    province: "Bulawayo",
     postal: "",
     method: "standard",
   });
@@ -88,7 +88,7 @@ function Checkout() {
 
     const addr =
       delivery_.method === "collect"
-        ? "Pick up: Avondale Branch, Harare"
+        ? "Pick up: Hillside Branch, Bulawayo"
         : `${delivery_.firstName} ${delivery_.lastName}, ` +
           `${delivery_.street}, ${delivery_.suburb}, ` +
           `${delivery_.city}, Zimbabwe`;
@@ -108,7 +108,7 @@ function Checkout() {
           `${delivery_.firstName || "Demo"} ` +
           `${delivery_.lastName || "Customer"}`.trim(),
         email:
-          delivery_.email || "customer@plus2pharmacy.co.zw",
+          delivery_.email || "customer@kingspharmacy.co.zw",
         phone: delivery_.phone || "+263 78 200 0100",
         address: addr,
       },
@@ -257,14 +257,14 @@ function Checkout() {
                   {[
                     {
                       id: "standard",
-                      label: "Standard Delivery (Harare metro)",
+                      label: "Standard Delivery (Bulawayo metro)",
                       desc: "1–2 working days",
                       price:
                         subtotal >= 50 ? "FREE" : "$5.00",
                     },
                     {
                       id: "express",
-                      label: "Same-day Express (Harare)",
+                      label: "Same-day Express (Bulawayo)",
                       desc: "Within 4 hours",
                       price: "$8.00",
                     },
@@ -347,7 +347,7 @@ function Checkout() {
                 <p
                   className="text-xs font-semibold uppercase
                     tracking-wide"
-                  style={{ color: "#00853F" }}
+                  style={{ color: "#0EA5E9" }}
                 >
                   Accepted Payment Methods
                 </p>
@@ -376,7 +376,7 @@ function Checkout() {
                     {
                       name: "ZimSwitch Card",
                       logo: "ZS",
-                      color: "#00853F",
+                      color: "#0EA5E9",
                       note: "",
                     },
                     {
@@ -409,7 +409,7 @@ function Checkout() {
                         {m.note && (
                           <p
                             className="text-[10px]"
-                            style={{ color: "#00853F" }}
+                            style={{ color: "#0EA5E9" }}
                           >
                             {m.note}
                           </p>
@@ -420,7 +420,7 @@ function Checkout() {
                 </div>
                 <p className="text-xs text-gray-500">
                   All payments processed in USD. Secured by
-                  Plus2 Pharmacy · ZPC Licensed · MCAZ Approved.
+                  Kings Pharmacy · ZPC Licensed · MCAZ Approved.
                 </p>
               </div>
             </div>
@@ -542,7 +542,7 @@ function Checkout() {
                   </span>
                   <span
                     className="text-lg font-bold"
-                    style={{ color: "#00853F" }}
+                    style={{ color: "#0EA5E9" }}
                   >
                     {formatUSD(total)}
                   </span>
@@ -630,7 +630,7 @@ function Checkout() {
                   value={
                     <span
                       className="text-lg font-extrabold"
-                      style={{ color: "#00853F" }}
+                      style={{ color: "#0EA5E9" }}
                     >
                       {formatUSD(total)}
                     </span>
