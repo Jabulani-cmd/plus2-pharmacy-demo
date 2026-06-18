@@ -1,5 +1,8 @@
 import { Pill, Sparkles, Baby, Leaf, Droplets, Dumbbell, Home, PawPrint } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import hero1 from "@/assets/hero-1.jpg";
+import hero2 from "@/assets/hero-2.jpg";
+import hero3 from "@/assets/hero-3.jpg";
 
 export type Category = { slug: string; name: string; icon: LucideIcon; image: string };
 
@@ -23,7 +26,7 @@ export const HERO_SLIDES = [
     subtext: "Vitamins, cold & flu remedies and immunity boosters — while stocks last.",
     cta: "Shop the sale",
     href: "/category/vitamins",
-    image: "https://images.unsplash.com/photo-1576602976047-174e57a47881?w=1400&h=500&fit=crop",
+    image: hero1,
   },
   {
     eyebrow: "Trusted Care",
@@ -31,7 +34,7 @@ export const HERO_SLIDES = [
     subtext: "Our registered pharmacists review every script. Delivery to your door across Zimbabwe.",
     cta: "Upload script",
     href: "/prescriptions",
-    image: "https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=1400&h=500&fit=crop",
+    image: hero2,
   },
   {
     eyebrow: "Fast Delivery",
@@ -39,7 +42,7 @@ export const HERO_SLIDES = [
     subtext: "Same-day delivery available in Bulawayo. Tracked & contactless.",
     cta: "Start shopping",
     href: "/category/all",
-    image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=1400&h=500&fit=crop",
+    image: hero3,
   },
 ];
 
