@@ -8,11 +8,16 @@ import { useAuth } from "@/store/auth";
 import { CATEGORIES } from "@/data/categories";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { BranchSelector } from "./BranchSelector";
+import { getBranch } from "@/data/branches";
+import { useBranch } from "@/store/branch";
 
 export function Navbar() {
   const cart = useShop((s) => s.cart);
   const wishlist = useShop((s) => s.wishlist);
   const user = useAuth((s) => s.user);
+  const branchId = useBranch((s) => s.selectedBranchId);
+  const branch = getBranch(branchId);
   const cartCount = cart.reduce((a, c) => a + c.qty, 0);
   const [q, setQ] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
@@ -30,8 +35,9 @@ export function Navbar() {
       <div className="hidden bg-[#F9FAFB] text-[#374151] md:block border-b border-[#E5E7EB]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[12px]">
           <div className="flex items-center gap-5">
+            <BranchSelector />
             <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" /> Free delivery over US$50</span>
-            <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> +263 78 200 0100</span>
+            <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {branch.phone}</span>
           </div>
           <div className="flex items-center gap-5">
             <Link to="/services" className="hover:text-primary">Pharmacy Services</Link>
@@ -51,6 +57,10 @@ export function Navbar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-72">
             <div className="mt-6 flex flex-col gap-1">
+              <div className="mb-3">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your branch</div>
+                <BranchSelector variant="full" />
+              </div>
               {CATEGORIES.map((c) => {
                 const Icon = c.icon;
                 return (
