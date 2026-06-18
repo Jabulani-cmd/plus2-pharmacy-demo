@@ -223,7 +223,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                       <div className="text-right">
                         <div
                           className="text-base font-black"
-                          style={{ color: "#00853F" }}
+                          style={{ color: "#0EA5E9" }}
                         >
                           ${rx.quotation.total.toFixed(2)}
                         </div>

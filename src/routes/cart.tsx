@@ -8,7 +8,7 @@ import { Minus, Plus, Trash2, Tag, ShoppingBag } from "lucide-react";
 import { FileText, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Cart — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Cart — Kings Pharmacy" }] }),
   component: CartPage,
 });
 

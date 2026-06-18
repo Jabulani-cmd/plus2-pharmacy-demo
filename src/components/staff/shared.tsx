@@ -17,7 +17,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 }
 
 export function KPI({
-  label, value, hint, delta, accent = "#00853F", icon,
+  label, value, hint, delta, accent = "#0EA5E9", icon,
 }: {
   label: string; value: string; hint?: string; delta?: number; accent?: string; icon?: ReactNode;
 }) {
@@ -91,7 +91,7 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 // Tiny inline SVG bar chart — no extra deps
-export function BarChart({ data, height = 120, valueKey = "sales", labelKey = "hour", color = "#00853F" }: {
+export function BarChart({ data, height = 120, valueKey = "sales", labelKey = "hour", color = "#0EA5E9" }: {
   data: Record<string, number | string>[]; height?: number; valueKey?: string; labelKey?: string; color?: string;
 }) {
   const max = Math.max(...data.map((d) => Number(d[valueKey])));
@@ -123,7 +123,7 @@ export function BarChart({ data, height = 120, valueKey = "sales", labelKey = "h
   );
 }
 
-export function LineChart({ data, height = 140, valueKey = "sales", labelKey = "day", color = "#00853F" }: {
+export function LineChart({ data, height = 140, valueKey = "sales", labelKey = "day", color = "#0EA5E9" }: {
   data: Record<string, number | string>[]; height?: number; valueKey?: string; labelKey?: string; color?: string;
 }) {
   const max = Math.max(...data.map((d) => Number(d[valueKey])));

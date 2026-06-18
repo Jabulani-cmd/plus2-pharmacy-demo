@@ -22,6 +22,6 @@ export const useStaffAuth = create<StaffAuthState>()(
       },
       logout: () => set({ staff: null }),
     }),
-    { name: "plus2-staff-auth" }
+    { name: "kings-staff-auth" }
   )
 );

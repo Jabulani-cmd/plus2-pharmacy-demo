@@ -36,7 +36,7 @@ export const HERO_SLIDES = [
   {
     eyebrow: "Fast Delivery",
     headline: "Free Delivery on Orders Over US$50",
-    subtext: "Same-day delivery available in Harare. Tracked & contactless.",
+    subtext: "Same-day delivery available in Bulawayo. Tracked & contactless.",
     cta: "Start shopping",
     href: "/category/all",
     image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=1400&h=500&fit=crop",

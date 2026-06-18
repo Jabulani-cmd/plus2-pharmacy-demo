@@ -13,7 +13,7 @@ export const Route = createFileRoute("/track")({
   validateSearch: (s: Record<string, unknown>) => ({
     order: typeof s.order === "string" ? s.order : "",
   }),
-  head: () => ({ meta: [{ title: "Track Order — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Track Order — Kings Pharmacy" }] }),
   component: TrackPage,
 });
 
@@ -70,7 +70,7 @@ function TrackPage() {
         Track your order
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Enter your Plus2 order number (e.g. P2-183904 or
+        Enter your Kings order number (e.g. P2-183904 or
         RX-2025-562411) to see live delivery progress.
       </p>
 
@@ -237,7 +237,7 @@ function RxTracker({
               {rx.quotation && (
                 <div
                   className="mt-1 text-lg font-black"
-                  style={{ color: "#00853F" }}
+                  style={{ color: "#0EA5E9" }}
                 >
                   ${rx.quotation.total.toFixed(2)}
                 </div>
@@ -263,7 +263,7 @@ function RxTracker({
                           className="h-0.5 flex-1 transition-colors"
                           style={{
                             background:
-                              i <= stageIdx ? "#00853F" : "#E5E7EB",
+                              i <= stageIdx ? "#0EA5E9" : "#E5E7EB",
                           }}
                         />
                       )}
@@ -271,7 +271,7 @@ function RxTracker({
                       <div
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors"
                         style={{
-                          background: done ? "#00853F" : "#E5E7EB",
+                          background: done ? "#0EA5E9" : "#E5E7EB",
                           color: done ? "white" : "#9CA3AF",
                           boxShadow: active
                             ? "0 0 0 3px #BBF7D0"
@@ -290,7 +290,7 @@ function RxTracker({
                           className="h-0.5 flex-1 transition-colors"
                           style={{
                             background:
-                              i < stageIdx ? "#00853F" : "#E5E7EB",
+                              i < stageIdx ? "#0EA5E9" : "#E5E7EB",
                           }}
                         />
                       )}
@@ -299,7 +299,7 @@ function RxTracker({
                       className="mt-1.5 text-center text-[9px] font-semibold leading-tight"
                       style={{
                         color: active
-                          ? "#00853F"
+                          ? "#0EA5E9"
                           : done
                           ? "#374151"
                           : "#9CA3AF",
@@ -373,7 +373,7 @@ function RxTracker({
               )}
               <div className="flex justify-between border-t border-border pt-2 font-extrabold">
                 <span>Total paid</span>
-                <span style={{ color: "#00853F" }}>
+                <span style={{ color: "#0EA5E9" }}>
                   ${rx.quotation.total.toFixed(2)}
                 </span>
               </div>
@@ -441,7 +441,7 @@ function RxTracker({
             <div className="mt-3 flex items-center gap-3">
               <div
                 className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-extrabold text-white"
-                style={{ background: "#00853F" }}
+                style={{ background: "#0EA5E9" }}
               >
                 {rx.driverName
                   .split(" ")
@@ -674,7 +674,7 @@ function RxStatusPill({
 }) {
   const color =
     status === "Delivered"
-      ? "bg-[#F0F9F4] text-[#00853F]"
+      ? "bg-[#F0F9F4] text-[#0EA5E9]"
       : status === "Out for Delivery"
       ? "bg-violet-50 text-violet-700"
       : status === "Dispensing" || status === "Paid"

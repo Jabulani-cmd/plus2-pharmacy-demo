@@ -15,11 +15,11 @@ function StockView() {
   const value = STAFF_INVENTORY.reduce((a, i) => a + i.onHand * i.costPrice, 0);
   return (
     <div>
-      <PageHeader title="Stock on Hand" subtitle="Harare CBD branch" />
+      <PageHeader title="Stock on Hand" subtitle="Bulawayo CBD branch" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <KPI label="Total SKUs" value={String(STAFF_INVENTORY.length)} accent="#0EA5E9" icon={<Boxes className="h-5 w-5" />} />
         <KPI label="Below reorder" value={String(low.length)} accent="#DC2626" icon={<AlertTriangle className="h-5 w-5" />} />
-        <KPI label="Stock value (cost)" value={fmtUSD(value)} accent="#00853F" icon={<DollarSign className="h-5 w-5" />} />
+        <KPI label="Stock value (cost)" value={fmtUSD(value)} accent="#0EA5E9" icon={<DollarSign className="h-5 w-5" />} />
       </div>
       <div className="mt-6">
         <Card title="Items requiring action" action={<span className="text-xs text-muted-foreground">Click ‘Order’ to draft a PO</span>}>

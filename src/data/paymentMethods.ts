@@ -155,7 +155,7 @@ export const ZIM_PAYMENT_METHODS: ZimPaymentMethod[] = [
     name: "ZimSwitch / Bank Card",
     provider: "ZimSwitch Payment Network",
     logo: "ZS",
-    color: "#00853F",
+    color: "#0EA5E9",
     bgColor: "#F0F9F4",
     borderColor: "#BBF7D0",
     description:
@@ -220,10 +220,10 @@ export const ZIM_PAYMENT_METHODS: ZimPaymentMethod[] = [
     fields: [],
     bankDetails: {
       bankName: "CBZ Bank Zimbabwe",
-      accountName: "Plus2 Pharmacy (Pvt) Ltd",
+      accountName: "Kings Pharmacy (Pvt) Ltd",
       accountNumber: "05488192100",
       branchCode: "055",
-      branch: "Harare CBD Branch",
+      branch: "Bulawayo CBD Branch",
       swiftCode: "COBZZWHAXXX",
     },
   },

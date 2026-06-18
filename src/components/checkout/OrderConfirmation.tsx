@@ -20,7 +20,7 @@ const initialSteps = (collect: boolean, rx: boolean): Step[] => {
     return [
       { key: "confirm", title: "Order Confirmed", desc: "Your order has been placed and payment confirmed", ts: "Just now", state: "done" },
       { key: "prep", title: "Being Prepared", desc: "Our pharmacy team is packing your items", ts: "In progress", state: "current" },
-      { key: "ready", title: "Ready for Collection", desc: "Pick up at Avondale Branch", ts: "Est. 30 min", state: "upcoming" },
+      { key: "ready", title: "Ready for Collection", desc: "Pick up at Hillside Branch", ts: "Est. 30 min", state: "upcoming" },
       { key: "collected", title: "Collected", desc: "Bring your ID and order number", ts: "Pending", state: "upcoming" },
     ];
   }
@@ -46,7 +46,7 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
     const t1 = setTimeout(() => {
       setSteps((prev) => advance(prev));
       if (isCollect) {
-        toast.success("✅ Ready for collection at Avondale Branch!", { description: "Bring your ID and order number" });
+        toast.success("✅ Ready for collection at Hillside Branch!", { description: "Bring your ID and order number" });
       } else {
         toast.info("📦 Your order is being prepared by our pharmacy team");
       }
@@ -69,7 +69,7 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
   return (
     <div className="-mx-6 -my-6">
       {/* SECTION 1 — Animated Success Header */}
-      <div className="rounded-t-xl bg-gradient-to-br from-[#00853F] to-[#006B32] px-6 py-12 text-center text-white">
+      <div className="rounded-t-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] px-6 py-12 text-center text-white">
         <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white animate-scale-in">
           <Check className="h-9 w-9 animate-fade-in" strokeWidth={3} />
           <span className="absolute inset-0 rounded-full bg-white/30 animate-ping" />
@@ -163,7 +163,7 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
         <h3 className="mb-3 text-sm font-bold">What Happens Next</h3>
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2 text-[#374151]"><Bell className="mt-0.5 h-4 w-4 text-primary" /> SMS &amp; email updates at every delivery stage</li>
-          <li className="flex items-start gap-2 text-[#374151]"><MapPin className="mt-0.5 h-4 w-4 text-primary" /> Track at plus2pharmacy.co.zw/track/{receipt.delivery.trackingRef}</li>
+          <li className="flex items-start gap-2 text-[#374151]"><MapPin className="mt-0.5 h-4 w-4 text-primary" /> Track at kingspharmacy.co.zw/track/{receipt.delivery.trackingRef}</li>
           <li className="flex items-start gap-2 text-[#374151]"><Clock className="mt-0.5 h-4 w-4 text-primary" /> Estimated delivery: {receipt.delivery.estimatedDate}</li>
         </ul>
       </div>
@@ -199,7 +199,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-[#BBF7D0] bg-[#F0F9F4] py-4 text-[#00853F] transition hover:bg-[#E0F2E9]">
+    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-[#BBF7D0] bg-[#F0F9F4] py-4 text-[#0EA5E9] transition hover:bg-[#E0F2E9]">
       {icon}
       <span className="text-xs font-bold">{label}</span>
     </button>
@@ -207,7 +207,7 @@ function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: str
 }
 
 function Confetti() {
-  const colors = ["#00853F", "#FFD600", "#FF6B35", "#FFFFFF", "#E0F2E9"];
+  const colors = ["#0EA5E9", "#FFD600", "#FF6B35", "#FFFFFF", "#E0F2E9"];
   return (
     <div className="pointer-events-none relative h-0">
       {Array.from({ length: 18 }).map((_, i) => (

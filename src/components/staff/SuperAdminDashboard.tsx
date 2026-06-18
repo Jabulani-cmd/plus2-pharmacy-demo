@@ -16,7 +16,7 @@ function Overview() {
     <div>
       <PageHeader title="Group Overview" subtitle="All branches, real-time" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPI label="Revenue today" value={fmtUSD(totals.sales)} delta={12} accent="#00853F" icon={<DollarSign className="h-5 w-5" />} />
+        <KPI label="Revenue today" value={fmtUSD(totals.sales)} delta={12} accent="#0EA5E9" icon={<DollarSign className="h-5 w-5" />} />
         <KPI label="Orders today" value={String(totals.orders)} delta={8} accent="#0EA5E9" icon={<ShoppingBag className="h-5 w-5" />} />
         <KPI label="Avg basket" value={fmtUSD(totals.avg)} delta={4} accent="#7C3AED" icon={<TrendingUp className="h-5 w-5" />} />
         <KPI label="Active staff" value={`${STAFF_SYSTEM_USERS.filter((u) => u.status === "Active").length} / ${STAFF_SYSTEM_USERS.length}`} accent="#F59E0B" icon={<Users className="h-5 w-5" />} />
@@ -52,7 +52,7 @@ function Overview() {
         <Card title="Branch performance">
           <ul className="space-y-3 text-sm">
             {[
-              { name: "Harare CBD", revenue: 6420, share: 62 },
+              { name: "Bulawayo CBD", revenue: 6420, share: 62 },
               { name: "Bulawayo", revenue: 2890, share: 28 },
               { name: "Mutare", revenue: 1040, share: 10 },
             ].map((b) => (
@@ -101,7 +101,7 @@ function StaffRolesView() {
 
 function BranchesView() {
   const branches = [
-    { name: "Harare CBD", address: "14 Samora Machel Ave", manager: "Michael Pretorius", staff: 7, revenueMTD: 142_840 },
+    { name: "Bulawayo CBD", address: "14 Samora Machel Ave", manager: "Michael Pretorius", staff: 7, revenueMTD: 142_840 },
     { name: "Bulawayo", address: "5 Joshua Mqabuko St", manager: "Patience Moyo", staff: 4, revenueMTD: 68_220 },
     { name: "Mutare", address: "22 Herbert Chitepo St", manager: "TBA", staff: 3, revenueMTD: 24_490 },
   ];

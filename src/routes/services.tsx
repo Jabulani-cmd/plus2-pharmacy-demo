@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pill, Syringe, HeartPulse, Activity, Baby, PawPrint, ClipboardList, Building2, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/services")({
-  head: () => ({ meta: [{ title: "Pharmacy Services — Plus2 Pharmacy" }] }),
+  head: () => ({ meta: [{ title: "Pharmacy Services — Kings Pharmacy" }] }),
   component: ServicesPage,
 });
 
@@ -18,10 +18,10 @@ const SERVICES = [
   { icon: Building2, title: "Medical Aid Claims", desc: "We claim directly from all major medical aids." },
 ];
 
-const CITIES = ["Harare", "Bulawayo", "Mutare", "Gweru", "Masvingo", "Kwekwe"];
+const CITIES = ["Bulawayo", "Bulawayo", "Mutare", "Gweru", "Masvingo", "Kwekwe"];
 
 function ServicesPage() {
-  const [city, setCity] = useState("Harare");
+  const [city, setCity] = useState("Bulawayo");
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="overflow-hidden rounded-md bg-primary p-8 text-primary-foreground md:p-12">
@@ -47,7 +47,7 @@ function ServicesPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 text-xl font-extrabold md:text-2xl">Find a Plus2 Pharmacy near you</h2>
+        <h2 className="mb-4 text-xl font-extrabold md:text-2xl">Find a Kings Pharmacy near you</h2>
         <div className="grid gap-4 md:grid-cols-[280px_1fr]">
           <div className="rounded-md border border-border bg-card p-5">
             <label className="text-sm font-bold">Choose city</label>
@@ -57,7 +57,7 @@ function ServicesPage() {
             <div className="mt-4 space-y-3 text-sm">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="rounded-md bg-surface p-3">
-                  <div className="font-bold">Plus2 {city} {["CBD", "Avondale", "Borrowdale"][i - 1] ?? "Mall"}</div>
+                  <div className="font-bold">Kings {city} {["CBD", "Avondale", "Borrowdale"][i - 1] ?? "Mall"}</div>
                   <div className="text-xs text-muted-foreground">Open today · 08:00–20:00</div>
                 </div>
               ))}

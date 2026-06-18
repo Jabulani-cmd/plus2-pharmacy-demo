@@ -41,7 +41,7 @@ export const useShop = create<ShopState>()(
       clearCart: () => set({ cart: [], promoCode: "" }),
       setPromoCode: (code) => set({ promoCode: code }),
     }),
-    { name: "plus2-shop" }
+    { name: "kings-shop" }
   )
 );
 

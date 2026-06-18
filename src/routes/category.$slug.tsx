@@ -13,7 +13,7 @@ export const Route = createFileRoute("/category/$slug")({
   validateSearch: searchSchema,
   head: ({ params }) => ({
     meta: [
-      { title: `${(CATEGORIES.find((c) => c.slug === params.slug)?.name) ?? "Shop"} — Plus2 Pharmacy` },
+      { title: `${(CATEGORIES.find((c) => c.slug === params.slug)?.name) ?? "Shop"} — Kings Pharmacy` },
       { name: "description", content: "Browse quality products from Zimbabwe's trusted pharmacy." },
     ],
   }),
