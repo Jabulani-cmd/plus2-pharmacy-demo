@@ -1,15 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { HERO_SLIDES } from "@/data/categories";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function HeroCarousel() {
   const [i, setI] = useState(0);
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
   useEffect(() => {
     const t = setInterval(() => setI((p) => (p + 1) % HERO_SLIDES.length), 6000);
     return () => clearInterval(t);
   }, []);
+  // Preload all slide images so transitions feel instant after the first paint
+  useEffect(() => {
+    HERO_SLIDES.forEach((slide, idx) => {
+      const img = new Image();
+      img.src = slide.image;
+      img.onload = () => setLoaded((p) => (p[idx] ? p : { ...p, [idx]: true }));
+    });
+  }, []);
   const s = HERO_SLIDES[i];
+  const isLoaded = loaded[i];
   return (
     <div className="relative overflow-hidden rounded-lg border border-[#E5E7EB] bg-[#111827] shadow-sm">
       <AnimatePresence mode="wait" initial={false}>
@@ -21,10 +31,29 @@ export function HeroCarousel() {
           transition={{ duration: 0.5 }}
           className="relative h-[260px] w-full md:h-[480px]"
         >
-          <img src={s.image} alt={s.headline} className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-black/55" />
+          {/* Skeleton shimmer while image loads */}
+          {!isLoaded && (
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#1f2937] via-[#374151] to-[#1f2937]" />
+          )}
+          <img
+            src={s.image}
+            alt={s.headline}
+            onLoad={() => setLoaded((p) => ({ ...p, [i]: true }))}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-out ${
+              isLoaded ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          <div
+            className={`absolute inset-0 bg-black/55 transition-opacity duration-700 ${
+              isLoaded ? "opacity-100" : "opacity-0"
+            }`}
+          />
           <div className="relative z-10 flex h-full max-w-7xl items-center px-6 md:px-12">
-            <div className="max-w-xl text-white">
+            <div
+              className={`max-w-xl text-white transition-all duration-500 ${
+                isLoaded ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+              }`}
+            >
               <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#86EFAC]">{s.eyebrow}</p>
               <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight md:text-[40px]">{s.headline}</h1>
               <p className="mt-3 text-sm text-white/90 md:text-base">{s.subtext}</p>
