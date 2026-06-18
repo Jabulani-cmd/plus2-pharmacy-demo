@@ -7,7 +7,9 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { RatingStars } from "@/components/product/RatingStars";
 import { useShop, formatUSD } from "@/store/shop";
 import { useAuth } from "@/store/auth";
-import { Heart, Minus, Plus, ShoppingCart, ChevronRight, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { useBranch } from "@/store/branch";
+import { getBranch, getStockByBranch, getBranchStock } from "@/data/branches";
+import { Heart, Minus, Plus, ShoppingCart, ChevronRight, CheckCircle2, AlertTriangle, FileText, MapPin, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/product/$id")({
   loader: ({ params }) => {
@@ -33,6 +35,10 @@ function ProductPage() {
   const toggleWishlist = useShop((s) => s.toggleWishlist);
   const wished = useShop((s) => s.wishlist.includes(product.id));
   const user = useAuth((s) => s.user);
+  const branchId = useBranch((s) => s.selectedBranchId);
+  const branch = getBranch(branchId);
+  const branchStock = getBranchStock(product, branchId);
+  const stockByBranch = getStockByBranch(product);
   const navigate = useNavigate();
   const location = useRouterState({ select: (s) => s.location });
   const related = PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4);
@@ -78,8 +84,25 @@ function ProductPage() {
           </div>
 
           <div className="mt-4">
-            {product.stock === "in" && <span className="inline-flex items-center gap-1 text-sm font-semibold text-success"><CheckCircle2 className="h-4 w-4" /> In Stock</span>}
-            {product.stock === "low" && <span className="inline-flex items-center gap-1 text-sm font-semibold text-warning"><AlertTriangle className="h-4 w-4" /> Low Stock — order soon</span>}
+            {branchStock === "in" && <span className="inline-flex items-center gap-1 text-sm font-semibold text-success"><CheckCircle2 className="h-4 w-4" /> In stock at {branch.shortName}</span>}
+            {branchStock === "low" && <span className="inline-flex items-center gap-1 text-sm font-semibold text-warning"><AlertTriangle className="h-4 w-4" /> Low stock at {branch.shortName} — order soon</span>}
+            {branchStock === "out" && <span className="inline-flex items-center gap-1 text-sm font-semibold text-destructive"><XCircle className="h-4 w-4" /> Out of stock at {branch.shortName}</span>}
+          </div>
+
+          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> Availability across Bulawayo branches
+            </div>
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {stockByBranch.map(({ branch: b, status }) => (
+                <li key={b.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5 text-xs">
+                  <span className="font-medium text-foreground">{b.shortName}</span>
+                  {status === "in" && <span className="inline-flex items-center gap-1 font-semibold text-success"><CheckCircle2 className="h-3.5 w-3.5" /> In stock</span>}
+                  {status === "low" && <span className="inline-flex items-center gap-1 font-semibold text-warning"><AlertTriangle className="h-3.5 w-3.5" /> Low</span>}
+                  {status === "out" && <span className="inline-flex items-center gap-1 font-semibold text-destructive"><XCircle className="h-3.5 w-3.5" /> Out</span>}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <p className="mt-4 text-sm text-muted-foreground">{product.shortDesc}</p>
