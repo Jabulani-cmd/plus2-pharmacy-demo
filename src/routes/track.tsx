@@ -549,61 +549,8 @@ function RxLiveMap() {
 
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-border">
-      <div className="relative h-44 w-full bg-[oklch(0.96_0.02_150)]">
-        <svg
-          viewBox="0 0 300 220"
-          className="absolute inset-0 h-full w-full"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <defs>
-            <pattern
-              id="streets-rx"
-              width="40"
-              height="40"
-              patternUnits="userSpaceOnUse"
-            >
-              <rect
-                width="40"
-                height="40"
-                fill="oklch(0.97 0.015 150)"
-              />
-              <path
-                d="M0 20 H40 M20 0 V40"
-                stroke="oklch(0.88 0.02 150)"
-                strokeWidth="1"
-              />
-            </pattern>
-          </defs>
-          <rect width="300" height="220" fill="url(#streets-rx)" />
-          <path
-            d="M0 110 H300"
-            stroke="oklch(0.82 0.02 150)"
-            strokeWidth="6"
-          />
-          <path
-            d="M150 0 V220"
-            stroke="oklch(0.82 0.02 150)"
-            strokeWidth="6"
-          />
-          <path
-            d={`M${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`}
-            stroke="var(--primary)"
-            strokeWidth="3"
-            strokeDasharray="6 4"
-            fill="none"
-          />
-          <circle
-            cx={p0.x}
-            cy={p0.y}
-            r="6"
-            fill="white"
-            stroke="var(--primary)"
-            strokeWidth="2"
-          />
-          <circle cx={p3.x} cy={p3.y} r="8" fill="var(--accent)" />
-          <circle cx={p3.x} cy={p3.y} r="3" fill="white" />
-        </svg>
+      <div className="relative h-48 w-full">
+        <GoogleStyleMap p0={p0} p1={p1} p2={p2} p3={p3} idSuffix="rx" />
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-700 ease-out"
           style={{
@@ -611,25 +558,25 @@ function RxLiveMap() {
             top: (dy / 220) * 100 + "%",
           }}
         >
-          <span className="absolute inset-0 -z-10 m-auto block h-8 w-8 animate-ping rounded-full bg-primary/40" />
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-white">
+          <span className="absolute inset-0 -z-10 m-auto block h-8 w-8 animate-ping rounded-full bg-[#1A73E8]/40" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A73E8] text-white shadow-lg ring-2 ring-white">
             <Navigation className="h-4 w-4" />
           </div>
         </div>
-        <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
-          Live
+        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> Live
         </div>
-        <div className="absolute bottom-2 right-2 rounded-md bg-white/90 px-2 py-1 text-[11px] font-bold text-foreground shadow">
+        <div className="absolute bottom-2 right-2 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-foreground shadow">
           {eta} min away
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 bg-card px-3 py-2 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-primary" />{" "}
+          <span className="inline-block h-2 w-2 rounded-full bg-[#1A73E8]" />{" "}
           Pharmacy
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-accent" />{" "}
+          <span className="inline-block h-2 w-2 rounded-full bg-[#EA4335]" />{" "}
           Your address
         </span>
       </div>
@@ -894,61 +841,8 @@ function LiveMap({ status }: { status: Order["status"] }) {
 
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-border">
-      <div className="relative h-44 w-full bg-[oklch(0.96_0.02_150)]">
-        <svg
-          viewBox="0 0 300 220"
-          className="absolute inset-0 h-full w-full"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <defs>
-            <pattern
-              id="streets"
-              width="40"
-              height="40"
-              patternUnits="userSpaceOnUse"
-            >
-              <rect
-                width="40"
-                height="40"
-                fill="oklch(0.97 0.015 150)"
-              />
-              <path
-                d="M0 20 H40 M20 0 V40"
-                stroke="oklch(0.88 0.02 150)"
-                strokeWidth="1"
-              />
-            </pattern>
-          </defs>
-          <rect width="300" height="220" fill="url(#streets)" />
-          <path
-            d="M0 110 H300"
-            stroke="oklch(0.82 0.02 150)"
-            strokeWidth="6"
-          />
-          <path
-            d="M150 0 V220"
-            stroke="oklch(0.82 0.02 150)"
-            strokeWidth="6"
-          />
-          <path
-            d={`M${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`}
-            stroke="var(--primary)"
-            strokeWidth="3"
-            strokeDasharray="6 4"
-            fill="none"
-          />
-          <circle
-            cx={p0.x}
-            cy={p0.y}
-            r="6"
-            fill="white"
-            stroke="var(--primary)"
-            strokeWidth="2"
-          />
-          <circle cx={p3.x} cy={p3.y} r="8" fill="var(--accent)" />
-          <circle cx={p3.x} cy={p3.y} r="3" fill="white" />
-        </svg>
+      <div className="relative h-48 w-full">
+        <GoogleStyleMap p0={p0} p1={p1} p2={p2} p3={p3} idSuffix="otc" />
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-700 ease-out"
           style={{
@@ -956,21 +850,21 @@ function LiveMap({ status }: { status: Order["status"] }) {
             top: (dy / 220) * 100 + "%",
           }}
         >
-          <span className="absolute inset-0 -z-10 m-auto block h-8 w-8 animate-ping rounded-full bg-primary/40" />
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-white">
+          <span className="absolute inset-0 -z-10 m-auto block h-8 w-8 animate-ping rounded-full bg-[#1A73E8]/40" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A73E8] text-white shadow-lg ring-2 ring-white">
             <Navigation className="h-4 w-4" />
           </div>
         </div>
-        <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
-          Live
+        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> Live
         </div>
-        <div className="absolute bottom-2 right-2 rounded-md bg-white/90 px-2 py-1 text-[11px] font-bold text-foreground shadow">
+        <div className="absolute bottom-2 right-2 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-foreground shadow">
           {eta}
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 bg-card px-3 py-2 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-primary" />{" "}
+          <span className="inline-block h-2 w-2 rounded-full bg-[#1A73E8]" />{" "}
           Pharmacy
         </span>
         <span className="flex items-center gap-1">
