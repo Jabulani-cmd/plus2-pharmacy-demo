@@ -42,7 +42,7 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
         <span
           className={`font-black tracking-tight ${onDark ? "text-white" : "text-primary"} ${compact ? "text-3xl" : "text-5xl"}`}
         >
-          Plus<span className="text-emerald-300">2</span>
+          Kings
         </span>
         <span
           className={`mt-2 font-bold tracking-[0.25em] ${onDark ? "text-white/80" : "text-muted-foreground"} ${compact ? "text-[10px]" : "text-xs"}`}

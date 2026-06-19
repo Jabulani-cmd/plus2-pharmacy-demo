@@ -39,6 +39,7 @@ export function HeroCarousel() {
             src={s.image}
             alt={s.headline}
             onLoad={() => setLoaded((p) => ({ ...p, [i]: true }))}
+            style={{ objectPosition: "center top" }}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-out ${
               isLoaded ? "opacity-100" : "opacity-0"
             }`}

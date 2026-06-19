@@ -369,12 +369,12 @@ function StaffLayout() {
           <div className="flex items-center gap-3">
             <NotificationBell />
 
-            <Link
-              to="/"
-              className="hidden items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted md:inline-flex"
+            <a
+              href="/"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
             >
               <Home className="h-3.5 w-3.5" /> Customer site
-            </Link>
+            </a>
 
             <div className="flex items-center gap-3 border-l border-border pl-3">
               <div className="text-right">

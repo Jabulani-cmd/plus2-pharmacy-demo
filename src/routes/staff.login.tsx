@@ -49,7 +49,7 @@ function StaffLogin() {
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-4xl font-black text-primary">+</div>
             <div>
-              <div className="text-3xl font-black tracking-tight">Plus<span className="text-emerald-300">2</span></div>
+              <div className="text-3xl font-black tracking-tight">Kings <span className="font-bold text-white/90">Pharmacy</span></div>
               <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/80">Staff Portal · Zimbabwe</div>
             </div>
           </div>
@@ -61,16 +61,16 @@ function StaffLogin() {
             <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300" /> Encrypted at rest &amp; in transit</li>
           </ul>
         </div>
-        <Link to="/" className="inline-flex w-fit items-center gap-2 rounded-md border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+        <a href="/" className="inline-flex w-fit items-center gap-2 rounded-md border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
           <Home className="h-3.5 w-3.5" /> Back to customer site
-        </Link>
+        </a>
       </div>
 
       {/* Form */}
       <div className="rounded-2xl border border-white/20 bg-white p-6 shadow-2xl md:p-8">
-        <Link to="/" className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary lg:hidden">
+        <a href="/" className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary lg:hidden">
           <Home className="h-3.5 w-3.5" /> Customer site
-        </Link>
+        </a>
         <div className="mb-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
             <Lock className="h-3 w-3" /> Staff Access Only
