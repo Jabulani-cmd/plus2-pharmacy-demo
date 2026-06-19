@@ -868,10 +868,138 @@ function LiveMap({ status }: { status: Order["status"] }) {
           Pharmacy
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-accent" />{" "}
+          <span className="inline-block h-2 w-2 rounded-full bg-[#EA4335]" />{" "}
           Your address
         </span>
       </div>
     </div>
+  );
+}
+
+// ── Google Maps–style background ──
+function GoogleStyleMap({
+  p0,
+  p1,
+  p2,
+  p3,
+  idSuffix,
+}: {
+  p0: { x: number; y: number };
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  p3: { x: number; y: number };
+  idSuffix: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 300 220"
+      className="absolute inset-0 h-full w-full"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {/* Land base — Google-Maps cream */}
+      <rect width="300" height="220" fill="#F5F1E8" />
+
+      {/* Parks */}
+      <path d="M0 0 L70 0 L90 35 L40 70 L0 55 Z" fill="#C8E6C9" />
+      <ellipse cx="240" cy="180" rx="55" ry="32" fill="#C8E6C9" />
+      <path d="M180 0 L220 0 L210 25 L185 28 Z" fill="#C8E6C9" />
+
+      {/* River / water */}
+      <path
+        d="M0 145 Q 70 130 130 155 T 300 140 L 300 165 Q 220 175 130 175 T 0 170 Z"
+        fill="#AADAFF"
+      />
+
+      {/* Building blocks (subtle) */}
+      <g fill="#EDE7DB">
+        <rect x="105" y="50" width="30" height="22" />
+        <rect x="140" y="50" width="22" height="22" />
+        <rect x="170" y="50" width="30" height="22" />
+        <rect x="105" y="78" width="55" height="18" />
+        <rect x="170" y="78" width="30" height="18" />
+        <rect x="105" y="180" width="40" height="22" />
+        <rect x="150" y="180" width="20" height="22" />
+      </g>
+
+      {/* Minor street grid */}
+      <g stroke="#FFFFFF" strokeWidth="2">
+        <path d="M0 45 H300" />
+        <path d="M0 75 H300" />
+        <path d="M0 105 H300" />
+        <path d="M0 195 H300" />
+        <path d="M60 0 V220" />
+        <path d="M105 0 V220" />
+        <path d="M205 0 V220" />
+        <path d="M255 0 V220" />
+      </g>
+
+      {/* Major arterials */}
+      <path d="M0 110 H300" stroke="#FFFFFF" strokeWidth="9" />
+      <path d="M0 110 H300" stroke="#FCD34D" strokeWidth="5" />
+      <path d="M160 0 V220" stroke="#FFFFFF" strokeWidth="9" />
+      <path d="M160 0 V220" stroke="#FCD34D" strokeWidth="5" />
+
+      {/* Highway diagonal */}
+      <path d="M-10 -10 L 310 230" stroke="#FFFFFF" strokeWidth="11" />
+      <path d="M-10 -10 L 310 230" stroke="#F59E0B" strokeWidth="6" />
+
+      {/* Route — driving path */}
+      <path
+        d={`M${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`}
+        stroke="#FFFFFF"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d={`M${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`}
+        stroke="#1A73E8"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Origin pin (pharmacy) */}
+      <g>
+        <circle cx={p0.x} cy={p0.y} r="7" fill="#FFFFFF" />
+        <circle cx={p0.x} cy={p0.y} r="4.5" fill="#1A73E8" />
+      </g>
+
+      {/* Destination pin (home) */}
+      <g transform={`translate(${p3.x} ${p3.y})`}>
+        <path
+          d="M0 -14 C -7 -14 -11 -8 -11 -3 C -11 5 0 12 0 12 C 0 12 11 5 11 -3 C 11 -8 7 -14 0 -14 Z"
+          fill="#EA4335"
+          stroke="#B31412"
+          strokeWidth="0.7"
+        />
+        <circle cx="0" cy="-4" r="3.5" fill="#FFFFFF" />
+      </g>
+
+      {/* Labels */}
+      <text
+        x="6"
+        y="14"
+        fontSize="8"
+        fontFamily="system-ui, sans-serif"
+        fill="#5F6368"
+        fontWeight="600"
+      >
+        Bulawayo
+      </text>
+      <text
+        x="172"
+        y="158"
+        fontSize="7"
+        fontFamily="system-ui, sans-serif"
+        fill="#1976D2"
+        fontStyle="italic"
+      >
+        Umguza R.
+      </text>
+      {/* idSuffix is reserved for future unique <defs> ids */}
+      <desc>{idSuffix}</desc>
+    </svg>
   );
 }
