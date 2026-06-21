@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
 import { useAuth, type Order } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useSharedOrders } from "@/store/sharedOrders";
 import PaymentModal from "@/components/checkout/PaymentModal";
 import { getProduct } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -254,6 +255,7 @@ function AccountPage() {
   const navigate = useNavigate();
   const sharedPrescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const markSharedPaid = useSharedPrescriptions((s) => s.markPaid);
+  const allSharedOrders = useSharedOrders((s) => s.orders);
   const wishlist = useShop((s) => s.wishlist).map(getProduct).filter(Boolean);
   const [tab, setTab] = useState("dash");
   const [activeReceipt, setActiveReceipt] = useState(null as Receipt | null);
@@ -265,6 +267,10 @@ function AccountPage() {
   }, [user, navigate]);
 
   if (!user) return null;
+
+  const mySharedOrders = allSharedOrders.filter(
+    (o) => o.customerId === user.id || o.customerEmail === user.email
+  );
 
   const mySharedPrescriptions = sharedPrescriptions.filter(
     (p) => p.customerId === user.id || p.customerEmail === user.email
