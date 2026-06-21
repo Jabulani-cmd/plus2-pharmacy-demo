@@ -23,23 +23,23 @@ function BrandMark({ size = 108 }: { size?: number }) {
 function BrandLockup({ compact = false }: { compact?: boolean }) {
   const onDark = !compact;
   return (
-    <div className={`flex items-center gap-4 ${compact ? "" : ""}`}>
-      <BrandMark size={compact ? 84 : 132} />
+    <div className={`flex items-center ${compact ? "gap-3" : "gap-4"}`}>
+      <BrandMark size={compact ? 64 : 132} />
       <div className="flex flex-col leading-none">
         <span
-          className={`font-black tracking-tight ${onDark ? "text-white" : "text-primary"} ${compact ? "text-3xl" : "text-5xl"}`}
+          className={`font-black tracking-tight ${onDark ? "text-white" : "text-primary"} ${compact ? "text-2xl" : "text-5xl"}`}
         >
           Kings
         </span>
         <span
-          className={`mt-2 font-bold tracking-[0.25em] ${onDark ? "text-white/80" : "text-muted-foreground"} ${compact ? "text-[10px]" : "text-xs"}`}
+          className={`mt-1.5 font-bold tracking-[0.25em] ${onDark ? "text-white/80" : "text-muted-foreground"} ${compact ? "text-[9px]" : "text-xs"}`}
         >
           PHARMACY
         </span>
         <span
           className={`mt-1 tracking-[0.2em] ${onDark ? "text-white/60" : "text-muted-foreground/80"} ${compact ? "text-[8px]" : "text-[10px]"}`}
         >
-          YOUR HEALTH · OUR PRIORITY
+          AT YOUR SERVICE
         </span>
       </div>
     </div>
@@ -71,13 +71,13 @@ function AuthPage() {
   }, [user, navigate, redirect]);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-2 lg:py-14">
+    <div className="mx-auto grid max-w-6xl gap-6 px-3 py-5 sm:px-4 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14">
       <div className="lg:col-span-2 flex justify-start">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:bg-muted sm:py-2 sm:text-sm"
         >
-          <Home className="h-4 w-4" /> Home
+          <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Home
         </Link>
       </div>
       <div className="relative hidden flex-col justify-center overflow-hidden rounded-md bg-primary p-10 text-primary-foreground shadow-sm lg:flex">
@@ -97,8 +97,8 @@ function AuthPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-        <div className="mb-6 flex justify-center lg:hidden"><BrandLockup compact /></div>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 md:p-8">
+        <div className="mb-5 flex justify-center lg:hidden"><BrandLockup compact /></div>
         <div className="mb-6 hidden justify-center lg:flex"><BrandMark size={56} /></div>
 
         {mode !== "forgot" && (
