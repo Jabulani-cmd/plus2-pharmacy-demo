@@ -613,6 +613,11 @@ function AccountPage() {
 
           {tab === "orders" && (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
+              {mySharedOrders.length > 0 && (
+                <div className="border-b border-border bg-[#F0F9F4] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#0EA5E9]">
+                  Your recent orders
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead className="bg-surface text-left text-xs uppercase text-muted-foreground">
                   <tr>
@@ -624,11 +629,50 @@ function AccountPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
+                  {mySharedOrders.map((o) => {
+                    const isDelivered = o.status === "Delivered";
+                    return (
+                      <tr key={o.id} className={isDelivered ? "bg-[#F0F9F4]/40" : ""}>
+                        <td className="px-4 py-3 font-bold">{o.id}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{o.placedAt}</td>
+                        <td className="px-4 py-3">
+                          {isDelivered ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Delivered{o.deliveredAt ? " · " + o.deliveredAt : ""}
+                            </span>
+                          ) : (
+                            <span className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+                              {o.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            to="/track"
+                            search={{ order: o.id }}
+                            className="text-sm font-bold text-primary hover:underline"
+                          >
+                            Track &rarr;
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {orders.map((o) => (
                     <tr key={o.id}>
                       <td className="px-4 py-3 font-bold">{o.id}</td>
                       <td className="px-4 py-3 text-muted-foreground">{o.date}</td>
-                      <td className="px-4 py-3"><StatusPill status={o.status} /></td>
+                      <td className="px-4 py-3">
+                        {o.status === "Delivered" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                            <CheckCircle2 className="h-3 w-3" /> Delivered
+                          </span>
+                        ) : (
+                          <StatusPill status={o.status} />
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
