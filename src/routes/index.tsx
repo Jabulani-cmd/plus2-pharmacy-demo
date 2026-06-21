@@ -27,7 +27,7 @@ function Home() {
       {/* Trust strip */}
       <section className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#E5E7EB] bg-[#E5E7EB] md:grid-cols-4">
         {[
-          { Icon: Truck, t: "Free Delivery", s: "On orders over US$50" },
+          { Icon: Truck, t: "Free Delivery", s: "Within 10km on orders over $30" },
           { Icon: Clock, t: "Same-Day Delivery", s: "Available in Bulawayo" },
           { Icon: ShieldCheck, t: "Secure Checkout", s: "EcoCash, ZIG, USD Card" },
           { Icon: HeartPulse, t: "Registered Pharmacists", s: "Trusted health advice" },
