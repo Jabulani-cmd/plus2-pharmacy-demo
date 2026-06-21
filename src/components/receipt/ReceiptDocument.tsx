@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import { CreditCard, Building2, Banknote, Smartphone, Package, UserCheck } from "lucide-react";
 import { formatUSD } from "@/store/shop";
 import { formatReceiptDate, type Receipt } from "@/lib/receipts";
+import kingsLogo from "@/assets/kings-logo.png";
 
 type Props = { receipt: Receipt };
 
@@ -31,7 +32,9 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
       <div style={{ background: "#0EA5E9", padding: "24px 32px", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 4, background: "#fff", color: "#0EA5E9", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16 }}>+</span>
+            <span style={{ display: "inline-flex", width: 36, height: 36, borderRadius: 6, background: "#fff", alignItems: "center", justifyContent: "center", padding: 3 }}>
+              <img src={kingsLogo} alt="Kings Pharmacy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </span>
             <span style={{ fontWeight: 700, fontSize: 18 }}>Kings Pharmacy</span>
           </div>
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Tax Invoice / Receipt</span>
