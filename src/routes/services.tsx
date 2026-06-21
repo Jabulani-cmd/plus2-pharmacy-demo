@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pill, Syringe, HeartPulse, Activity, Baby, PawPrint, ClipboardList, Building2, MapPin } from "lucide-react";
 
@@ -27,7 +27,12 @@ function ServicesPage() {
       <div className="overflow-hidden rounded-md bg-primary p-8 text-primary-foreground md:p-12">
         <h1 className="text-3xl font-extrabold md:text-4xl">Our Pharmacy Services</h1>
         <p className="mt-2 max-w-xl text-sm opacity-95 md:text-base">From dispensing to vaccinations, our qualified pharmacists are here to help you and your family stay healthy.</p>
-        <button className="mt-5 rounded-md bg-white px-6 py-3 text-sm font-bold text-foreground shadow hover:bg-surface">Book a Consultation</button>
+        <Link
+          to="/consultation"
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-white px-6 py-3 text-sm font-bold text-foreground shadow hover:bg-surface"
+        >
+          Book a Consultation
+        </Link>
       </div>
 
       <section className="mt-10">
