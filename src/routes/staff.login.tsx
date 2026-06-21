@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
 import { DEMO_STAFF, ROLE_BADGE_BG } from "@/data/demoAccounts";
 import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound } from "lucide-react";
+import kingsLogo from "@/assets/kings-logo.png";
 
 export const Route = createFileRoute("/staff/login")({
   head: () => ({ meta: [{ title: "Staff Sign-in — Kings Pharmacy" }] }),
@@ -47,7 +48,9 @@ function StaffLogin() {
       <div className="hidden flex-col justify-between rounded-2xl bg-white/10 p-8 text-white shadow-2xl ring-1 ring-white/20 backdrop-blur lg:flex">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-4xl font-black text-primary">+</div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-1.5">
+              <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
+            </div>
             <div>
               <div className="text-3xl font-black tracking-tight">Kings <span className="font-bold text-white/90">Pharmacy</span></div>
               <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/80">Staff Portal · Zimbabwe</div>
@@ -72,6 +75,9 @@ function StaffLogin() {
           <Home className="h-3.5 w-3.5" /> Customer site
         </a>
         <div className="mb-6">
+          <div className="mb-4 flex justify-center">
+            <img src={kingsLogo} alt="Kings Pharmacy" className="h-16 w-16 object-contain" />
+          </div>
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
             <Lock className="h-3 w-3" /> Staff Access Only
           </div>

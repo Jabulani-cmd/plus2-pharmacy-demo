@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Facebook, Instagram, Twitter, Youtube, Linkedin, Lock, ChevronDown } from "lucide-react";
+import kingsLogo from "@/assets/kings-logo.png";
 
 const COLS = [
   {
@@ -24,10 +25,8 @@ export function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white/15">
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor" aria-hidden>
-                  <path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z" />
-                </svg>
+              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-white p-1">
+                <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
               </div>
               <div className="text-[17px] font-bold tracking-tight">Kings Pharmacy</div>
             </div>

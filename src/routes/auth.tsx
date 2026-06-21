@@ -5,30 +5,17 @@ import { useAuth } from "@/store/auth";
 import { Logo } from "@/components/layout/Logo";
 import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home } from "lucide-react";
 import { DEMO_CUSTOMERS } from "@/data/demoAccounts";
+import kingsLogo from "@/assets/kings-logo.png";
 
 type Mode = "login" | "register" | "forgot";
 
 function BrandMark({ size = 72 }: { size?: number }) {
   return (
     <div
-      className="relative flex items-center justify-center rounded-3xl bg-white text-primary shadow-2xl ring-1 ring-black/5"
+      className="relative flex items-center justify-center rounded-3xl bg-white p-2 shadow-2xl ring-1 ring-black/5"
       style={{ width: size, height: size }}
     >
-      <span
-        className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white to-emerald-50"
-        aria-hidden
-      />
-      <span
-        className="relative font-black leading-none"
-        style={{ fontSize: size * 0.62 }}
-      >
-        +
-      </span>
-      <span
-        className="absolute -right-1 -top-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow"
-      >
-        Rx
-      </span>
+      <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
     </div>
   );
 }
