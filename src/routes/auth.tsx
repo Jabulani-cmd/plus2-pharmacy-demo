@@ -9,7 +9,7 @@ import kingsLogo from "@/assets/kings-logo.png";
 
 type Mode = "login" | "register" | "forgot";
 
-function BrandMark({ size = 72 }: { size?: number }) {
+function BrandMark({ size = 108 }: { size?: number }) {
   return (
     <div
       className="relative flex items-center justify-center rounded-3xl bg-white p-2 shadow-2xl ring-1 ring-black/5"
@@ -24,7 +24,7 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
   const onDark = !compact;
   return (
     <div className={`flex items-center gap-4 ${compact ? "" : ""}`}>
-      <BrandMark size={compact ? 56 : 88} />
+      <BrandMark size={compact ? 84 : 132} />
       <div className="flex flex-col leading-none">
         <span
           className={`font-black tracking-tight ${onDark ? "text-white" : "text-primary"} ${compact ? "text-3xl" : "text-5xl"}`}

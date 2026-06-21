@@ -48,7 +48,7 @@ function StaffLogin() {
       <div className="hidden flex-col justify-between rounded-2xl bg-white/10 p-8 text-white shadow-2xl ring-1 ring-white/20 backdrop-blur lg:flex">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-1.5">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-1.5">
               <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
             </div>
             <div>
@@ -76,7 +76,7 @@ function StaffLogin() {
         </a>
         <div className="mb-6">
           <div className="mb-4 flex justify-center">
-            <img src={kingsLogo} alt="Kings Pharmacy" className="h-16 w-16 object-contain" />
+            <img src={kingsLogo} alt="Kings Pharmacy" className="h-24 w-24 object-contain" />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
             <Lock className="h-3 w-3" /> Staff Access Only

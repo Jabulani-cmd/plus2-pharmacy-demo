@@ -25,7 +25,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-white p-1">
+              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-white p-1">
                 <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
               </div>
               <div className="text-[17px] font-bold tracking-tight">Kings Pharmacy</div>
