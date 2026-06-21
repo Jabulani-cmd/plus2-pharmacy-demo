@@ -8,8 +8,6 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
-import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
-import { useSharedOrders } from "@/store/sharedOrders";
 import { ROLE_BADGE_BG } from "@/data/demoAccounts";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import kingsLogo from "@/assets/kings-logo.png";
@@ -24,12 +22,10 @@ import {
   ShieldCheck,
   LogOut,
   Home,
-  Bell,
   Building2,
   BarChart3,
   ClipboardList,
   Tag,
-  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/staff")({
