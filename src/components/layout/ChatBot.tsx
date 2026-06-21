@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Send, X, Sparkles } from "lucide-react";
-import { BRANCHES } from "@/data/branches";
+import { Bot, Send, X, Sparkles, MessageCircle, MapPin } from "lucide-react";
+import { BRANCHES, getBranch } from "@/data/branches";
+import { useBranch } from "@/store/branch";
 import { Link } from "@tanstack/react-router";
 
-type Msg = { id: string; from: "bot" | "user"; text: string; link?: { to: string; label: string } };
+type Msg = {
+  id: string;
+  from: "bot" | "user";
+  text: string;
+  link?: { to: string; label: string };
+  branchPicker?: boolean;
+  whatsapp?: { number: string; name: string };
+};
 
 const INTRO: Msg = {
   id: "intro",
@@ -14,6 +22,7 @@ const INTRO: Msg = {
 
 const SUGGESTIONS = [
   "Where are your branches?",
+  "Choose a branch",
   "How does delivery work?",
   "Upload a prescription",
   "Book a consultation",
@@ -23,13 +32,21 @@ const SUGGESTIONS = [
 function answer(q: string): Msg {
   const text = q.toLowerCase();
   const id = crypto.randomUUID();
+  if (/choose.*branch|switch.*branch|change.*branch|select.*branch|set.*branch|my branch/.test(text)) {
+    return {
+      id,
+      from: "bot",
+      text: "Sure — which branch would you like to use? I'll remember it for this visit.",
+      branchPicker: true,
+    };
+  }
   if (/branch|location|where|address|shop|store/.test(text)) {
     return {
       id,
       from: "bot",
       text:
-        "We have 4 branches in Bulawayo:\n" +
-        BRANCHES.map((b) => `• ${b.shortName} — ${b.address}`).join("\n"),
+        "We have 4 branches in Bulawayo. Tap one to make it your branch or to chat on WhatsApp.",
+      branchPicker: true,
     };
   }
   if (/deliver|courier|ship/.test(text)) {
