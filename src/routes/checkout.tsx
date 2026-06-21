@@ -7,6 +7,9 @@ import { Check, Truck, MapPin, CreditCard } from "lucide-react";
 import { OrderConfirmation } from "@/components/checkout/OrderConfirmation";
 import { buildReceipt, type Receipt } from "@/lib/receipts";
 import PaymentModal from "@/components/checkout/PaymentModal";
+import { useSharedOrders } from "@/store/sharedOrders";
+import { useAuth } from "@/store/auth";
+import { useBranch } from "@/store/branch";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Kings Pharmacy" }] }),
@@ -19,6 +22,9 @@ function Checkout() {
   const cart = useShop((s) => s.cart);
   const clearCart = useShop((s) => s.clearCart);
   const navigate = useNavigate();
+  const addSharedOrder = useSharedOrders((s) => s.addOrder);
+  const user = useAuth((s) => s.user);
+  const branchId = useBranch((s) => s.selectedBranchId);
 
   const items = cart
     .map((c) => ({ ...c, product: getProduct(c.id)! }))
@@ -49,7 +55,7 @@ function Checkout() {
   });
 
   const orderNumber =
-    "P2-" + Math.floor(100000 + Math.random() * 900000);
+    "KP-" + Math.floor(100000 + Math.random() * 900000);
 
   const [showPayment, setShowPayment] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -131,6 +137,43 @@ function Checkout() {
     const r = makeReceipt(ref, method);
     setReceipt(r);
     setShowPayment(false);
+
+    // Persist into shared dispatch store so staff can see it.
+    const customerName =
+      ((delivery_.firstName || user?.firstName || "Demo") +
+        " " +
+        (delivery_.lastName || user?.lastName || "Customer")).trim();
+    const address =
+      delivery_.method === "collect"
+        ? "Pick up at branch"
+        : [
+            delivery_.street,
+            delivery_.suburb,
+            delivery_.city,
+          ]
+            .filter(Boolean)
+            .join(", ");
+    addSharedOrder({
+      id: orderNumber,
+      customerId: user?.id,
+      customerEmail: user?.email ?? delivery_.email,
+      customer: customerName,
+      phone: delivery_.phone || user?.phone || "",
+      branchId,
+      items: items.map((i) => ({
+        id: i.product.id,
+        name: i.product.name,
+        qty: i.qty,
+        price: i.product.price,
+      })),
+      itemCount: items.reduce((a, i) => a + i.qty, 0),
+      address,
+      deliveryMethod: delivery_.method,
+      paymentMethod: labelFor(method),
+      paymentRef: ref,
+      total,
+    });
+
     clearCart();
     setStep(3);
     toast.success("Payment confirmed — order placed");
