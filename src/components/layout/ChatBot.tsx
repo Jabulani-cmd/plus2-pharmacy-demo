@@ -109,6 +109,8 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Msg[]>([INTRO]);
   const [input, setInput] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const selectedBranchId = useBranch((s) => s.selectedBranchId);
+  const setBranch = useBranch((s) => s.setBranch);
 
   useEffect(() => {
     if (scrollerRef.current) {
@@ -123,6 +125,30 @@ export function ChatBot() {
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setTimeout(() => setMessages((m) => [...m, answer(q)]), 350);
+  };
+
+  const pickBranch = (branchId: string) => {
+    const b = getBranch(branchId);
+    setBranch(branchId);
+    setMessages((m) => [
+      ...m,
+      { id: crypto.randomUUID(), from: "user", text: `Use ${b.shortName}` },
+      {
+        id: crypto.randomUUID(),
+        from: "bot",
+        text: `Great — ${b.shortName} is now your branch.\n${b.address}\nHours: ${b.hours}\n\nYou can also chat with this branch directly on WhatsApp.`,
+        whatsapp: { number: b.whatsapp, name: b.shortName },
+      },
+    ]);
+  };
+
+  const openWhatsApp = (number: string, name: string) => {
+    const url =
+      "https://wa.me/" +
+      number +
+      "?text=" +
+      encodeURIComponent("Hi Kings Pharmacy, I'd like to ask about (" + name + ")");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
