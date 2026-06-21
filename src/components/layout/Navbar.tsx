@@ -22,6 +22,7 @@ export function Navbar() {
   const cartCount = cart.reduce((a, c) => a + c.qty, 0);
   const [q, setQ] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -52,11 +53,11 @@ export function Navbar() {
 
       {/* Main header */}
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-        <Sheet>
-          <SheetTrigger className="md:hidden" aria-label="Open menu">
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger className="md:hidden -ml-1 rounded-md p-2 hover:bg-[#F0F9F4] active:bg-[#E5F4EC]" aria-label="Open menu">
             <Menu className="h-6 w-6" />
           </SheetTrigger>
-          <SheetContent side="left" className="w-72">
+          <SheetContent side="left" className="w-[85vw] max-w-sm overflow-y-auto p-4">
             <div className="mt-6 flex flex-col gap-1">
               <div className="mb-3">
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your branch</div>
@@ -65,16 +66,16 @@ export function Navbar() {
               {CATEGORIES.map((c) => {
                 const Icon = c.icon;
                 return (
-                  <Link key={c.slug} to="/category/$slug" params={{ slug: c.slug }} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] hover:text-primary">
+                  <Link key={c.slug} to="/category/$slug" params={{ slug: c.slug }} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] hover:text-primary active:bg-[#E5F4EC]">
                     <Icon className="h-4 w-4" /> {c.name}
                   </Link>
                 );
               })}
               <div className="my-2 border-t border-[#E5E7EB]" />
-              <Link to="/prescriptions" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4]"><FileText className="h-4 w-4" /> Upload Prescription</Link>
-              <Link to="/track" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4]"><Truck className="h-4 w-4" /> Track Order</Link>
-              <Link to="/services" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4]"><HelpCircle className="h-4 w-4" /> Pharmacy Services</Link>
-              <Link to={user ? "/account" : "/auth"} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4]"><User className="h-4 w-4" /> {user ? "My Account" : "Sign In / Register"}</Link>
+              <Link to="/prescriptions" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] active:bg-[#E5F4EC]"><FileText className="h-4 w-4" /> Upload Prescription</Link>
+              <Link to="/track" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] active:bg-[#E5F4EC]"><Truck className="h-4 w-4" /> Track Order</Link>
+              <Link to="/services" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] active:bg-[#E5F4EC]"><HelpCircle className="h-4 w-4" /> Pharmacy Services</Link>
+              <Link to={user ? "/account" : "/auth"} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-[#374151] hover:bg-[#F0F9F4] active:bg-[#E5F4EC]"><User className="h-4 w-4" /> {user ? "My Account" : "Sign In / Register"}</Link>
             </div>
           </SheetContent>
         </Sheet>
