@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth, type Order } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
 import { formatUSD } from "@/store/shop";
 import {
   Search, MapPin, Phone, Truck, CheckCircle2,
@@ -40,10 +41,14 @@ function TrackPage() {
   const sharedPrescriptions = useSharedPrescriptions(
     (s) => s.prescriptions
   );
+  const sharedOrders = useSharedOrders((s) => s.orders);
 
   const [q, setQ] = useState(initial || "");
 
-  // Search OTC orders
+  // Match a live (checkout-placed) order first, then fall back to the demo orders list.
+  const sharedOtcMatch = sharedOrders.find(
+    (o) => o.id.toLowerCase() === q.trim().toLowerCase()
+  );
   const otcMatch = orders.find(
     (o) => o.id.toLowerCase() === q.trim().toLowerCase()
   );
@@ -53,7 +58,7 @@ function TrackPage() {
     (p) => p.id.toLowerCase() === q.trim().toLowerCase()
   );
 
-  const hasMatch = otcMatch || rxMatch;
+  const hasMatch = sharedOtcMatch || otcMatch || rxMatch;
 
   // Customer's own prescription orders for quick links
   const myRxOrders = user
@@ -118,7 +123,8 @@ function TrackPage() {
       )}
 
       {/* OTC order result */}
-      {otcMatch && <OrderTracker order={otcMatch} />}
+      {sharedOtcMatch && <SharedOrderTracker order={sharedOtcMatch} />}
+      {!sharedOtcMatch && otcMatch && <OrderTracker order={otcMatch} />}
 
       {/* Prescription order result */}
       {rxMatch && <RxTracker rx={rxMatch} />}
@@ -126,6 +132,32 @@ function TrackPage() {
       {/* Empty state — show recent orders */}
       {!q && (
         <div className="mt-8 space-y-6">
+          {/* Live orders placed via checkout */}
+          {sharedOrders.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                Your Recent Orders
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sharedOrders.slice(0, 6).map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => setQ(o.id)}
+                    className="rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary hover:shadow-md"
+                  >
+                    <div className="text-xs font-bold uppercase text-muted-foreground">
+                      {o.placedAt}
+                    </div>
+                    <div className="mt-1 text-lg font-extrabold">{o.id}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {o.itemCount} item{o.itemCount !== 1 ? "s" : ""} · ${o.total.toFixed(2)}
+                    </div>
+                    <SharedStatusPill status={o.status} className="mt-2" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* OTC orders */}
           {orders.length > 0 && (
             <div>
