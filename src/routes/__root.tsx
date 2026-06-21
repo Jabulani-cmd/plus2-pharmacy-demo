@@ -101,12 +101,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "A responsive pharmacy e-commerce app for browsing, ordering medicines, and managing prescriptions." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
+      { name: "theme-color", content: "#0EA5E9" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Kings Rx" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
