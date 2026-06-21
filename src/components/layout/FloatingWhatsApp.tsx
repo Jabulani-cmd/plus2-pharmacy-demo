@@ -6,6 +6,13 @@ import { useBranch } from "@/store/branch";
 const GREETING =
   "Hi Kings Pharmacy, I'd like to ask about ";
 
+// Pre-filled menu sent when the customer chooses "Choose a branch in WhatsApp".
+// They reply with the number inside WhatsApp and our team routes them.
+const BRANCH_MENU = (branches: { shortName: string; address: string }[]) =>
+  "Hi Kings Pharmacy 👋\n\nI'd like to chat with a branch. Please connect me with:\n\n" +
+  branches.map((b, i) => `${i + 1}. ${b.shortName} — ${b.address}`).join("\n") +
+  "\n\nReply with the number of your preferred branch.";
+
 export function FloatingWhatsApp() {
   const selectedBranchId = useBranch((s) => s.selectedBranchId);
   const [open, setOpen] = useState(false);
@@ -16,6 +23,19 @@ export function FloatingWhatsApp() {
       whatsapp +
       "?text=" +
       encodeURIComponent(GREETING + "(" + name + ")");
+    window.open(url, "_blank", "noopener,noreferrer");
+    setOpen(false);
+  };
+
+  // Opens WhatsApp with a numbered branch menu so the customer can pick the
+  // branch from inside WhatsApp itself. Routed via the main (9th Ave) number.
+  const openBranchMenu = () => {
+    const main = BRANCHES[0].whatsapp;
+    const url =
+      "https://wa.me/" +
+      main +
+      "?text=" +
+      encodeURIComponent(BRANCH_MENU(BRANCHES));
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
   };
@@ -65,8 +85,15 @@ export function FloatingWhatsApp() {
               </button>
             </div>
             <p className="px-1 pb-2 text-[11px] text-[#6B7280]">
-              Choose a branch to start chatting
+              Pick a branch below, or let the customer choose inside WhatsApp.
             </p>
+            <button
+              onClick={openBranchMenu}
+              className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#25D366] bg-white py-2 text-xs font-bold text-[#128C7E] hover:bg-[#F0FDF4]"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              Choose a branch in WhatsApp
+            </button>
             <ul className="max-h-[60vh] overflow-y-auto">
               {BRANCHES.map((b) => {
                 const active = b.id === selectedBranchId;
