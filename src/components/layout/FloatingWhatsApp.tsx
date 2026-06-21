@@ -13,16 +13,29 @@ const BRANCH_MENU = (branches: { shortName: string; address: string }[]) =>
   branches.map((b, i) => `${i + 1}. ${b.shortName} — ${b.address}`).join("\n") +
   "\n\nReply with the number of your preferred branch.";
 
+/**
+ * Build a WhatsApp deep link that avoids the `wa.me` → `api.whatsapp.com`
+ * redirect (which some corporate / ISP networks block with
+ * ERR_BLOCKED_BY_RESPONSE). Uses the native app scheme on mobile and
+ * `web.whatsapp.com` on desktop.
+ */
+function buildWhatsAppUrl(phone: string, text: string): string {
+  const encoded = encodeURIComponent(text);
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (isMobile) {
+    return `whatsapp://send?phone=${phone}&text=${encoded}`;
+  }
+  return `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+}
+
 export function FloatingWhatsApp() {
   const selectedBranchId = useBranch((s) => s.selectedBranchId);
   const [open, setOpen] = useState(false);
 
   const openChat = (whatsapp: string, name: string) => {
-    const url =
-      "https://wa.me/" +
-      whatsapp +
-      "?text=" +
-      encodeURIComponent(GREETING + "(" + name + ")");
+    const url = buildWhatsAppUrl(whatsapp, GREETING + "(" + name + ")");
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
   };
@@ -31,11 +44,7 @@ export function FloatingWhatsApp() {
   // branch from inside WhatsApp itself. Routed via the main (9th Ave) number.
   const openBranchMenu = () => {
     const main = BRANCHES[0].whatsapp;
-    const url =
-      "https://wa.me/" +
-      main +
-      "?text=" +
-      encodeURIComponent(BRANCH_MENU(BRANCHES));
+    const url = buildWhatsAppUrl(main, BRANCH_MENU(BRANCHES));
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
   };
