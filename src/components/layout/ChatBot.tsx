@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Send, X, Sparkles } from "lucide-react";
-import { BRANCHES } from "@/data/branches";
+import { Bot, Send, X, Sparkles, MessageCircle, MapPin } from "lucide-react";
+import { BRANCHES, getBranch } from "@/data/branches";
+import { useBranch } from "@/store/branch";
 import { Link } from "@tanstack/react-router";
 
-type Msg = { id: string; from: "bot" | "user"; text: string; link?: { to: string; label: string } };
+type Msg = {
+  id: string;
+  from: "bot" | "user";
+  text: string;
+  link?: { to: string; label: string };
+  branchPicker?: boolean;
+  whatsapp?: { number: string; name: string };
+};
 
 const INTRO: Msg = {
   id: "intro",
@@ -14,6 +22,7 @@ const INTRO: Msg = {
 
 const SUGGESTIONS = [
   "Where are your branches?",
+  "Choose a branch",
   "How does delivery work?",
   "Upload a prescription",
   "Book a consultation",
@@ -23,13 +32,21 @@ const SUGGESTIONS = [
 function answer(q: string): Msg {
   const text = q.toLowerCase();
   const id = crypto.randomUUID();
+  if (/choose.*branch|switch.*branch|change.*branch|select.*branch|set.*branch|my branch/.test(text)) {
+    return {
+      id,
+      from: "bot",
+      text: "Sure — which branch would you like to use? I'll remember it for this visit.",
+      branchPicker: true,
+    };
+  }
   if (/branch|location|where|address|shop|store/.test(text)) {
     return {
       id,
       from: "bot",
       text:
-        "We have 4 branches in Bulawayo:\n" +
-        BRANCHES.map((b) => `• ${b.shortName} — ${b.address}`).join("\n"),
+        "We have 4 branches in Bulawayo. Tap one to make it your branch or to chat on WhatsApp.",
+      branchPicker: true,
     };
   }
   if (/deliver|courier|ship/.test(text)) {
@@ -92,6 +109,8 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Msg[]>([INTRO]);
   const [input, setInput] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const selectedBranchId = useBranch((s) => s.selectedBranchId);
+  const setBranch = useBranch((s) => s.setBranch);
 
   useEffect(() => {
     if (scrollerRef.current) {
@@ -106,6 +125,30 @@ export function ChatBot() {
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setTimeout(() => setMessages((m) => [...m, answer(q)]), 350);
+  };
+
+  const pickBranch = (branchId: string) => {
+    const b = getBranch(branchId);
+    setBranch(branchId);
+    setMessages((m) => [
+      ...m,
+      { id: crypto.randomUUID(), from: "user", text: `Use ${b.shortName}` },
+      {
+        id: crypto.randomUUID(),
+        from: "bot",
+        text: `Great — ${b.shortName} is now your branch.\n${b.address}\nHours: ${b.hours}\n\nYou can also chat with this branch directly on WhatsApp.`,
+        whatsapp: { number: b.whatsapp, name: b.shortName },
+      },
+    ]);
+  };
+
+  const openWhatsApp = (number: string, name: string) => {
+    const url =
+      "https://wa.me/" +
+      number +
+      "?text=" +
+      encodeURIComponent("Hi Kings Pharmacy, I'd like to ask about (" + name + ")");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -170,6 +213,52 @@ export function ChatBot() {
                         >
                           {m.link.label}
                         </Link>
+                      </div>
+                    )}
+                    {m.branchPicker && (
+                      <ul className="mt-2 space-y-1">
+                        {BRANCHES.map((b) => {
+                          const active = b.id === selectedBranchId;
+                          return (
+                            <li key={b.id}>
+                              <button
+                                onClick={() => pickBranch(b.id)}
+                                className={
+                                  "flex w-full items-start gap-2 rounded-lg border px-2 py-1.5 text-left transition " +
+                                  (active
+                                    ? "border-primary bg-primary/5"
+                                    : "border-[#E5E7EB] bg-white hover:border-primary")
+                                }
+                              >
+                                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-xs font-bold text-[#111827]">
+                                    {b.shortName}
+                                    {active && (
+                                      <span className="ml-1 text-[10px] font-semibold text-primary">
+                                        · your branch
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="block truncate text-[11px] text-[#6B7280]">
+                                    {b.address}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {m.whatsapp && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => openWhatsApp(m.whatsapp!.number, m.whatsapp!.name)}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#1DA851]"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Chat with {m.whatsapp.name} on WhatsApp
+                        </button>
                       </div>
                     )}
                   </div>
