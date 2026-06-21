@@ -143,11 +143,14 @@ export function ChatBot() {
   };
 
   const openWhatsApp = (number: string, name: string) => {
-    const url =
-      "https://wa.me/" +
-      number +
-      "?text=" +
-      encodeURIComponent("Hi Kings Pharmacy, I'd like to ask about (" + name + ")");
+    const text = "Hi Kings Pharmacy, I'd like to ask about (" + name + ")";
+    const encoded = encodeURIComponent(text);
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const url = isMobile
+      ? `whatsapp://send?phone=${number}&text=${encoded}`
+      : `https://web.whatsapp.com/send?phone=${number}&text=${encoded}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
