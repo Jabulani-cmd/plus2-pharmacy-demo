@@ -18,6 +18,7 @@ import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DemoBadge } from "@/components/layout/DemoBadge";
 import { FloatingWhatsApp } from "@/components/layout/FloatingWhatsApp";
+import { ChatBot } from "@/components/layout/ChatBot";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -150,6 +151,7 @@ function RootComponent() {
         {!isStaff && <MobileBottomNav />}
         {!isStaff && <DemoBadge />}
         {!isStaff && <FloatingWhatsApp />}
+        {!isStaff && <ChatBot />}
         <Toaster position="top-center" richColors />
       </div>
     </QueryClientProvider>
