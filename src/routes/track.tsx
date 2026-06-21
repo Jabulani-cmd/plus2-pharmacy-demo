@@ -1035,3 +1035,216 @@ function GoogleStyleMap({
     </svg>
   );
 }
+
+// ── Shared OTC order tracker (from live checkout) ──
+function SharedStatusPill({
+  status,
+  className = "",
+}: {
+  status: SharedOrder["status"];
+  className?: string;
+}) {
+  const map: Record<SharedOrder["status"], string> = {
+    "Ready to dispatch": "bg-amber-50 text-amber-700",
+    Packed: "bg-blue-50 text-blue-700",
+    Assigned: "bg-blue-50 text-blue-700",
+    "Out for delivery": "bg-violet-50 text-violet-700",
+    Delivered: "bg-primary/10 text-primary",
+  };
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold " +
+        map[status] +
+        " " +
+        className
+      }
+    >
+      {status === "Delivered" && <CheckCircle2 className="h-3 w-3" />}
+      {status}
+    </span>
+  );
+}
+
+const SHARED_STAGES: { key: SharedOrder["status"]; label: string }[] = [
+  { key: "Ready to dispatch", label: "Confirmed" },
+  { key: "Packed", label: "Packed" },
+  { key: "Out for delivery", label: "Out for Delivery" },
+  { key: "Delivered", label: "Delivered" },
+];
+
+function SharedOrderTracker({ order }: { order: SharedOrder }) {
+  const stageIdx = Math.max(
+    0,
+    SHARED_STAGES.findIndex(
+      (s) =>
+        s.key === order.status ||
+        (order.status === "Assigned" && s.key === "Packed")
+    )
+  );
+  const isDelivered = order.status === "Delivered";
+
+  return (
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="space-y-4">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="text-xs font-bold uppercase text-muted-foreground">
+                Order
+              </div>
+              <div className="text-xl font-extrabold">{order.id}</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Placed {order.placedAt}
+              </div>
+            </div>
+            <div className="text-right">
+              <SharedStatusPill status={order.status} />
+              <div className="mt-1 text-lg font-extrabold text-primary">
+                ${order.total.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 overflow-x-auto pb-1">
+            <ol className="flex min-w-[420px] items-start">
+              {SHARED_STAGES.map((stage, i) => {
+                const done = i <= stageIdx;
+                const active = i === stageIdx && !isDelivered;
+                return (
+                  <li
+                    key={stage.key}
+                    className="flex flex-1 flex-col items-center"
+                  >
+                    <div className="flex w-full items-center">
+                      {i > 0 && (
+                        <div
+                          className="h-0.5 flex-1"
+                          style={{
+                            background: done ? "#0EA5E9" : "#E5E7EB",
+                          }}
+                        />
+                      )}
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                        style={{
+                          background: done ? "#0EA5E9" : "#E5E7EB",
+                          color: done ? "white" : "#9CA3AF",
+                          boxShadow: active ? "0 0 0 3px #BBF7D0" : "none",
+                        }}
+                      >
+                        {done && !active ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          i + 1
+                        )}
+                      </div>
+                      {i < SHARED_STAGES.length - 1 && (
+                        <div
+                          className="h-0.5 flex-1"
+                          style={{
+                            background: i < stageIdx ? "#0EA5E9" : "#E5E7EB",
+                          }}
+                        />
+                      )}
+                    </div>
+                    <span
+                      className="mt-1.5 text-center text-[10px] font-semibold"
+                      style={{
+                        color: active
+                          ? "#0EA5E9"
+                          : done
+                          ? "#374151"
+                          : "#9CA3AF",
+                      }}
+                    >
+                      {stage.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          {order.deliveredAt && (
+            <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+              Delivered: {order.deliveredAt}
+            </div>
+          )}
+          {order.dispatchedAt && !isDelivered && (
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Truck className="h-3.5 w-3.5" />
+              Dispatched: {order.dispatchedAt}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="font-extrabold">Items</h3>
+          <ul className="mt-3 divide-y divide-border">
+            {order.items.map((it) => (
+              <li key={it.id} className="flex items-center gap-3 py-3 text-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface text-xs font-bold text-muted-foreground">
+                  ×{it.qty}
+                </div>
+                <div className="flex-1 font-semibold">{it.name}</div>
+                <div className="font-bold">
+                  ${(it.price * it.qty).toFixed(2)}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm font-extrabold">
+            <span>Total paid</span>
+            <span className="text-primary">${order.total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <aside className="space-y-4">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="flex items-center gap-2 font-extrabold">
+            <MapPin className="h-4 w-4 text-primary" /> Delivering to
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">{order.address}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{order.phone}</p>
+        </div>
+        {order.driverName && (
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="flex items-center gap-2 font-extrabold">
+              <Truck className="h-4 w-4 text-primary" /> Your driver
+            </h3>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-extrabold">
+                {order.driverName.charAt(0)}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-bold">{order.driverName}</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Car className="h-3 w-3" />
+                  {order.driverVehicle}
+                </div>
+              </div>
+              {order.driverPhone && (
+                <a
+                  href={"tel:" + order.driverPhone}
+                  className="rounded-md bg-primary p-2 text-primary-foreground hover:bg-primary-dark"
+                  aria-label="Call driver"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+        <Link
+          to="/account"
+          className="block rounded-xl border border-border bg-card p-4 text-center text-sm font-bold text-primary hover:bg-muted"
+        >
+          View all orders &rarr;
+        </Link>
+      </aside>
+    </div>
+  );
+}
