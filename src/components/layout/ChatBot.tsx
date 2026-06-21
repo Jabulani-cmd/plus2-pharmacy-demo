@@ -215,6 +215,52 @@ export function ChatBot() {
                         </Link>
                       </div>
                     )}
+                    {m.branchPicker && (
+                      <ul className="mt-2 space-y-1">
+                        {BRANCHES.map((b) => {
+                          const active = b.id === selectedBranchId;
+                          return (
+                            <li key={b.id}>
+                              <button
+                                onClick={() => pickBranch(b.id)}
+                                className={
+                                  "flex w-full items-start gap-2 rounded-lg border px-2 py-1.5 text-left transition " +
+                                  (active
+                                    ? "border-primary bg-primary/5"
+                                    : "border-[#E5E7EB] bg-white hover:border-primary")
+                                }
+                              >
+                                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-xs font-bold text-[#111827]">
+                                    {b.shortName}
+                                    {active && (
+                                      <span className="ml-1 text-[10px] font-semibold text-primary">
+                                        · your branch
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="block truncate text-[11px] text-[#6B7280]">
+                                    {b.address}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {m.whatsapp && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => openWhatsApp(m.whatsapp!.number, m.whatsapp!.name)}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#1DA851]"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Chat with {m.whatsapp.name} on WhatsApp
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
