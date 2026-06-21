@@ -7,6 +7,7 @@ import {
   type StaffDriver,
 } from "@/data/staffDemo";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useSharedOrders } from "@/store/sharedOrders";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
@@ -25,8 +26,41 @@ const COLUMNS: {
 ];
 
 export function DispatcherDashboard({ view }: { view?: string }) {
-  const [deliveries, setDeliveries] =
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const markPackedShared = useSharedOrders((s) => s.markPacked);
+  const assignDriverSharedOrder = useSharedOrders((s) => s.assignDriver);
+  const updateOrderStatus = useSharedOrders((s) => s.updateStatus);
+
+  // Merge demo deliveries with live orders from checkout.
+  const liveDeliveries: StaffDelivery[] = useMemo(
+    () =>
+      sharedOrders.map((o) => {
+        const status: StaffDelivery["status"] =
+          o.status === "Packed"
+            ? "Ready to dispatch"
+            : (o.status as StaffDelivery["status"]);
+        return {
+          id: o.id,
+          customer: o.customer,
+          address: o.address,
+          items: o.itemCount,
+          total: o.total,
+          status,
+          paymentMethod: o.paymentMethod,
+          placedAt: o.placedAt,
+          driverId: o.driverName ? "live-" + o.id : undefined,
+          eta: o.eta,
+        };
+      }),
+    [sharedOrders]
+  );
+
+  const [demoDeliveries, setDemoDeliveries] =
     useState<StaffDelivery[]>(STAFF_DELIVERIES);
+  const deliveries = [...liveDeliveries, ...demoDeliveries];
+  const setDeliveries = setDemoDeliveries;
+  const isLiveOrder = (id: string) => sharedOrders.some((o) => o.id === id);
+
   const [drivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
@@ -76,6 +110,17 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     drivers.find((d) => d.id === id);
 
   const assign = (deliveryId: string, driverId: string) => {
+    if (isLiveOrder(deliveryId)) {
+      const drv = driverById(driverId);
+      if (drv) {
+        assignDriverSharedOrder(deliveryId, drv.name, drv.phone, drv.vehicle);
+        setAssignFor(null);
+        toast.success(
+          "Order " + deliveryId + " assigned to " + drv.name.split(" ")[0]
+        );
+        return;
+      }
+    }
     setDeliveries((prev) =>
       prev.map((d) =>
         d.id === deliveryId
@@ -116,6 +161,17 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     deliveryId: string,
     next: StaffDelivery["status"]
   ) => {
+    if (isLiveOrder(deliveryId)) {
+      if (next === "Out for delivery") {
+        updateOrderStatus(deliveryId, "Out for delivery");
+      } else if (next === "Delivered") {
+        updateOrderStatus(deliveryId, "Delivered");
+      } else if (next === "Assigned") {
+        markPackedShared(deliveryId);
+      }
+      toast.success("Order " + deliveryId + " → " + next);
+      return;
+    }
     setDeliveries((prev) =>
       prev.map((d) =>
         d.id === deliveryId ? { ...d, status: next } : d

@@ -1,60 +1,92 @@
-# Plus2 Pharmacy — Full Demo Mode Build Plan
 
-This is a very large scope. Before I start coding, I want to align on approach so we don't burn hours on the wrong direction.
+# Kings Pharmacy — Site-Wide Fix Pass
 
-## What you're asking for (scope summary)
+Note on WhatsApp numbers: only the 9th Ave number (+263 77 571 5520) was supplied. I'll use it as a placeholder for the other 3 branches and add a TODO comment in `src/data/branches.ts` so they're trivial to swap in. All branding (blue/white) and existing layout preserved.
 
-1. **Demo accounts** — 5 customers + 6 staff with full profiles, addresses, health profiles, medical aid, order history, prescriptions, wishlists.
-2. **Seeded data** — 15 orders, 6 prescriptions, 4 drivers, 20 inventory items with stock levels, sales charts (hourly + 7-day + category), 12 expenses.
-3. **Payment workflows** — Simulated card (incl. 4242/4000 demo cards), PayFast modal, EFT with copy-to-clipboard, Cash on Delivery, full Rx payment flow, animated order confirmation.
-4. **Staff portal (NEW — doesn't exist yet)** — `/staff/login` plus 6 role-specific dashboards (Super Admin, Pharmacist, Store Manager, Dispatcher, Cashier, Inventory Clerk), each with KPIs, charts, queues, kanban boards, modals, POs, expense approvals.
-5. **Demo login panels** on both customer and staff login.
-6. **Demo Scenarios floating help button** with 5 walkthrough scripts.
+## 1. Branch data (src/data/branches.ts)
 
-## Reality check
+Replace the 4 demo branches with the new list. Add `whatsapp` field to the `Branch` type:
 
-The existing app has a customer storefront (cart, checkout, prescriptions, track, account) but **no staff portal at all**. Building 6 role-based dashboards with kanban boards, prescription review modals, PO creation, POS, expense approvals, and inter-account real-time state sync is roughly equivalent to building a second full app on top of the existing one.
+- 9th Ave Branch — CBD · +263 77 571 5520
+- 6th Ave Branch — CBD · placeholder
+- Shop 4, Old Mutual Centre, Jason Moyo Ave · placeholder
+- Ascot Shopping Centre · placeholder
 
-A realistic honest estimate: this is **15–25+ hours of focused work** across ~40 new files. Doing it in one shot in a single response will almost certainly produce something that compiles but has broken flows, mismatched data, and missed checklist items — the opposite of what you need for an investor demo.
+Update any place that hard-codes branch names (checkout's "Hillside" pickup label, footer addresses, branches section on homepage if present).
 
-## Recommended approach — phased delivery
+## 2. Floating WhatsApp button (new `src/components/layout/FloatingWhatsApp.tsx`)
 
-I'd like to split this into ~5 phases, each shippable and testable on its own. After each phase you can demo what's done and we course-correct before the next.
+- Fixed bottom-right (above mobile bottom-nav: `bottom: calc(safe + 80px)` on mobile, `bottom: 24px` desktop, `right: 16-24px`).
+- Renders a green circular FAB with `MessageCircle` icon and "WhatsApp" tooltip.
+- Click → opens a Popover listing all 4 branches. Currently-selected branch (from `useBranch`) is highlighted and pre-selected; user can pick any.
+- Selecting opens `https://wa.me/<intl-format>?text=<encoded greeting>` in a new tab.
+- Mount once in `__root.tsx` so it shows on every page.
 
-**Phase 1 — Foundation (data + accounts)**
-- Central `src/data/demo.ts` with all 5 customers, 6 staff, 15 orders, 6 prescriptions, 4 drivers, 20 inventory items, sales/expenses data.
-- New `useDemoStore` Zustand store as single source of truth so customer + staff views stay in sync.
-- Update `useAuth` to support staff roles + demo login.
-- Demo login panel on `/auth` (customer) with one-click cards.
+## 3. Header promo text (src/components/layout/Navbar.tsx + MobileBottomNav if relevant)
 
-**Phase 2 — Customer payment workflow**
-- Replace existing checkout payment step with the 4-method simulator (Card with 4242/4000 logic, PayFast modal, EFT with copy buttons, COD).
-- Animated order confirmation page with checkmark, tracker, receipt download.
-- Wire Rx payment notification flow.
+Change "Free delivery over US$50" / promo strings → "Free delivery within 10km on orders over $30". Same change anywhere this string appears (footer trust strip, home trust strip in `src/routes/index.tsx`).
 
-**Phase 3 — Staff portal shell + auth**
-- New routes: `/staff/login`, `/staff` layout with role-based nav, role-routing on login.
-- Staff demo login panel.
-- Shared KPI/Chart/Card components.
+## 4. OTC dispatch bug (root cause: orders never written to a shared store)
 
-**Phase 4 — Role dashboards (split into 2 sub-passes)**
-- 4a: Super Admin + Store Manager + Cashier (read-heavy + simple actions).
-- 4b: Pharmacist (Rx review modal), Dispatcher (kanban + driver assign), Inventory Clerk (PO flow). These are the interactive ones.
+Today the checkout flow calls `clearCart()` and shows a confirmation, but never persists the order anywhere the dispatcher reads. `DispatcherDashboard` only reads `STAFF_DELIVERIES` (static demo) + `useSharedPrescriptions`.
 
-**Phase 5 — Polish**
-- Demo Scenarios floating help panel.
-- Excel/PDF/Print exports on reports.
-- Final QA pass against your checklist at 375px + 1280px.
+Fix:
+- Create `src/store/sharedOrders.ts` (zustand + persist, mirrors prescription store): `SharedOrder { id, customer, phone, email, branchId, items[], address, deliveryMethod, paymentMethod, paymentRef, total, status, placedAt, driverName?, dispatchedAt?, deliveredAt? }` with actions `addOrder`, `assignDriver`, `updateStatus`.
+- In `checkout.tsx` `handlePaymentSuccess`, push a `SharedOrder` into the store (status `"Ready to dispatch"`) right before `clearCart()`.
+- In `DispatcherDashboard.tsx`, read from `useSharedOrders` and merge into the kanban columns alongside `STAFF_DELIVERIES`. Wire Assign/Mark out/Mark delivered to the new store actions.
+- Customer-facing `track.tsx` and `account.tsx` read from the same store so status updates flow through.
+
+## 5. Book Consultation (new route + store)
+
+- New `src/store/consultations.ts` (zustand+persist) with `addConsultation` returning a reference number.
+- New `src/routes/consultation.tsx` with the form (name, phone, branch select sourced from `BRANCHES`, date/time, reason). On submit show confirmation screen with `KP-CONS-<6 digits>`.
+- Find existing "Book Consultation" CTA (likely in `services.tsx` or a home section) — replace stale onClick with `<Link to="/consultation">`.
+
+## 6. Real-time notifications (new `src/store/notifications.ts` + bell)
+
+- Lightweight notification store: `{ id, audience: "customer"|"staff"|"driver", userId?, title, body, link, ts, read }`.
+- Hook into existing store actions:
+  - `sharedPrescriptions.approvePrescription` → customer notification "Quotation ready".
+  - `sharedPrescriptions.markPaid` → staff notification "Payment received for #X — ready to pack".
+  - `sharedPrescriptions.assignDriver` → customer notification "Out for delivery".
+  - `sharedPrescriptions.updateStatus(..., 'Delivered')` → customer "Delivered".
+  - `sharedOrders.addOrder` → customer "Order confirmed" + staff "New OTC order".
+  - `sharedOrders.updateStatus` likewise.
+- Bell component in `Navbar` (customer) and `staff.tsx` header (staff) with unread badge; opening clears unread; clicking a notification routes to its `link`.
+
+## 7. Payment → packing → dispatch chain
+
+Covered by #6 wiring: `markPaid` already exists, the new side-effect raises the staff notification. Add "Mark Packed" button to the rx card before "Assign Driver" (intermediate status `"Dispensing"` already exists). Track-order page reflects the dispatch timeline (already mostly built; add the "Out for Delivery" step from notifications).
+
+## 8. Mobile-friendly pass
+
+Targeted sweep (no global redesign), focused on known pain points:
+- Checkout 2-col form on mobile → single column (`grid-cols-1 sm:grid-cols-2`).
+- All primary buttons → `min-h-11` (44px).
+- Floating WhatsApp positioned to clear `MobileBottomNav` (~64px) and cart FAB.
+- Dispatch kanban: horizontal scroll on small screens with snap.
+- Notifications panel: full-width sheet on mobile, popover on desktop.
+- Modal dialogs: `max-h-[90vh] overflow-y-auto`.
+
+## 9. Delivered status badge (customer dashboard)
+
+In `account.tsx` order/prescription rows: when status is `"Delivered"`, render a navy badge `bg-primary/10 text-primary` with `CheckCircle2` icon + delivery timestamp. Same on track-order page final step.
+
+## 10. End-to-end verification
+
+After build, drive Playwright through:
+- OTC: home → product → cart → checkout → pay (sim) → dispatch dashboard shows order → assign driver → mark delivered → customer dashboard shows "Delivered".
+- Rx: upload prescription → staff approves with quote → customer pays → staff notification fires → assign driver → mark delivered → customer dashboard shows "Delivered".
+
+Capture screenshots at each step; report any console errors.
+
+---
 
 ## Technical notes
-- Everything stays client-side (Zustand + localStorage). No backend changes.
-- Currency stays USD/ZIG only — already enforced.
-- All "real-time" updates are local state mutations that propagate via Zustand subscribers.
-- Simulated PDFs use `jspdf`, Excel uses `xlsx` (will add as deps in the phase that needs them).
-- Prescription "script image" will be an SVG mockup, not a generated image, to keep it fast.
 
-## What I need from you
+- All new stores use `zustand` + `persist` so customer and staff portals (same browser) share state — consistent with existing `sharedPrescriptions` pattern.
+- No backend / Lovable Cloud needed (per your choice).
+- No styling changes outside what's listed; existing blue (#0EA5E9 primary) and white palette preserved.
+- New files: `branches.ts` (edit), `FloatingWhatsApp.tsx`, `sharedOrders.ts`, `consultation.tsx`, `consultations.ts`, `notifications.ts`, `NotificationsBell.tsx`. Edited: `Navbar.tsx`, `__root.tsx`, `checkout.tsx`, `DispatcherDashboard.tsx`, `account.tsx`, `track.tsx`, `services.tsx`/`index.tsx` (Book Consultation link), `index.tsx` (promo text), `Footer.tsx`.
 
-1. **Confirm phased delivery is OK** — or tell me to power through it all in one go (with the quality caveat above).
-2. **Confirm Phase 1 should start now** — if yes, I'll begin immediately after your approval.
-3. **Anything to cut?** The 5 demo scenarios + 6 staff roles is a lot. If your investor demo only really needs Admin + Pharmacist + Dispatcher, we save ~30% of the work.
+Estimated ~14 file edits + 6 new files. I'll batch them aggressively and verify with Playwright at the end.

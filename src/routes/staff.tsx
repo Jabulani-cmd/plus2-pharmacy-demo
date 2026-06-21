@@ -8,8 +8,9 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
-import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import { ROLE_BADGE_BG } from "@/data/demoAccounts";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
+import kingsLogo from "@/assets/kings-logo.png";
 import {
   LayoutDashboard,
   FileText,
@@ -21,12 +22,10 @@ import {
   ShieldCheck,
   LogOut,
   Home,
-  Bell,
   Building2,
   BarChart3,
   ClipboardList,
   Tag,
-  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/staff")({
@@ -185,129 +184,6 @@ const ROLE_NAV: Record<string, NavItem[]> = {
 };
 
 // ============================================================
-// NOTIFICATION BELL
-// ============================================================
-function NotificationBell() {
-  const sharedPrescriptions = useSharedPrescriptions(
-    (s) => s.prescriptions
-  );
-  const [open, setOpen] = useState(false);
-
-  const pendingRx = sharedPrescriptions.filter(
-    (p) => p.status === "Pending"
-  );
-  const paidRx = sharedPrescriptions.filter(
-    (p) => p.status === "Paid"
-  );
-
-  const notifications = [
-    ...pendingRx.map((p) => ({
-      id: p.id + "_pending",
-      message:
-        "New script from " +
-        p.patientName +
-        " — awaiting review",
-      sub: p.uploadedAt,
-      dot: "#F59E0B",
-    })),
-    ...paidRx.map((p) => ({
-      id: p.id + "_paid",
-      message:
-        p.patientName +
-        " paid $" +
-        (p.quotation?.total.toFixed(2) ?? "0.00") +
-        " — ready to dispatch",
-      sub: p.paidAt ?? "Just now",
-      dot: "#0EA5E9",
-    })),
-  ];
-
-  const totalCount = notifications.length;
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="relative rounded-md p-2 hover:bg-muted"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5 text-muted-foreground" />
-        {totalCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
-            {totalCount > 9 ? "9+" : totalCount}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-          />
-          {/* Panel */}
-          <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-border bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="font-bold text-sm">
-                Notifications
-              </span>
-              <div className="flex items-center gap-2">
-                {totalCount > 0 && (
-                  <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-white">
-                    {totalCount} new
-                  </span>
-                )}
-                <button
-                  onClick={() => setOpen(false)}
-                  className="rounded p-1 hover:bg-muted"
-                >
-                  <X className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
-
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No new notifications
-              </div>
-            ) : (
-              <ul className="max-h-72 overflow-y-auto divide-y divide-border">
-                {notifications.map((n) => (
-                  <li
-                    key={n.id}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-default"
-                  >
-                    <div
-                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: n.dot }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground leading-snug">
-                        {n.message}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {n.sub}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="border-t border-border px-4 py-2 text-center">
-              <p className="text-[10px] text-muted-foreground">
-                Go to Rx Queue to review prescriptions
-              </p>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
 // STAFF LAYOUT
 // ============================================================
 function StaffLayout() {
@@ -353,8 +229,8 @@ function StaffLayout() {
       <header className="sticky top-0 z-30 border-b border-border bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 lg:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-2xl font-black text-primary-foreground">
-              +
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1 ring-1 ring-[#E5E7EB]">
+              <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="text-sm font-extrabold leading-tight text-foreground">
@@ -367,14 +243,14 @@ function StaffLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <NotificationBell />
+            <NotificationsBell audience="staff" />
 
-            <a
-              href="/"
+            <Link
+              to="/"
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
             >
               <Home className="h-3.5 w-3.5" /> Customer site
-            </a>
+            </Link>
 
             <div className="flex items-center gap-3 border-l border-border pl-3">
               <div className="text-right">

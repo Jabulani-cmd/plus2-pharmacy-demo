@@ -13,6 +13,7 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
+import { Route as ConsultationRouteImport } from './routes/consultation'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -42,6 +43,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const PrescriptionsRoute = PrescriptionsRouteImport.update({
   id: '/prescriptions',
   path: '/prescriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultationRoute = ConsultationRouteImport.update({
+  id: '/consultation',
+  path: '/consultation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/consultation': typeof ConsultationRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/consultation': typeof ConsultationRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/consultation': typeof ConsultationRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/consultation'
     | '/prescriptions'
     | '/services'
     | '/staff'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/consultation'
     | '/prescriptions'
     | '/services'
     | '/track'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/consultation'
     | '/prescriptions'
     | '/services'
     | '/staff'
@@ -199,6 +211,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  ConsultationRoute: typeof ConsultationRoute
   PrescriptionsRoute: typeof PrescriptionsRoute
   ServicesRoute: typeof ServicesRoute
   StaffRoute: typeof StaffRouteWithChildren
@@ -235,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/prescriptions'
       fullPath: '/prescriptions'
       preLoaderRoute: typeof PrescriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consultation': {
+      id: '/consultation'
+      path: '/consultation'
+      fullPath: '/consultation'
+      preLoaderRoute: typeof ConsultationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -330,6 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  ConsultationRoute: ConsultationRoute,
   PrescriptionsRoute: PrescriptionsRoute,
   ServicesRoute: ServicesRoute,
   StaffRoute: StaffRouteWithChildren,
@@ -340,13 +361,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

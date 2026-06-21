@@ -11,6 +11,7 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { BranchSelector } from "./BranchSelector";
 import { getBranch } from "@/data/branches";
 import { useBranch } from "@/store/branch";
+import { NotificationsBell } from "./NotificationsBell";
 
 export function Navbar() {
   const cart = useShop((s) => s.cart);
@@ -36,7 +37,7 @@ export function Navbar() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[12px]">
           <div className="flex items-center gap-5">
             <BranchSelector />
-            <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" /> Free delivery over US$50</span>
+            <span className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" /> Free delivery within 10km on orders over $30</span>
             <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {branch.phone}</span>
           </div>
           <div className="flex items-center gap-5">
@@ -96,6 +97,9 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
+          {user && (
+            <NotificationsBell audience="customer" userId={user.id ?? user.email} />
+          )}
           <Link to={user ? "/account" : "/auth"} className="hidden items-center gap-2 rounded-md px-3 py-2 text-left text-xs hover:bg-[#F0F9F4] lg:flex">
             <User className="h-5 w-5 text-[#374151]" />
             <span className="leading-tight">

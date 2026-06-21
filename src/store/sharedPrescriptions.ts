@@ -8,6 +8,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { pushNotification } from "./notifications";
 
 export type SharedPrescriptionStatus =
   | "Pending"
@@ -132,6 +133,21 @@ export const useSharedPrescriptions = create<SharedState>()(
             ...state.prescriptions,
           ],
         }));
+        pushNotification({
+          audience: "customer",
+          userId: p.customerId ?? p.customerEmail,
+          title: "Prescription submitted",
+          body: "Script " + p.id + " is awaiting pharmacist review.",
+          link: "/account",
+          tone: "info",
+        });
+        pushNotification({
+          audience: "staff",
+          title: "New prescription to review",
+          body: p.patientName + " uploaded " + p.fileName,
+          link: "/staff/dashboard",
+          tone: "warning",
+        });
       },
 
       approvePrescription: (id, quotation, pharmacistNotes) => {
@@ -155,6 +171,18 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
+        if (rx) {
+          pushNotification({
+            audience: "customer",
+            userId: rx.customerId ?? rx.customerEmail,
+            title: "Quotation ready — action required",
+            body:
+              "Your script " + id + " has been approved. Total $" + quotation.total.toFixed(2) + ".",
+            link: "/account",
+            tone: "success",
+          });
+        }
       },
 
       rejectPrescription: (id, reason) => {
@@ -169,6 +197,17 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
+        if (rx) {
+          pushNotification({
+            audience: "customer",
+            userId: rx.customerId ?? rx.customerEmail,
+            title: "Prescription declined",
+            body: "Script " + id + ": " + reason,
+            link: "/account",
+            tone: "danger",
+          });
+        }
       },
 
       dispensePrescription: (id) => {
@@ -205,6 +244,28 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
+        pushNotification({
+          audience: "staff",
+          title: "Payment received — ready to pack",
+          body:
+            "Prescription " + id + " · $" +
+            (rx?.quotation?.total.toFixed(2) ?? paymentRef) +
+            " via " + paymentMethod,
+          link: "/staff/dashboard",
+          tone: "success",
+        });
+        if (rx) {
+          pushNotification({
+            audience: "customer",
+            userId: rx.customerId ?? rx.customerEmail,
+            title: "Payment confirmed",
+            body: "We've received your payment for " + id + ". Dispensing has started.",
+            link: "/track",
+            linkSearch: { order: id },
+            tone: "success",
+          });
+        }
       },
 
       assignDriver: (
@@ -237,6 +298,18 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
+        if (rx) {
+          pushNotification({
+            audience: "customer",
+            userId: rx.customerId ?? rx.customerEmail,
+            title: "Your order has been dispatched",
+            body: driverName + " is on the way with " + id + " — track your delivery.",
+            link: "/track",
+            linkSearch: { order: id },
+            tone: "success",
+          });
+        }
       },
 
       updateStatus: (id, status, extra = {}) => {
@@ -245,6 +318,19 @@ export const useSharedPrescriptions = create<SharedState>()(
             p.id === id ? { ...p, status, ...extra } : p
           ),
         }));
+        if (status === "Delivered") {
+          const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
+          if (rx) {
+            pushNotification({
+              audience: "customer",
+              userId: rx.customerId ?? rx.customerEmail,
+              title: "Prescription delivered",
+              body: "Your script " + id + " has been delivered. Stay well!",
+              link: "/account",
+              tone: "success",
+            });
+          }
+        }
       },
     }),
     { name: "kings-shared-prescriptions" }

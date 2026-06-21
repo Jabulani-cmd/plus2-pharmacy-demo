@@ -7,40 +7,55 @@ export type Branch = {
   address: string;
   phone: string;
   hours: string;
+  /**
+   * Branch WhatsApp number in international format (no leading "+").
+   * Used by `wa.me/<number>` deep links.
+   * TODO: replace placeholder numbers once provided by Kings Pharmacy.
+   */
+  whatsapp: string;
 };
+
+// Only the 9th Ave WhatsApp number has been confirmed by the client.
+// The other three default to the same number as a safe placeholder;
+// swap each `whatsapp` value when the real number is provided.
+const TODO_WHATSAPP = "263775715520";
 
 export const BRANCHES: Branch[] = [
   {
-    id: "byo-cbd",
-    name: "Kings Pharmacy — Bulawayo CBD",
-    shortName: "Bulawayo CBD",
-    address: "Shop 5, Fife Street & 9th Avenue, Bulawayo CBD",
-    phone: "+263 29 220 0101",
+    id: "9th-ave",
+    name: "Kings Pharmacy — 9th Avenue CBD",
+    shortName: "9th Ave CBD",
+    address: "9th Avenue, Bulawayo CBD",
+    phone: "+263 77 571 5520",
     hours: "Mon–Sat 08:00–19:00 · Sun 09:00–14:00",
+    whatsapp: "263775715520",
   },
   {
-    id: "byo-hillside",
-    name: "Kings Pharmacy — Hillside",
-    shortName: "Hillside",
-    address: "Hillside Shopping Centre, Cecil Avenue, Bulawayo",
-    phone: "+263 29 224 5500",
-    hours: "Mon–Sun 08:00–20:00",
+    id: "6th-ave",
+    name: "Kings Pharmacy — 6th Avenue CBD",
+    shortName: "6th Ave CBD",
+    address: "6th Avenue, Bulawayo CBD",
+    phone: "+263 77 571 5520",
+    hours: "Mon–Sat 08:00–19:00",
+    whatsapp: TODO_WHATSAPP,
   },
   {
-    id: "byo-ascot",
-    name: "Kings Pharmacy — Ascot",
-    shortName: "Ascot",
-    address: "Ascot Shopping Centre, Cecil Avenue, Bulawayo",
-    phone: "+263 29 226 7788",
-    hours: "Mon–Sat 08:00–18:30",
+    id: "old-mutual",
+    name: "Kings Pharmacy — Old Mutual Centre",
+    shortName: "Old Mutual Centre",
+    address: "Shop 4, Old Mutual Centre, Jason Moyo Avenue, Bulawayo",
+    phone: "+263 77 571 5520",
+    hours: "Mon–Fri 08:00–17:30 · Sat 08:00–13:00",
+    whatsapp: TODO_WHATSAPP,
   },
   {
-    id: "byo-khumalo",
-    name: "Kings Pharmacy — Khumalo",
-    shortName: "Khumalo",
-    address: "Khumalo Shopping Centre, Burnside Road, Bulawayo",
-    phone: "+263 29 228 3344",
+    id: "ascot",
+    name: "Kings Pharmacy — Ascot Shopping Centre",
+    shortName: "Ascot Centre",
+    address: "Ascot Shopping Centre, Bulawayo",
+    phone: "+263 77 571 5520",
     hours: "Mon–Sun 08:00–19:00",
+    whatsapp: TODO_WHATSAPP,
   },
 ];
 
