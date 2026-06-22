@@ -13,6 +13,7 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ConsultationRouteImport } from './routes/consultation'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
@@ -43,6 +44,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const PrescriptionsRoute = PrescriptionsRouteImport.update({
   id: '/prescriptions',
   path: '/prescriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsultationRoute = ConsultationRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
+  '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
+  '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
+  '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/consultation'
+    | '/demo'
     | '/prescriptions'
     | '/services'
     | '/staff'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/consultation'
+    | '/demo'
     | '/prescriptions'
     | '/services'
     | '/track'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/consultation'
+    | '/demo'
     | '/prescriptions'
     | '/services'
     | '/staff'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   ConsultationRoute: typeof ConsultationRoute
+  DemoRoute: typeof DemoRoute
   PrescriptionsRoute: typeof PrescriptionsRoute
   ServicesRoute: typeof ServicesRoute
   StaffRoute: typeof StaffRouteWithChildren
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/prescriptions'
       fullPath: '/prescriptions'
       preLoaderRoute: typeof PrescriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/consultation': {
@@ -351,6 +371,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   ConsultationRoute: ConsultationRoute,
+  DemoRoute: DemoRoute,
   PrescriptionsRoute: PrescriptionsRoute,
   ServicesRoute: ServicesRoute,
   StaffRoute: StaffRouteWithChildren,
