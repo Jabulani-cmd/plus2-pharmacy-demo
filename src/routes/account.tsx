@@ -522,6 +522,19 @@ function AccountPage() {
         <div>
           {tab === "dash" && (
             <div className="grid gap-4 sm:grid-cols-2">
+              {activeSharedOrder && (
+                <div className="sm:col-span-2">
+                  <ActiveOrderBanner order={activeSharedOrder} />
+                </div>
+              )}
+              {unratedDelivered.length > 0 && (
+                <div className="sm:col-span-2">
+                  <RatingPrompt orderId={unratedDelivered[0].id} />
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <LoyaltyCard />
+              </div>
               <div className="rounded-xl border border-border bg-card p-5">
                 <h3 className="font-extrabold">Profile</h3>
                 <div className="mt-3 space-y-1 text-sm">
