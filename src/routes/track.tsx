@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { Check, Phone, MessageCircle, X, Star, Navigation, MapPin, Clock, Package } from "lucide-react";
+import {
+  Check,
+  Phone,
+  MessageCircle,
+  X,
+  Star,
+  Navigation,
+  MapPin,
+  Clock,
+  Package,
+} from "lucide-react";
 import { useOrders, ORDER_FLOW, type LiveStatus } from "@/lib/orders";
 import { toast } from "sonner";
 
@@ -13,79 +23,67 @@ export const Route = createFileRoute("/track")({
 });
 
 const STEP_META: Record<string, { e: string; label: string }> = {
-  "Order Confirmed":      { e: "✅", label: "Order received and confirmed" },
+  "Order Confirmed": { e: "✅", label: "Order received and confirmed" },
   "Pharmacist Reviewing": { e: "👨‍⚕️", label: "Pharmacist verifying items" },
-  "Preparing Order":      { e: "📦", label: "Order being packed at branch" },
-  "Driver Assigned":      { e: "🚗", label: "Driver assigned and collecting" },
-  "Out for Delivery":     { e: "🛵", label: "Driver on the way to you" },
-  "Delivered":            { e: "🏠", label: "Order delivered successfully" },
+  "Preparing Order": { e: "📦", label: "Order being packed at branch" },
+  "Driver Assigned": { e: "🚗", label: "Driver assigned and collecting" },
+  "Out for Delivery": { e: "🛵", label: "Driver on the way to you" },
+  "Delivered": { e: "🏠", label: "Order delivered successfully" },
 };
 
 // ─── Bulawayo map data (SVG viewport 520×340) ────────────────────────────────
-// Mapped from real Bulawayo street grid. Origin (0,0) = NW corner approx.
-// Jason Moyo Ave runs east–west, Robert Mugabe runs east–west, etc.
-
 const MAP_W = 520;
 const MAP_H = 340;
 
-// Branch positions in SVG space (matching real Bulawayo CBD grid)
 const BRANCHES: Record<string, { x: number; y: number; label: string; color: string }> = {
-  "9th Ave CBD":                  { x: 80,  y: 240, label: "9th Ave",      color: "#1E5BC6" },
-  "6th Ave CBD":                  { x: 150, y: 180, label: "6th Ave",      color: "#1E5BC6" },
-  "Old Mutual Centre Jason Moyo": { x: 240, y: 140, label: "Old Mutual",   color: "#1E5BC6" },
-  "Ascot Shopping Centre":        { x: 390, y: 80,  label: "Ascot",        color: "#1E5BC6" },
+  "9th Ave CBD": { x: 80, y: 240, label: "9th Ave", color: "#1E5BC6" },
+  "6th Ave CBD": { x: 150, y: 180, label: "6th Ave", color: "#1E5BC6" },
+  "Old Mutual Centre Jason Moyo": { x: 240, y: 140, label: "Old Mutual", color: "#1E5BC6" },
+  "Ascot Shopping Centre": { x: 390, y: 80, label: "Ascot", color: "#1E5BC6" },
 };
 
-// Customer delivery point (fixed demo destination)
 const CUSTOMER = { x: 440, y: 260, label: "Your location" };
 
-// Road network (simplified Bulawayo street grid)
 const ROADS = [
-  // Main east-west arteries
-  { x1: 0,   y1: 80,  x2: 520, y2: 80  },  // Herbert Chitepo St
-  { x1: 0,   y1: 140, x2: 520, y2: 140 },  // Jason Moyo Ave
-  { x1: 0,   y1: 180, x2: 520, y2: 180 },  // 6th Ave
-  { x1: 0,   y1: 240, x2: 520, y2: 240 },  // 9th Ave
-  { x1: 0,   y1: 300, x2: 520, y2: 300 },  // 12th Ave
-  // Main north-south arteries
-  { x1: 80,  y1: 0,   x2: 80,  y2: 340 },  // Fife St
-  { x1: 150, y1: 0,   x2: 150, y2: 340 },  // Robert Mugabe Way
-  { x1: 240, y1: 0,   x2: 240, y2: 340 },  // Main St
-  { x1: 320, y1: 0,   x2: 320, y2: 340 },  // George Silundika
-  { x1: 390, y1: 0,   x2: 390, y2: 340 },  // Leopold Takawira
-  { x1: 460, y1: 0,   x2: 460, y2: 340 },  // Fort St
+  { x1: 0, y1: 80, x2: 520, y2: 80 },
+  { x1: 0, y1: 140, x2: 520, y2: 140 },
+  { x1: 0, y1: 180, x2: 520, y2: 180 },
+  { x1: 0, y1: 240, x2: 520, y2: 240 },
+  { x1: 0, y1: 300, x2: 520, y2: 300 },
+  { x1: 80, y1: 0, x2: 80, y2: 340 },
+  { x1: 150, y1: 0, x2: 150, y2: 340 },
+  { x1: 240, y1: 0, x2: 240, y2: 340 },
+  { x1: 320, y1: 0, x2: 320, y2: 340 },
+  { x1: 390, y1: 0, x2: 390, y2: 340 },
+  { x1: 460, y1: 0, x2: 460, y2: 340 },
 ];
 
-// Secondary/minor roads
 const MINOR_ROADS = [
-  { x1: 0,   y1: 110, x2: 520, y2: 110 },
-  { x1: 0,   y1: 210, x2: 520, y2: 210 },
-  { x1: 0,   y1: 270, x2: 520, y2: 270 },
-  { x1: 115, y1: 0,   x2: 115, y2: 340 },
-  { x1: 195, y1: 0,   x2: 195, y2: 340 },
-  { x1: 280, y1: 0,   x2: 280, y2: 340 },
-  { x1: 355, y1: 0,   x2: 355, y2: 340 },
-  { x1: 425, y1: 0,   x2: 425, y2: 340 },
+  { x1: 0, y1: 110, x2: 520, y2: 110 },
+  { x1: 0, y1: 210, x2: 520, y2: 210 },
+  { x1: 0, y1: 270, x2: 520, y2: 270 },
+  { x1: 115, y1: 0, x2: 115, y2: 340 },
+  { x1: 195, y1: 0, x2: 195, y2: 340 },
+  { x1: 280, y1: 0, x2: 280, y2: 340 },
+  { x1: 355, y1: 0, x2: 355, y2: 340 },
+  { x1: 425, y1: 0, x2: 425, y2: 340 },
 ];
 
-// Route waypoints from 9th Ave branch → Customer (follows real street logic)
 const ROUTE_WAYPOINTS = [
-  { x: 80,  y: 240 }, // Start: 9th Ave Branch
-  { x: 150, y: 240 }, // Along 9th Ave east
-  { x: 240, y: 240 }, // Continue east on 9th Ave
-  { x: 240, y: 180 }, // Turn north on Main St
-  { x: 320, y: 180 }, // East on 6th Ave
-  { x: 390, y: 180 }, // Continue east
-  { x: 390, y: 260 }, // Turn south on Leopold Takawira
-  { x: 440, y: 260 }, // Arrive at customer
+  { x: 80, y: 240 },
+  { x: 150, y: 240 },
+  { x: 240, y: 240 },
+  { x: 240, y: 180 },
+  { x: 320, y: 180 },
+  { x: 390, y: 180 },
+  { x: 390, y: 260 },
+  { x: 440, y: 260 },
 ];
 
-// Convert waypoints to SVG path string
 function waypointsToPath(pts: { x: number; y: number }[]) {
   return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 }
 
-// Interpolate position along waypoints given progress 0-1
 function interpolateRoute(pts: { x: number; y: number }[], progress: number) {
   if (progress <= 0) return pts[0];
   if (progress >= 1) return pts[pts.length - 1];
@@ -118,7 +116,6 @@ function DeliveryMap({
   const branch = BRANCHES[branchName] ?? BRANCHES["9th Ave CBD"];
   const routePath = waypointsToPath(ROUTE_WAYPOINTS);
 
-  // Animate driver bouncing
   const [bounce, setBounce] = useState(0);
   useEffect(() => {
     if (!isActive) return;
@@ -133,10 +130,8 @@ function DeliveryMap({
         viewBox={`0 0 ${MAP_W} ${MAP_H}`}
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Map background — land */}
         <rect width={MAP_W} height={MAP_H} fill="#EEF2E8" />
 
-        {/* City block fills (alternating subtle shading for realism) */}
         {[0, 2, 4].map((row) =>
           [0, 2, 4, 6].map((col) => (
             <rect
@@ -164,34 +159,42 @@ function DeliveryMap({
           ))
         )}
 
-        {/* Minor roads */}
         {MINOR_ROADS.map((r, i) => (
           <line
             key={`minor-${i}`}
-            x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
-            stroke="#D4DAD0" strokeWidth="1.5"
+            x1={r.x1}
+            y1={r.y1}
+            x2={r.x2}
+            y2={r.y2}
+            stroke="#D4DAD0"
+            strokeWidth="1.5"
           />
         ))}
 
-        {/* Main roads */}
         {ROADS.map((r, i) => (
           <line
             key={`road-${i}`}
-            x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
-            stroke="#FFFFFF" strokeWidth="5"
+            x1={r.x1}
+            y1={r.y1}
+            x2={r.x2}
+            y2={r.y2}
+            stroke="#FFFFFF"
+            strokeWidth="5"
           />
         ))}
-        {/* Road centre lines */}
         {ROADS.map((r, i) => (
           <line
             key={`roadline-${i}`}
-            x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
-            stroke="#E8E0C8" strokeWidth="1"
+            x1={r.x1}
+            y1={r.y1}
+            x2={r.x2}
+            y2={r.y2}
+            stroke="#E8E0C8"
+            strokeWidth="1"
             strokeDasharray="8 6"
           />
         ))}
 
-        {/* Route path — dashed grey (full route) */}
         <path
           d={routePath}
           stroke="#B0BEC5"
@@ -202,7 +205,6 @@ function DeliveryMap({
           strokeLinejoin="round"
         />
 
-        {/* Route path — solid blue (traveled portion) */}
         {isActive && (
           <motion.path
             d={routePath}
@@ -219,61 +221,91 @@ function DeliveryMap({
           />
         )}
 
-        {/* Street name labels */}
-        <text x="4" y="238" fontSize="7" fill="#999" fontFamily="sans-serif">9th Ave</text>
-        <text x="4" y="178" fontSize="7" fill="#999" fontFamily="sans-serif">6th Ave</text>
-        <text x="4" y="138" fontSize="7" fill="#999" fontFamily="sans-serif">Jason Moyo Ave</text>
-        <text x="78" y="12" fontSize="7" fill="#999" fontFamily="sans-serif" transform="rotate(90, 78, 12)">Fife St</text>
-        <text x="148" y="12" fontSize="7" fill="#999" fontFamily="sans-serif" transform="rotate(90, 148, 12)">R.Mugabe</text>
-        <text x="238" y="12" fontSize="7" fill="#999" fontFamily="sans-serif" transform="rotate(90, 238, 12)">Main St</text>
+        <text x="4" y="238" fontSize="7" fill="#999" fontFamily="sans-serif">
+          9th Ave
+        </text>
+        <text x="4" y="178" fontSize="7" fill="#999" fontFamily="sans-serif">
+          6th Ave
+        </text>
+        <text x="4" y="138" fontSize="7" fill="#999" fontFamily="sans-serif">
+          Jason Moyo Ave
+        </text>
+        <text
+          x="78"
+          y="12"
+          fontSize="7"
+          fill="#999"
+          fontFamily="sans-serif"
+          transform="rotate(90, 78, 12)"
+        >
+          Fife St
+        </text>
+        <text
+          x="148"
+          y="12"
+          fontSize="7"
+          fill="#999"
+          fontFamily="sans-serif"
+          transform="rotate(90, 148, 12)"
+        >
+          R.Mugabe
+        </text>
+        <text
+          x="238"
+          y="12"
+          fontSize="7"
+          fill="#999"
+          fontFamily="sans-serif"
+          transform="rotate(90, 238, 12)"
+        >
+          Main St
+        </text>
 
-        {/* Branch marker (origin) */}
         <circle cx={branch.x} cy={branch.y} r="14" fill="#1E5BC6" opacity="0.15">
           <animate attributeName="r" values="12;20;12" dur="2.5s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.2;0;0.2" dur="2.5s" repeatCount="indefinite" />
         </circle>
         <circle cx={branch.x} cy={branch.y} r="10" fill="#1E5BC6" />
-        <text x={branch.x} y={branch.y + 4} fontSize="8" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">Rx</text>
+        <text x={branch.x} y={branch.y + 4} fontSize="8" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
+          Rx
+        </text>
         <rect x={branch.x - 22} y={branch.y + 13} width={44} height={13} rx={6} fill="#1B3A6B" />
         <text x={branch.x} y={branch.y + 22} fontSize="7.5" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
           {branch.label}
         </text>
 
-        {/* Customer / destination marker */}
         <circle cx={CUSTOMER.x} cy={CUSTOMER.y} r="12" fill="#E53935" opacity="0.15">
           <animate attributeName="r" values="10;18;10" dur="2s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite" />
         </circle>
         <circle cx={CUSTOMER.x} cy={CUSTOMER.y} r="9" fill="#E53935" />
-        <text x={CUSTOMER.x} y={CUSTOMER.y + 3} fontSize="9" fill="white" textAnchor="middle">📍</text>
+        <text x={CUSTOMER.x} y={CUSTOMER.y + 3} fontSize="9" fill="white" textAnchor="middle">
+          📍
+        </text>
         <rect x={CUSTOMER.x - 20} y={CUSTOMER.y + 12} width={40} height={13} rx={6} fill="#C62828" />
         <text x={CUSTOMER.x} y={CUSTOMER.y + 21} fontSize="7.5" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
           You
         </text>
 
-        {/* Driver marker — only shown when active */}
         {isActive && (
           <g transform={`translate(${driverPos.x}, ${driverPos.y + bounce})`}>
-            {/* Drop shadow */}
             <ellipse cx={0} cy={14} rx={10} ry={4} fill="rgba(0,0,0,0.15)" />
-            {/* Car body */}
             <circle r="13" fill="white" stroke="#1E5BC6" strokeWidth="2.5" />
-            <text x="0" y="5" fontSize="14" textAnchor="middle">🚗</text>
-            {/* Driver name bubble */}
+            <text x="0" y="5" fontSize="14" textAnchor="middle">
+              🚗
+            </text>
             <rect x={-28} y={16} width={56} height={14} rx={7} fill="#1E5BC6" />
             <text x={0} y={26} fontSize="7" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
-              {driverName.split(" ")[0]}
+              {driverName.split(" ")[0] || "Driver"}
             </text>
           </g>
         )}
 
-        {/* Progress badge top-left */}
         <rect x={8} y={8} width={84} height={20} rx={10} fill="rgba(255,255,255,0.92)" />
         <text x={50} y={21} fontSize="9" fill="#1B3A6B" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
           {isActive ? `${Math.round(progress * 100)}% to destination` : "Awaiting dispatch"}
         </text>
 
-        {/* Distance remaining badge top-right */}
         {isActive && (
           <>
             <rect x={MAP_W - 92} y={8} width={84} height={20} rx={10} fill="rgba(255,255,255,0.92)" />
@@ -283,10 +315,11 @@ function DeliveryMap({
           </>
         )}
 
-        {/* Compass rose bottom-right */}
         <g transform={`translate(${MAP_W - 22}, ${MAP_H - 22})`}>
           <circle r="10" fill="white" opacity="0.8" />
-          <text x="0" y="4" fontSize="8" textAnchor="middle" fill="#1B3A6B" fontWeight="bold">N</text>
+          <text x="0" y="4" fontSize="8" textAnchor="middle" fill="#1B3A6B" fontWeight="bold">
+            N
+          </text>
           <line x1="0" y1="5" x2="0" y2="9" stroke="#1B3A6B" strokeWidth="1.5" />
         </g>
       </svg>
@@ -297,12 +330,14 @@ function DeliveryMap({
 // ─── Countdown Timer ──────────────────────────────────────────────────────────
 
 function CountdownTimer({ stepIdx }: { stepIdx: number }) {
-  const totalSeconds = Math.max(30, (5 - stepIdx) * 3 * 60);
+  // Ensure stepIdx is within bounds (0 to ORDER_FLOW.length-1)
+  const safeIdx = Math.min(Math.max(stepIdx, 0), ORDER_FLOW.length - 1);
+  const totalSeconds = Math.max(30, (5 - safeIdx) * 3 * 60);
   const [secs, setSecs] = useState(totalSeconds);
 
   useEffect(() => {
-    setSecs(Math.max(30, (5 - stepIdx) * 3 * 60));
-  }, [stepIdx]);
+    setSecs(Math.max(30, (5 - safeIdx) * 3 * 60));
+  }, [safeIdx]);
 
   useEffect(() => {
     if (secs <= 0) return;
@@ -327,10 +362,10 @@ function CountdownTimer({ stepIdx }: { stepIdx: number }) {
 type ChatMsg = { from: "driver" | "customer"; text: string; time: string };
 
 const DEMO_MESSAGES: ChatMsg[] = [
-  { from: "driver",   text: "Hi! I have your order and I'm on my way 🚗",     time: "10:32" },
-  { from: "customer", text: "Great, please ring at the gate.",                 time: "10:33" },
-  { from: "driver",   text: "About 10 minutes away — traffic is light! 👍",   time: "10:34" },
-  { from: "driver",   text: "I have arrived at the entrance.",                  time: "10:41" },
+  { from: "driver", text: "Hi! I have your order and I'm on my way 🚗", time: "10:32" },
+  { from: "customer", text: "Great, please ring at the gate.", time: "10:33" },
+  { from: "driver", text: "About 10 minutes away — traffic is light! 👍", time: "10:34" },
+  { from: "driver", text: "I have arrived at the entrance.", time: "10:41" },
 ];
 
 function ChatPanel({ driverName, onClose }: { driverName: string; onClose: () => void }) {
@@ -346,12 +381,17 @@ function ChatPanel({ driverName, onClose }: { driverName: string; onClose: () =>
     const text = input.trim();
     if (!text) return;
     const now = new Date();
-    const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const time = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
     setMessages((m) => [...m, { from: "customer", text, time }]);
     setInput("");
-    // Auto-reply after 1.5s for demo
     setTimeout(() => {
-      setMessages((m) => [...m, { from: "driver", text: "On my way! 🚗", time }]);
+      setMessages((m) => [
+        ...m,
+        { from: "driver", text: "On my way! 🚗", time },
+      ]);
     }, 1500);
   }
 
@@ -371,10 +411,12 @@ function ChatPanel({ driverName, onClose }: { driverName: string; onClose: () =>
         className="bg-white rounded-2xl w-full max-w-sm flex flex-col overflow-hidden"
         style={{ maxHeight: "75vh" }}
       >
-        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[#1B3A6B] to-[#1E5BC6] text-white">
           <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center font-black text-sm">
-            {driverName.split(" ").map((n) => n[0]).join("")}
+            {driverName
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
           </div>
           <div className="flex-1">
             <div className="font-black text-sm">{driverName}</div>
@@ -383,25 +425,41 @@ function ChatPanel({ driverName, onClose }: { driverName: string; onClose: () =>
               Active delivery
             </div>
           </div>
-          <button onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center">
+          <button
+            onClick={onClose}
+            className="h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#F5F7FA]" style={{ minHeight: 200 }}>
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.from === "customer" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm ${m.from === "customer" ? "bg-[#1E5BC6] text-white rounded-br-sm" : "bg-white text-[#1B3A6B] rounded-bl-sm shadow-sm"}`}>
+            <div
+              key={i}
+              className={`flex ${m.from === "customer" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm ${
+                  m.from === "customer"
+                    ? "bg-[#1E5BC6] text-white rounded-br-sm"
+                    : "bg-white text-[#1B3A6B] rounded-bl-sm shadow-sm"
+                }`}
+              >
                 <p>{m.text}</p>
-                <p className={`text-[10px] mt-0.5 ${m.from === "customer" ? "text-white/60 text-right" : "text-slate-400"}`}>{m.time}</p>
+                <p
+                  className={`text-[10px] mt-0.5 ${
+                    m.from === "customer" ? "text-white/60 text-right" : "text-slate-400"
+                  }`}
+                >
+                  {m.time}
+                </p>
               </div>
             </div>
           ))}
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div className="flex gap-2 p-3 border-t border-slate-100 bg-white">
           <input
             value={input}
@@ -414,8 +472,18 @@ function ChatPanel({ driverName, onClose }: { driverName: string; onClose: () =>
             onClick={send}
             className="h-10 w-10 rounded-full bg-[#1B3A6B] text-white flex items-center justify-center shrink-0 hover:bg-[#1E5BC6] transition"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
           </button>
         </div>
@@ -451,11 +519,20 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-gradient-to-br from-[#1B3A6B] to-[#0F2347] flex flex-col items-center justify-center"
     >
-      {/* Rings */}
       {phase === "calling" && (
         <>
-          <motion.div className="absolute rounded-full border-2 border-white/10" animate={{ scale: [1, 2.5], opacity: [0.3, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }} style={{ width: 140, height: 140 }} />
-          <motion.div className="absolute rounded-full border-2 border-white/10" animate={{ scale: [1, 2.5], opacity: [0.3, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeOut", delay: 0.7 }} style={{ width: 140, height: 140 }} />
+          <motion.div
+            className="absolute rounded-full border-2 border-white/10"
+            animate={{ scale: [1, 2.5], opacity: [0.3, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+            style={{ width: 140, height: 140 }}
+          />
+          <motion.div
+            className="absolute rounded-full border-2 border-white/10"
+            animate={{ scale: [1, 2.5], opacity: [0.3, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeOut", delay: 0.7 }}
+            style={{ width: 140, height: 140 }}
+          />
         </>
       )}
 
@@ -466,7 +543,10 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
       <div className="text-white/60 text-sm mt-1 z-10">Kings Pharmacy Driver</div>
       <div className="text-white/80 font-bold mt-3 z-10">
         {phase === "calling" ? (
-          <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}>
+          <motion.span
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ repeat: Infinity, duration: 1.2 }}
+          >
             Calling…
           </motion.span>
         ) : (
@@ -474,7 +554,6 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
         )}
       </div>
 
-      {/* End call button */}
       <button
         onClick={onEnd}
         className="mt-14 h-16 w-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white z-10 transition"
@@ -499,45 +578,59 @@ function Track() {
   const [chat, setChat] = useState(false);
   const [calling, setCalling] = useState(false);
 
+  // Handle missing order
   if (!order) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
         <div className="text-lg font-bold text-[#1B3A6B]">No active orders</div>
-        <div className="text-sm text-slate-500 mt-1">Place an order from the shop to start tracking.</div>
+        <div className="text-sm text-slate-500 mt-1">
+          Place an order from the shop to start tracking.
+        </div>
       </div>
     );
   }
 
+  // Safely compute step index
   const stepIdx = ORDER_FLOW.indexOf(order.status as LiveStatus);
-  const progress = stepIdx / (ORDER_FLOW.length - 1);
+  const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, ORDER_FLOW.length - 1);
+  const progress = safeStepIdx / (ORDER_FLOW.length - 1);
   const delivered = order.status === "Delivered";
-  const isOutForDelivery = stepIdx >= 4; // "Out for Delivery" or "Delivered"
+  const isOutForDelivery = safeStepIdx >= 4; // "Out for Delivery" or later
   const driverName = order.driverName ?? "Awaiting driver";
-  const branchName = "9th Ave CBD"; // default branch for map
+  const branchName = "9th Ave CBD"; // default branch
+
+  // Safely access history and items
+  const history = order.history ?? [];
+  const items = order.items ?? [];
+  const total = order.total ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4">
-
       {/* Top status card */}
       <div className="bg-gradient-to-r from-[#1B3A6B] to-[#1E5BC6] rounded-2xl p-4 md:p-5 text-white">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-[11px] opacity-70 font-bold uppercase tracking-wider">Order #{order.id}</div>
-            <div className="text-lg md:text-xl font-black mt-0.5">{STEP_META[order.status]?.e} {order.status}</div>
-            <div className="text-[12px] opacity-80 mt-0.5">{STEP_META[order.status]?.label}</div>
+            <div className="text-[11px] opacity-70 font-bold uppercase tracking-wider">
+              Order #{order.id}
+            </div>
+            <div className="text-lg md:text-xl font-black mt-0.5">
+              {STEP_META[order.status]?.e} {order.status}
+            </div>
+            <div className="text-[12px] opacity-80 mt-0.5">
+              {STEP_META[order.status]?.label}
+            </div>
           </div>
           <div className="text-right shrink-0">
             <div className="text-[11px] opacity-70 flex items-center gap-1 justify-end">
               <Clock className="h-3 w-3" /> Arriving in
             </div>
             <div className="text-xl md:text-2xl font-black mt-0.5">
-              <CountdownTimer stepIdx={stepIdx} />
+              <CountdownTimer stepIdx={safeStepIdx} />
             </div>
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="mt-3">
           <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
             <motion.div
@@ -556,7 +649,6 @@ function Track() {
 
       {/* Main content grid */}
       <div className="grid md:grid-cols-3 gap-4">
-
         {/* Map — col span 2 */}
         <div className="md:col-span-2 bg-white rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -579,7 +671,6 @@ function Track() {
             branchName={branchName}
           />
 
-          {/* Map legend */}
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
             <span className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-full bg-[#1E5BC6] inline-block" />
@@ -601,10 +692,16 @@ function Track() {
             </span>
           </div>
 
-          {/* Simulate button */}
           {!delivered && (
             <button
-              onClick={() => { advance(order.id); toast.success(`Status updated: ${ORDER_FLOW[Math.min(stepIdx + 1, ORDER_FLOW.length - 1)]}`); }}
+              onClick={() => {
+                advance(order.id);
+                toast.success(
+                  `Status updated: ${
+                    ORDER_FLOW[Math.min(safeStepIdx + 1, ORDER_FLOW.length - 1)]
+                  }`
+                );
+              }}
               className="w-full h-11 rounded-full bg-[#1B3A6B] hover:bg-[#1E5BC6] text-white font-bold text-sm transition"
             >
               ▶ Simulate Next Delivery Stage
@@ -622,16 +719,18 @@ function Track() {
           <div className="font-black text-[#1B3A6B] mb-4">Delivery Timeline</div>
           <ol>
             {ORDER_FLOW.map((s, i) => {
-              const done = i < stepIdx;
-              const current = i === stepIdx;
-              const event = order.history.find((h) => h.status === s);
+              const done = i < safeStepIdx;
+              const current = i === safeStepIdx;
+              const event = history.find((h) => h.status === s);
               const ts = event ? new Date(event.at) : null;
               const isLast = i === ORDER_FLOW.length - 1;
               return (
                 <li key={s} className="flex items-start gap-3 relative pb-4">
                   {!isLast && (
                     <span
-                      className={`absolute left-4 top-8 -translate-x-1/2 w-0.5 h-full transition-colors duration-500 ${done ? "bg-[#1E5BC6]" : "bg-slate-200"}`}
+                      className={`absolute left-4 top-8 -translate-x-1/2 w-0.5 h-full transition-colors duration-500 ${
+                        done ? "bg-[#1E5BC6]" : "bg-slate-200"
+                      }`}
                       aria-hidden
                     />
                   )}
@@ -647,7 +746,11 @@ function Track() {
                     {done ? <Check className="h-4 w-4" strokeWidth={3} /> : STEP_META[s].e}
                   </div>
                   <div className="pt-1 flex-1 min-w-0">
-                    <div className={`text-sm font-bold truncate ${current ? "text-[#1B3A6B]" : done ? "text-slate-700" : "text-slate-400"}`}>
+                    <div
+                      className={`text-sm font-bold truncate ${
+                        current ? "text-[#1B3A6B]" : done ? "text-slate-700" : "text-slate-400"
+                      }`}
+                    >
                       {s}
                     </div>
                     {ts ? (
@@ -673,8 +776,11 @@ function Track() {
       {/* Driver card */}
       <div className="bg-white rounded-2xl p-4 flex items-center gap-3">
         <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#1E5BC6] to-[#1B3A6B] flex items-center justify-center text-white font-black text-lg shrink-0">
-          {driverName !== "Awaiting driver assignment"
-            ? driverName.split(" ").map((n: string) => n[0]).join("")
+          {driverName !== "Awaiting driver assignment" && driverName !== "Awaiting driver"
+            ? driverName
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
             : "?"}
         </div>
         <div className="flex-1 min-w-0">
@@ -683,7 +789,7 @@ function Track() {
             ⭐⭐⭐⭐⭐ <span className="text-slate-400">4.9 rating · Honda CB125</span>
           </div>
           <div className="text-xs text-slate-400 mt-0.5">
-            {order.items.length} item{order.items.length !== 1 ? "s" : ""} · ${order.total.toFixed(2)}
+            {items.length} item{items.length !== 1 ? "s" : ""} · ${total.toFixed(2)}
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -708,47 +814,53 @@ function Track() {
       <div className="bg-white rounded-2xl p-4">
         <div className="font-black text-[#1B3A6B] mb-3">Order Items</div>
         <div className="space-y-2">
-          {order.items.map((item, i) => (
+          {items.map((item, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
-              <span className="text-slate-700">{item.name} <span className="text-slate-400">×{item.qty}</span></span>
-              <span className="font-bold text-[#1B3A6B]">${(item.price * item.qty).toFixed(2)}</span>
+              <span className="text-slate-700">
+                {item.name} <span className="text-slate-400">×{item.qty}</span>
+              </span>
+              <span className="font-bold text-[#1B3A6B]">
+                ${(item.price * item.qty).toFixed(2)}
+              </span>
             </div>
           ))}
           <div className="border-t pt-2 flex justify-between font-black text-[#1B3A6B]">
             <span>Total</span>
-            <span>${order.total.toFixed(2)}</span>
+            <span>${total.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* Rating cards — shown after delivery */}
+      {/* Rating cards */}
       {delivered && (
         <div className="grid md:grid-cols-2 gap-4">
           <RatingCard
             title="Rate this order"
             existing={order.rating}
-            onSubmit={(s, t) => { rate(order.id, s, t); toast.success("Thanks for your rating!"); }}
+            onSubmit={(s, t) => {
+              rate(order.id, s, t);
+              toast.success("Thanks for your rating!");
+            }}
           />
           <RatingCard
             title="Rate your driver"
             existing={order.deliveryRating}
-            onSubmit={(s, t) => { rateDelivery(order.id, s, t); toast.success("Driver rated — thank you!"); }}
+            onSubmit={(s, t) => {
+              rateDelivery(order.id, s, t);
+              toast.success("Driver rated — thank you!");
+            }}
           />
         </div>
       )}
 
       {/* Chat panel */}
       <AnimatePresence>
-        {chat && (
-          <ChatPanel driverName={driverName} onClose={() => setChat(false)} />
-        )}
+        {chat && <ChatPanel driverName={driverName} onClose={() => setChat(false)} />}
       </AnimatePresence>
 
       {/* Call screen */}
       <AnimatePresence>
-        {calling && (
-          <CallScreen driverName={driverName} onEnd={() => setCalling(false)} />
-        )}
+        {calling && <CallScreen driverName={driverName} onEnd={() => setCalling(false)} />}
       </AnimatePresence>
     </div>
   );
@@ -780,7 +892,11 @@ function RatingCard({
             disabled={submitted}
             className="transition hover:scale-110"
           >
-            <Star className={`h-7 w-7 ${n <= stars ? "fill-[#1E5BC6] text-[#1E5BC6]" : "text-slate-200"}`} />
+            <Star
+              className={`h-7 w-7 ${
+                n <= stars ? "fill-[#1E5BC6] text-[#1E5BC6]" : "text-slate-200"
+              }`}
+            />
           </button>
         ))}
       </div>
