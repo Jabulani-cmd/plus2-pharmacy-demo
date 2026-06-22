@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
 import { Logo } from "@/components/layout/Logo";
-import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home } from "lucide-react";
+import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff } from "lucide-react";
 import { DEMO_CUSTOMERS } from "@/data/demoAccounts";
 import kingsLogo from "@/assets/kings-logo.png";
 
@@ -71,13 +71,13 @@ function AuthPage() {
   }, [user, navigate, redirect]);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-3 py-5 sm:px-4 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14">
+    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14">
       <div className="lg:col-span-2 flex justify-start">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:bg-muted sm:py-2 sm:text-sm"
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
         >
-          <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Home
+          <Home className="h-4 w-4" /> Home
         </Link>
       </div>
       <div className="relative hidden flex-col justify-center overflow-hidden rounded-md bg-primary p-10 text-primary-foreground shadow-sm lg:flex">
@@ -97,8 +97,10 @@ function AuthPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 md:p-8">
-        <div className="mb-5 flex justify-center lg:hidden"><BrandLockup compact /></div>
+      <div className="mx-auto w-full max-w-[420px] rounded-[20px] border border-border bg-card p-5 shadow-sm sm:p-7 lg:max-w-none lg:p-8">
+        <div className="mb-5 flex flex-col items-center lg:hidden">
+          <BrandMark size={64} />
+        </div>
         <div className="mb-6 hidden justify-center lg:flex"><BrandMark size={56} /></div>
 
         {mode !== "forgot" && (
