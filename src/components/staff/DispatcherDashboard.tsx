@@ -19,6 +19,7 @@ const COLUMNS: {
   label: string;
   color: string;
 }[] = [
+  { key: "Confirmed", label: "New Orders", color: "#0EA5E9" },
   { key: "Ready to dispatch", label: "Ready to dispatch", color: "#F59E0B" },
   { key: "Assigned", label: "Assigned to driver", color: "#3B82F6" },
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
@@ -29,14 +30,18 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const sharedOrders = useSharedOrders((s) => s.orders);
   const markPackedShared = useSharedOrders((s) => s.markPacked);
   const assignDriverSharedOrder = useSharedOrders((s) => s.assignDriver);
+  const startDeliveryShared = useSharedOrders((s) => s.startDelivery);
   const updateOrderStatus = useSharedOrders((s) => s.updateStatus);
 
   // Merge demo deliveries with live orders from checkout.
   const liveDeliveries: StaffDelivery[] = useMemo(
     () =>
       sharedOrders.map((o) => {
+        // Map live order status → dispatch column bucket.
         const status: StaffDelivery["status"] =
-          o.status === "Packed"
+          o.status === "Confirmed"
+            ? "Confirmed"
+            : o.status === "Packed"
             ? "Ready to dispatch"
             : (o.status as StaffDelivery["status"]);
         return {
@@ -89,7 +94,10 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const counts = useMemo(
     () => ({
       ready:
-        deliveries.filter((d) => d.status === "Ready to dispatch").length +
+        deliveries.filter(
+          (d) =>
+            d.status === "Confirmed" || d.status === "Ready to dispatch"
+        ).length +
         rxOrders.filter(
           (p) => p.status === "Paid" || p.status === "Dispensing"
         ).length,
@@ -116,7 +124,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         assignDriverSharedOrder(deliveryId, drv.name, drv.phone, drv.vehicle);
         setAssignFor(null);
         toast.success(
-          "Order " + deliveryId + " assigned to " + drv.name.split(" ")[0]
+          "Order " + deliveryId + " → assigned to " + drv.name.split(" ")[0] + ". Driver must Start Delivery."
         );
         return;
       }
@@ -162,12 +170,13 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     next: StaffDelivery["status"]
   ) => {
     if (isLiveOrder(deliveryId)) {
-      if (next === "Out for delivery") {
-        updateOrderStatus(deliveryId, "Out for delivery");
+      if (next === "Ready to dispatch") {
+        // staff marked a NEW order as packed → ready for driver assignment
+        markPackedShared(deliveryId);
+      } else if (next === "Out for delivery") {
+        startDeliveryShared(deliveryId);
       } else if (next === "Delivered") {
         updateOrderStatus(deliveryId, "Delivered");
-      } else if (next === "Assigned") {
-        markPackedShared(deliveryId);
       }
       toast.success("Order " + deliveryId + " → " + next);
       return;
@@ -455,7 +464,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                           <div className="text-xs font-bold text-foreground">
                             {d.id}
                           </div>
-                          <div className="text-xs font-bold text-primary">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                            {d.status === "Confirmed" && (
+                              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
+                                NEW
+                              </span>
+                            )}
                             {fmtUSD(d.total)}
                           </div>
                         </div>
@@ -487,12 +501,22 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                           </div>
                         )}
                         <div className="mt-2 flex gap-1">
+                          {d.status === "Confirmed" && (
+                            <button
+                              onClick={() =>
+                                advance(d.id, "Ready to dispatch")
+                              }
+                              className="flex-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary-dark"
+                            >
+                              Mark as Packed
+                            </button>
+                          )}
                           {d.status === "Ready to dispatch" && (
                             <button
                               onClick={() => setAssignFor(d)}
                               className="flex-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary-dark"
                             >
-                              Assign driver
+                              Assign Driver &amp; Dispatch
                             </button>
                           )}
                           {d.status === "Assigned" && (
@@ -502,7 +526,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                               }
                               className="flex-1 rounded bg-violet-600 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-violet-700"
                             >
-                              Mark out
+                              Start Delivery
                             </button>
                           )}
                           {d.status === "Out for delivery" && (
@@ -512,7 +536,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                               }
                               className="flex-1 rounded bg-emerald-600 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700"
                             >
-                              Mark delivered
+                              Mark as Delivered
                             </button>
                           )}
                         </div>

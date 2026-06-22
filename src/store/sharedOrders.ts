@@ -8,6 +8,7 @@ import { persist } from "zustand/middleware";
 import { pushNotification } from "./notifications";
 
 export type SharedOrderStatus =
+  | "Confirmed"
   | "Ready to dispatch"
   | "Packed"
   | "Assigned"
@@ -57,6 +58,7 @@ type State = {
     driverPhone: string,
     driverVehicle: string
   ) => void;
+  startDelivery: (id: string) => void;
   updateStatus: (id: string, status: SharedOrderStatus) => void;
 };
 
@@ -77,7 +79,7 @@ export const useSharedOrders = create<State>()(
         const placedAt = stamp();
         const order: SharedOrder = {
           ...o,
-          status: "Ready to dispatch",
+          status: "Confirmed",
           placedAt,
           placedTs: Date.now(),
         };
@@ -89,7 +91,7 @@ export const useSharedOrders = create<State>()(
           userId: o.customerId ?? o.customerEmail,
           title: "Order confirmed",
           body:
-            "Order " + o.id + " received — we're preparing it for dispatch.",
+            "Order " + o.id + " received — staff have been notified to pack it.",
           link: "/track",
           linkSearch: { order: o.id },
           tone: "success",
@@ -98,7 +100,7 @@ export const useSharedOrders = create<State>()(
         // Staff alert
         pushNotification({
           audience: "staff",
-          title: "New OTC order — ready to pack",
+          title: "NEW OTC order — needs packing",
           body:
             o.customer + " · $" + o.total.toFixed(2) + " · " + o.itemCount + " item" + (o.itemCount === 1 ? "" : "s"),
           link: "/staff/dashboard",
@@ -135,7 +137,7 @@ export const useSharedOrders = create<State>()(
             x.id === id
               ? {
                   ...x,
-                  status: "Out for delivery",
+                  status: "Assigned",
                   driverName,
                   driverPhone,
                   driverVehicle,
@@ -148,9 +150,34 @@ export const useSharedOrders = create<State>()(
         pushNotification({
           audience: "customer",
           userId: o.customerId ?? o.customerEmail,
-          title: "Your order has been dispatched",
+          title: "Driver assigned",
           body:
-            driverName + " is on the way with order " + id + " — track your delivery.",
+            driverName + " has been assigned to order " + id + " — awaiting dispatch.",
+          link: "/track",
+          linkSearch: { order: id },
+          tone: "info",
+        });
+      },
+
+      startDelivery: (id) => {
+        const o = get().orders.find((x) => x.id === id);
+        if (!o) return;
+        set((s) => ({
+          orders: s.orders.map((x) =>
+            x.id === id
+              ? { ...x, status: "Out for delivery", eta: "20 min" }
+              : x
+          ),
+        }));
+        pushNotification({
+          audience: "customer",
+          userId: o.customerId ?? o.customerEmail,
+          title: "Driver is on the way",
+          body:
+            (o.driverName ?? "Your driver") +
+            " has started delivery of order " +
+            id +
+            " — ETA 20 minutes.",
           link: "/track",
           linkSearch: { order: id },
           tone: "success",

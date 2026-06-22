@@ -37,6 +37,7 @@ export type StaffDelivery = {
   items: number;
   total: number;
   status:
+    | "Confirmed"
     | "Ready to dispatch"
     | "Assigned"
     | "Out for delivery"

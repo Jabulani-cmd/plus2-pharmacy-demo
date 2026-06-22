@@ -1045,6 +1045,7 @@ function SharedStatusPill({
   className?: string;
 }) {
   const map: Record<SharedOrder["status"], string> = {
+    Confirmed: "bg-amber-50 text-amber-700",
     "Ready to dispatch": "bg-amber-50 text-amber-700",
     Packed: "bg-blue-50 text-blue-700",
     Assigned: "bg-blue-50 text-blue-700",
@@ -1067,8 +1068,9 @@ function SharedStatusPill({
 }
 
 const SHARED_STAGES: { key: SharedOrder["status"]; label: string }[] = [
-  { key: "Ready to dispatch", label: "Confirmed" },
+  { key: "Confirmed", label: "Order Confirmed" },
   { key: "Packed", label: "Packed" },
+  { key: "Assigned", label: "Dispatched" },
   { key: "Out for delivery", label: "Out for Delivery" },
   { key: "Delivered", label: "Delivered" },
 ];
@@ -1079,7 +1081,7 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
     SHARED_STAGES.findIndex(
       (s) =>
         s.key === order.status ||
-        (order.status === "Assigned" && s.key === "Packed")
+        (order.status === "Ready to dispatch" && s.key === "Confirmed")
     )
   );
   const isDelivered = order.status === "Delivered";

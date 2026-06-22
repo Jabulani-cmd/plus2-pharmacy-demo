@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Receipt as ReceiptIcon, Download, Mail, MessageSquare, Check, MapPin, Phone, Bell, Clock, Loader2 } from "lucide-react";
 import { ReceiptModal } from "@/components/receipt/ReceiptModal";
 import { type Receipt } from "@/lib/receipts";
 import { formatUSD } from "@/store/shop";
+import { useSharedOrders } from "@/store/sharedOrders";
 
 type Props = {
   receipt: Receipt;
@@ -15,56 +16,40 @@ type Props = {
 type StepState = "done" | "current" | "upcoming";
 type Step = { key: string; title: string; desc: string; ts: string; state: StepState };
 
-const initialSteps = (collect: boolean, rx: boolean): Step[] => {
-  if (collect) {
-    return [
-      { key: "confirm", title: "Order Confirmed", desc: "Your order has been placed and payment confirmed", ts: "Just now", state: "done" },
-      { key: "prep", title: "Being Prepared", desc: "Our pharmacy team is packing your items", ts: "In progress", state: "current" },
-      { key: "ready", title: "Ready for Collection", desc: "Pick up at Hillside Branch", ts: "Est. 30 min", state: "upcoming" },
-      { key: "collected", title: "Collected", desc: "Bring your ID and order number", ts: "Pending", state: "upcoming" },
-    ];
-  }
-  const base: Step[] = [
-    { key: "confirm", title: "Order Confirmed", desc: "Your order has been placed and payment confirmed", ts: "Just now", state: "done" },
-    { key: "prep", title: "Processing", desc: "Our pharmacy team is preparing your items", ts: "In progress", state: "current" },
-  ];
-  if (rx) base.push({ key: "rx", title: "Pharmacist Verification", desc: "A registered pharmacist is verifying your prescription", ts: "Est. 15 min", state: "upcoming" });
-  base.push(
-    { key: "dispatch", title: "Ready for Dispatch", desc: "Your order will be packed and labelled", ts: "Est. 30–60 min", state: "upcoming" },
-    { key: "out", title: "Out for Delivery", desc: "A driver will deliver to your address", ts: "Est. 2–4 hours", state: "upcoming" },
-    { key: "delivered", title: "Delivered", desc: "Your order arrives at your address", ts: "Est. today by 18:00", state: "upcoming" }
-  );
-  return base;
+const STAGE_ORDER = ["Confirmed", "Packed", "Assigned", "Out for delivery", "Delivered"] as const;
+
+const stagesFromStatus = (status: string | undefined, isCollect: boolean): Step[] => {
+  const idx = Math.max(0, STAGE_ORDER.indexOf((status ?? "Confirmed") as typeof STAGE_ORDER[number]));
+  const labels: { key: string; title: string; desc: string }[] = isCollect
+    ? [
+        { key: "confirm",   title: "Order Confirmed",      desc: "Your order has been placed and payment confirmed" },
+        { key: "prep",      title: "Being Prepared",       desc: "Our pharmacy team is packing your items" },
+        { key: "ready",     title: "Ready for Collection", desc: "Pick up at branch — bring your ID and order number" },
+        { key: "ready2",    title: "Ready for Collection", desc: "Awaiting your visit" },
+        { key: "collected", title: "Collected",            desc: "Order collected — thank you" },
+      ]
+    : [
+        { key: "confirm",   title: "Order Confirmed",            desc: "Your order has been placed and payment confirmed" },
+        { key: "prep",      title: "Packed",                     desc: "Our pharmacy team has packed your items" },
+        { key: "assigned",  title: "Driver Assigned",            desc: "A driver has been assigned to your order" },
+        { key: "out",       title: "Out for Delivery",           desc: "Driver is on the way to your address" },
+        { key: "delivered", title: "Delivered",                  desc: "Your order has arrived" },
+      ];
+  return labels.map((l, i) => ({
+    ...l,
+    ts: i < idx ? "Done" : i === idx ? "In progress" : "Waiting",
+    state: i < idx ? "done" : i === idx ? "current" : "upcoming",
+  }));
 };
 
 export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }: Props) {
   const [receiptOpen, setReceiptOpen] = useState(false);
-  const [steps, setSteps] = useState<Step[]>(() => initialSteps(isCollect, hasRx));
-  const [showDriver, setShowDriver] = useState(false);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => {
-      setSteps((prev) => advance(prev));
-      if (isCollect) {
-        toast.success("✅ Ready for collection at Hillside Branch!", { description: "Bring your ID and order number" });
-      } else {
-        toast.info("📦 Your order is being prepared by our pharmacy team");
-      }
-    }, 8000);
-    const t2 = !isCollect ? setTimeout(() => {
-      setSteps((prev) => advance(prev));
-      setShowDriver(true);
-      toast.info("🚗 Out for delivery — Driver: Siphamandla Dube");
-    }, 16000) : null;
-    const t3 = !isCollect ? setTimeout(() => {
-      toast.info("🔔 You'll receive an SMS when your order arrives");
-    }, 24000) : null;
-    return () => {
-      clearTimeout(t1);
-      if (t2) clearTimeout(t2);
-      if (t3) clearTimeout(t3);
-    };
-  }, [isCollect]);
+  // Live order from shared store — drives the timeline as staff/driver advance it.
+  const liveOrder = useSharedOrders((s) =>
+    s.orders.find((o) => o.id === receipt.orderNumber)
+  );
+  const steps = stagesFromStatus(liveOrder?.status, isCollect);
+  const showDriver = !!liveOrder?.driverName;
 
   return (
     <div className="-mx-6 -my-6">
@@ -148,10 +133,10 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
           <div className="mt-2 flex items-center gap-3 rounded-md bg-[#F0F9F4] p-3 animate-fade-in">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">SD</div>
             <div className="flex-1">
-              <div className="text-sm font-bold">Siphamandla Dube</div>
-              <div className="text-[11px] text-muted-foreground">Toyota Hilux · {randomZwPlateMemo()}</div>
+              <div className="text-sm font-bold">{liveOrder?.driverName ?? "Driver"}</div>
+              <div className="text-[11px] text-muted-foreground">{liveOrder?.driverVehicle ?? "Vehicle"}</div>
             </div>
-            <button onClick={() => toast.info("📞 Calling Siphamandla Dube... (demo)")} className="inline-flex items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/5">
+            <button onClick={() => toast.info("📞 Calling " + (liveOrder?.driverName ?? "driver") + "... (demo)")} className="inline-flex items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/5">
               <Phone className="h-3 w-3" /> Call
             </button>
           </div>
