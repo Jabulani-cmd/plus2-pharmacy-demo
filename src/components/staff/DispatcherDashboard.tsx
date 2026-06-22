@@ -19,6 +19,7 @@ const COLUMNS: {
   label: string;
   color: string;
 }[] = [
+  { key: "Confirmed", label: "New Orders", color: "#0EA5E9" },
   { key: "Ready to dispatch", label: "Ready to dispatch", color: "#F59E0B" },
   { key: "Assigned", label: "Assigned to driver", color: "#3B82F6" },
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
@@ -29,14 +30,18 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const sharedOrders = useSharedOrders((s) => s.orders);
   const markPackedShared = useSharedOrders((s) => s.markPacked);
   const assignDriverSharedOrder = useSharedOrders((s) => s.assignDriver);
+  const startDeliveryShared = useSharedOrders((s) => s.startDelivery);
   const updateOrderStatus = useSharedOrders((s) => s.updateStatus);
 
   // Merge demo deliveries with live orders from checkout.
   const liveDeliveries: StaffDelivery[] = useMemo(
     () =>
       sharedOrders.map((o) => {
+        // Map live order status → dispatch column bucket.
         const status: StaffDelivery["status"] =
-          o.status === "Packed"
+          o.status === "Confirmed"
+            ? "Confirmed"
+            : o.status === "Packed"
             ? "Ready to dispatch"
             : (o.status as StaffDelivery["status"]);
         return {
