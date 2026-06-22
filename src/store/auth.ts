@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { findDemoCustomer } from "@/data/demoAccounts";
+import { pushNotification } from "@/store/notifications";
 
 export type User = {
   id: string;
@@ -296,9 +297,10 @@ export const useAuth = create<AuthState>()(
             ok: false,
             error: "Password must be at least 8 characters",
           };
+        const id = "u_" + Date.now();
         set({
           user: {
-            id: "u_" + Date.now(),
+            id,
             email,
             firstName,
             lastName,
@@ -306,6 +308,15 @@ export const useAuth = create<AuthState>()(
             points: 250,
             tier: "Silver",
           },
+        });
+        // Welcome notification on the bell + dashboard
+        pushNotification({
+          audience: "customer",
+          userId: id,
+          title: "Welcome to Kings Pharmacy, " + firstName + "!",
+          body: "Start shopping or upload your first prescription to get going.",
+          link: "/account",
+          tone: "success",
         });
         return { ok: true };
       },
