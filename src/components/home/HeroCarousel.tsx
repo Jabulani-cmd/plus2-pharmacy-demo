@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { HERO_SLIDES } from "@/data/categories";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function HeroCarousel() {
   const [i, setI] = useState(0);
@@ -20,6 +21,8 @@ export function HeroCarousel() {
   }, []);
   const s = HERO_SLIDES[i];
   const isLoaded = loaded[i];
+  const go = (dir: number) =>
+    setI((p) => (p + dir + HERO_SLIDES.length) % HERO_SLIDES.length);
   return (
     <div className="relative overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-sm md:bg-[#111827]">
       {/* MOBILE: stacked image + text card */}
@@ -46,19 +49,7 @@ export function HeroCarousel() {
                 }`}
               />
             </div>
-            <div className="flex justify-center gap-2 bg-white py-3">
-              {HERO_SLIDES.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setI(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    idx === i ? "w-6 bg-primary" : "w-2 bg-[#D1D5DB]"
-                  }`}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
-            </div>
-            <div className="bg-white p-4 pt-1">
+            <div className="bg-white p-4">
               <p className="inline-block rounded-full bg-[#F0F9F4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-primary-dark">
                 {s.eyebrow}
               </p>
@@ -134,16 +125,21 @@ export function HeroCarousel() {
           </div>
         </motion.div>
       </AnimatePresence>
-      <div className="absolute bottom-5 left-1/2 z-20 hidden -translate-x-1/2 gap-2 md:flex">
-        {HERO_SLIDES.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setI(idx)}
-            className={`h-2 rounded-full bg-white transition-all ${idx === i ? "w-8" : "w-2 opacity-50"}`}
-            aria-label={`Slide ${idx + 1}`}
-          />
-        ))}
-      </div>
+      {/* Desktop arrows */}
+      <button
+        onClick={() => go(-1)}
+        aria-label="Previous slide"
+        className="absolute left-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#111827] shadow-md backdrop-blur transition hover:bg-white md:flex"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <button
+        onClick={() => go(1)}
+        aria-label="Next slide"
+        className="absolute right-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#111827] shadow-md backdrop-blur transition hover:bg-white md:flex"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }
