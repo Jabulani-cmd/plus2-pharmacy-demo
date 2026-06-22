@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { HERO_SLIDES } from "@/data/categories";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function HeroCarousel() {
   const [i, setI] = useState(0);
@@ -21,8 +20,6 @@ export function HeroCarousel() {
   }, []);
   const s = HERO_SLIDES[i];
   const isLoaded = loaded[i];
-  const go = (dir: number) =>
-    setI((p) => (p + dir + HERO_SLIDES.length) % HERO_SLIDES.length);
   return (
     <div className="relative overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-sm md:bg-[#111827]">
       {/* MOBILE: stacked image + text card */}
@@ -125,21 +122,6 @@ export function HeroCarousel() {
           </div>
         </motion.div>
       </AnimatePresence>
-      {/* Desktop arrows */}
-      <button
-        onClick={() => go(-1)}
-        aria-label="Previous slide"
-        className="absolute left-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#111827] shadow-md backdrop-blur transition hover:bg-white md:flex"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        onClick={() => go(1)}
-        aria-label="Next slide"
-        className="absolute right-4 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#111827] shadow-md backdrop-blur transition hover:bg-white md:flex"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
     </div>
   );
 }
