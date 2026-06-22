@@ -1,92 +1,85 @@
+# OTC Workflow — 10-Stage Manual Demo Mode
 
-# Kings Pharmacy — Site-Wide Fix Pass
+Goal: every stage waits for a human click. No auto-advance anywhere. The presenter can pause indefinitely at any stage. Customer view, staff dispatch view, and driver view stay in sync via the existing `sharedOrders` store.
 
-Note on WhatsApp numbers: only the 9th Ave number (+263 77 571 5520) was supplied. I'll use it as a placeholder for the other 3 branches and add a TODO comment in `src/data/branches.ts` so they're trivial to swap in. All branding (blue/white) and existing layout preserved.
+## Stage map (source of truth)
 
-## 1. Branch data (src/data/branches.ts)
+| # | Stage | Trigger | Status in store |
+|---|-------|---------|-----------------|
+| 1 | Shopping & Cart | Add to Cart → toast → manual nav to /cart → Proceed | (not yet created) |
+| 2 | Delivery Details | Fill form → Continue to Payment | — |
+| 3 | Payment | Pick method → method-specific verify → Continue to Review | — |
+| 4 | Review | Place Order | — |
+| 5 | Confirmation | Manual nav: Track / Continue Shopping | `Confirmed` |
+| 6 | Staff sees new order | Staff clicks Mark as Packed | `Confirmed` → `Packed` |
+| 7 | Packed | Staff assigns driver & dispatches | `Packed` → `Assigned` |
+| 8 | Dispatched | Driver clicks Start Delivery | `Assigned` → `Out for delivery` |
+| 9 | Out for Delivery | Driver clicks Mark as Delivered | `Out for delivery` → `Delivered` |
+| 10 | Delivered | Terminal | `Delivered` |
 
-Replace the 4 demo branches with the new list. Add `whatsapp` field to the `Branch` type:
+We extend `SharedOrderStatus` to add `"Confirmed"` (between order placed and packed) so Stage 6 has a distinct state from Stage 7. Default status changes from `"Ready to dispatch"` → `"Confirmed"`.
 
-- 9th Ave Branch — CBD · +263 77 571 5520
-- 6th Ave Branch — CBD · placeholder
-- Shop 4, Old Mutual Centre, Jason Moyo Ave · placeholder
-- Ascot Shopping Centre · placeholder
+## Files to change
 
-Update any place that hard-codes branch names (checkout's "Hillside" pickup label, footer addresses, branches section on homepage if present).
+### Store
+- `src/store/sharedOrders.ts` — add `"Confirmed"` status, keep `markPacked`, `assignDriver` (now also takes vehicle), add `startDelivery` action, keep `updateStatus`. Each transition pushes a notification.
 
-## 2. Floating WhatsApp button (new `src/components/layout/FloatingWhatsApp.tsx`)
+### Customer flow
+- `src/routes/cart.tsx` — verify "Proceed to Checkout" is the only path (already is); confirm Add-to-Cart toast comes from `useShop` (audit).
+- `src/components/cart/CartDrawer.tsx` — no auto-redirect; just a "View Cart" / "Checkout" button.
+- `src/routes/checkout.tsx` — rebuild as 3-step wizard with explicit `step` state (1/2/3):
+  - Step 1: Delivery form with per-field validation, Continue disabled until valid.
+  - Step 2: Payment method picker → per-method sub-flow with verify button + spinner + success badge. Continue to Review disabled until verified.
+  - Step 3: Review summary + Place Order button (1s spinner then advance).
+  - Removes any auto-advance / auto-redirect to confirmation.
+  - Visible progress bar at top showing current step.
+- `src/components/checkout/PaymentSimulator.tsx` (or new `PaymentStepper.tsx`) — per-method inline forms with manual Verify buttons:
+  - EcoCash/Telecash: phone → Send OTP → 6-digit OTP → Verify OTP → ✓
+  - ZimSwitch: bank + account → Verify Account → ✓
+  - ZIPIT: account + bank → Confirm Details → ✓
+  - International Card: number/expiry/CVV/name → Validate Card → ✓
+  - Cash on Delivery: confirm amount → Confirm COD → ✓
+- `src/components/checkout/OrderConfirmation.tsx` — blue checkmark, ref #, summary, "Track My Order" + "Continue Shopping". No auto-redirect.
 
-- Fixed bottom-right (above mobile bottom-nav: `bottom: calc(safe + 80px)` on mobile, `bottom: 24px` desktop, `right: 16-24px`).
-- Renders a green circular FAB with `MessageCircle` icon and "WhatsApp" tooltip.
-- Click → opens a Popover listing all 4 branches. Currently-selected branch (from `useBranch`) is highlighted and pre-selected; user can pick any.
-- Selecting opens `https://wa.me/<intl-format>?text=<encoded greeting>` in a new tab.
-- Mount once in `__root.tsx` so it shows on every page.
+### Staff flow
+- `src/components/staff/DispatcherDashboard.tsx` — three columns: **New Orders** (`Confirmed`, with blue "NEW" badge), **Ready for Dispatch** (`Packed`, driver dropdown + Assign & Dispatch), **Out for Delivery** (`Assigned`/`Out for delivery`), plus **Completed** (`Delivered`). Each transition button shows a 0.5s spinner. Read from `useSharedOrders`.
 
-## 3. Header promo text (src/components/layout/Navbar.tsx + MobileBottomNav if relevant)
+### Driver flow
+- Add a minimal Driver view inside the existing staff dashboard (new tab or section in `DispatcherDashboard`) showing orders where `status === "Assigned"` with "Start Delivery" button, and `"Out for delivery"` with "Mark as Delivered" button. Avoids a new route/auth layer for the demo.
 
-Change "Free delivery over US$50" / promo strings → "Free delivery within 10km on orders over $30". Same change anywhere this string appears (footer trust strip, home trust strip in `src/routes/index.tsx`).
+### Customer tracking
+- `src/routes/track.tsx` — read selected order from `useSharedOrders` and render a 5-step timeline: Confirmed → Packed → Dispatched → Out for Delivery → Delivered. Each completed step shows timestamp. Map placeholder activates at Dispatched.
 
-## 4. OTC dispatch bug (root cause: orders never written to a shared store)
+### Notifications
+- `src/store/notifications.ts` — already exists; ensure every transition (`addOrder`, `markPacked`, `assignDriver`, `startDelivery`, deliver) sends the customer-facing copy specified in the brief.
 
-Today the checkout flow calls `clearCart()` and shows a confirmation, but never persists the order anywhere the dispatcher reads. `DispatcherDashboard` only reads `STAFF_DELIVERIES` (static demo) + `useSharedPrescriptions`.
-
-Fix:
-- Create `src/store/sharedOrders.ts` (zustand + persist, mirrors prescription store): `SharedOrder { id, customer, phone, email, branchId, items[], address, deliveryMethod, paymentMethod, paymentRef, total, status, placedAt, driverName?, dispatchedAt?, deliveredAt? }` with actions `addOrder`, `assignDriver`, `updateStatus`.
-- In `checkout.tsx` `handlePaymentSuccess`, push a `SharedOrder` into the store (status `"Ready to dispatch"`) right before `clearCart()`.
-- In `DispatcherDashboard.tsx`, read from `useSharedOrders` and merge into the kanban columns alongside `STAFF_DELIVERIES`. Wire Assign/Mark out/Mark delivered to the new store actions.
-- Customer-facing `track.tsx` and `account.tsx` read from the same store so status updates flow through.
-
-## 5. Book Consultation (new route + store)
-
-- New `src/store/consultations.ts` (zustand+persist) with `addConsultation` returning a reference number.
-- New `src/routes/consultation.tsx` with the form (name, phone, branch select sourced from `BRANCHES`, date/time, reason). On submit show confirmation screen with `KP-CONS-<6 digits>`.
-- Find existing "Book Consultation" CTA (likely in `services.tsx` or a home section) — replace stale onClick with `<Link to="/consultation">`.
-
-## 6. Real-time notifications (new `src/store/notifications.ts` + bell)
-
-- Lightweight notification store: `{ id, audience: "customer"|"staff"|"driver", userId?, title, body, link, ts, read }`.
-- Hook into existing store actions:
-  - `sharedPrescriptions.approvePrescription` → customer notification "Quotation ready".
-  - `sharedPrescriptions.markPaid` → staff notification "Payment received for #X — ready to pack".
-  - `sharedPrescriptions.assignDriver` → customer notification "Out for delivery".
-  - `sharedPrescriptions.updateStatus(..., 'Delivered')` → customer "Delivered".
-  - `sharedOrders.addOrder` → customer "Order confirmed" + staff "New OTC order".
-  - `sharedOrders.updateStatus` likewise.
-- Bell component in `Navbar` (customer) and `staff.tsx` header (staff) with unread badge; opening clears unread; clicking a notification routes to its `link`.
-
-## 7. Payment → packing → dispatch chain
-
-Covered by #6 wiring: `markPaid` already exists, the new side-effect raises the staff notification. Add "Mark Packed" button to the rx card before "Assign Driver" (intermediate status `"Dispensing"` already exists). Track-order page reflects the dispatch timeline (already mostly built; add the "Out for Delivery" step from notifications).
-
-## 8. Mobile-friendly pass
-
-Targeted sweep (no global redesign), focused on known pain points:
-- Checkout 2-col form on mobile → single column (`grid-cols-1 sm:grid-cols-2`).
-- All primary buttons → `min-h-11` (44px).
-- Floating WhatsApp positioned to clear `MobileBottomNav` (~64px) and cart FAB.
-- Dispatch kanban: horizontal scroll on small screens with snap.
-- Notifications panel: full-width sheet on mobile, popover on desktop.
-- Modal dialogs: `max-h-[90vh] overflow-y-auto`.
-
-## 9. Delivered status badge (customer dashboard)
-
-In `account.tsx` order/prescription rows: when status is `"Delivered"`, render a navy badge `bg-primary/10 text-primary` with `CheckCircle2` icon + delivery timestamp. Same on track-order page final step.
-
-## 10. End-to-end verification
-
-After build, drive Playwright through:
-- OTC: home → product → cart → checkout → pay (sim) → dispatch dashboard shows order → assign driver → mark delivered → customer dashboard shows "Delivered".
-- Rx: upload prescription → staff approves with quote → customer pays → staff notification fires → assign driver → mark delivered → customer dashboard shows "Delivered".
-
-Capture screenshots at each step; report any console errors.
-
----
+### Demo Mode
+- Locate existing Demo Mode button (likely in `DemoBadge.tsx` or `staff.tsx`). Replace with a controller that:
+  - Seeds a sample order, then walks through stages 5 → 10 with 3s pauses (stages 1–4 are user-driven; demo starts from "Place Order").
+  - Shows a top-right overlay label: "Stage N: <name>".
+  - Provides **Pause / Resume** buttons; pause freezes the timer indefinitely.
+  - Uses the real store actions so both customer and staff views update live.
 
 ## Technical notes
 
-- All new stores use `zustand` + `persist` so customer and staff portals (same browser) share state — consistent with existing `sharedPrescriptions` pattern.
-- No backend / Lovable Cloud needed (per your choice).
-- No styling changes outside what's listed; existing blue (#0EA5E9 primary) and white palette preserved.
-- New files: `branches.ts` (edit), `FloatingWhatsApp.tsx`, `sharedOrders.ts`, `consultation.tsx`, `consultations.ts`, `notifications.ts`, `NotificationsBell.tsx`. Edited: `Navbar.tsx`, `__root.tsx`, `checkout.tsx`, `DispatcherDashboard.tsx`, `account.tsx`, `track.tsx`, `services.tsx`/`index.tsx` (Book Consultation link), `index.tsx` (promo text), `Footer.tsx`.
+- All stage state lives in `useSharedOrders` (zustand+persist) — single source of truth, already shared across portals in the same browser.
+- New status string `"Confirmed"` is added to the union; every `switch`/filter on status must be updated (dispatcher columns, track timeline, account page badge).
+- No backend changes; no routing changes beyond possibly a `/staff/driver` subview (kept inside existing dispatcher to limit blast radius).
+- Mobile: wizard steps stack to single column, buttons `min-h-11`, progress bar full-width.
+- No visual redesign outside what each stage requires. Existing blue/white palette and grey page background preserved.
 
-Estimated ~14 file edits + 6 new files. I'll batch them aggressively and verify with Playwright at the end.
+## Out of scope
+
+- Real payment gateway integration (still simulated, just gated behind manual buttons).
+- Real map / GPS — animated marker remains a placeholder.
+- Multi-user auth for driver portal — driver view is a tab inside the staff dashboard for demo simplicity.
+
+## Verification
+
+After build, drive Playwright at 1280×1800:
+1. Add product → toast → cart → checkout step 1 → fill → step 2 → EcoCash → OTP → verify → step 3 → place order → confirmation.
+2. Open `/staff/dashboard` in a second tab → see NEW order → Mark Packed → Assign driver → switch to Driver tab → Start Delivery → Mark Delivered.
+3. Open `/track?order=...` → confirm timeline updates after each staff/driver action.
+4. Click Demo Mode → confirm overlay labels, 3s pauses, Pause/Resume works, no stage skipped.
+
+Screenshots at each stage for the report.
