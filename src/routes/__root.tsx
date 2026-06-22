@@ -17,7 +17,6 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DemoBadge } from "@/components/layout/DemoBadge";
-import { DemoController } from "@/components/layout/DemoController";
 import { FloatingWhatsApp } from "@/components/layout/FloatingWhatsApp";
 import { ChatBot } from "@/components/layout/ChatBot";
 import { InstallPWA } from "@/components/layout/InstallPWA";
@@ -160,7 +159,6 @@ function RootComponent() {
         {!isStaff && <Footer />}
         {!isStaff && <MobileBottomNav />}
         {!isStaff && <DemoBadge />}
-        <DemoController />
         {!isStaff && <FloatingWhatsApp />}
         {!isStaff && <ChatBot />}
         {!isStaff && <InstallPWA />}
