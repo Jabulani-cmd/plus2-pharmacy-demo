@@ -447,6 +447,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
             return (
               <div
                 key={col.key}
+                id={col.key === "Confirmed" ? "new-orders-col" : undefined}
                 className="flex flex-col rounded-xl border border-border bg-white shadow-sm"
               >
                 <header className="flex items-center justify-between border-b border-border px-4 py-3">
