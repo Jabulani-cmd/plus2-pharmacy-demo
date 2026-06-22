@@ -250,7 +250,7 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
         <label className="flex items-center gap-2"><input type="checkbox" defaultChecked /> Remember me</label>
         <button type="button" onClick={onForgot} className="font-semibold text-primary hover:underline">Forgot password?</button>
       </div>
-      <button disabled={loading} className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
+      <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Signing in…" : "Sign in"}
       </button>
     </form>
@@ -274,14 +274,14 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     <form onSubmit={submit} className="space-y-4">
       <h1 className="text-2xl font-extrabold">Create your account</h1>
       <p className="-mt-2 text-sm text-muted-foreground">Join thousands of Zimbabwean families who trust Kings.</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="First name" required value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} />
         <Field label="Last name" required value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} />
       </div>
       <Field label="Email" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
       <Field label="Mobile" type="tel" placeholder="+27 82 000 0000" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
       <Field label="Password (min 8 chars)" type="password" required value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
-      <button disabled={loading} className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
+      <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Creating…" : "Create account"}
       </button>
     </form>
