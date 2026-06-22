@@ -196,12 +196,28 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       <HistoryView deliveries={deliveries} drivers={drivers} />
     );
 
+  const newCount = deliveries.filter((d) => d.status === "Confirmed").length;
+
   return (
     <div>
-      <PageHeader
-        title="Dispatch Board"
-        subtitle="Manage OTC orders and prescription deliveries."
-      />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Dispatch Board"
+          subtitle="Manage OTC orders and prescription deliveries."
+        />
+        {newCount > 0 && (
+          <a
+            href="#new-orders-col"
+            className="group inline-flex items-center gap-2 rounded-full bg-[#0EA5E9] px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white shadow-lg ring-4 ring-[#0EA5E9]/20 transition hover:bg-[#0284C7]"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+            </span>
+            {newCount} New Order{newCount === 1 ? "" : "s"}
+          </a>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KPI
