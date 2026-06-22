@@ -1203,15 +1203,6 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
           />
         )}
 
-        {/* Inline chat with driver, once assigned */}
-        {hasDriverContact && !isDelivered && (
-          <OrderChat
-            orderId={order.id}
-            perspective="customer"
-            partnerName={order.driverName ?? "Driver"}
-          />
-        )}
-
         {/* Post-delivery rating */}
         {isDelivered && <RatingPrompt orderId={order.id} />}
 
