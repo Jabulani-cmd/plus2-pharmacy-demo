@@ -133,10 +133,10 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
           <div className="mt-2 flex items-center gap-3 rounded-md bg-[#F0F9F4] p-3 animate-fade-in">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">SD</div>
             <div className="flex-1">
-              <div className="text-sm font-bold">Siphamandla Dube</div>
-              <div className="text-[11px] text-muted-foreground">Toyota Hilux · {randomZwPlateMemo()}</div>
+              <div className="text-sm font-bold">{liveOrder?.driverName ?? "Driver"}</div>
+              <div className="text-[11px] text-muted-foreground">{liveOrder?.driverVehicle ?? "Vehicle"}</div>
             </div>
-            <button onClick={() => toast.info("📞 Calling Siphamandla Dube... (demo)")} className="inline-flex items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/5">
+            <button onClick={() => toast.info("📞 Calling " + (liveOrder?.driverName ?? "driver") + "... (demo)")} className="inline-flex items-center gap-1 rounded-md border border-primary px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/5">
               <Phone className="h-3 w-3" /> Call
             </button>
           </div>
