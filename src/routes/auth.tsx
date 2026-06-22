@@ -71,8 +71,8 @@ function AuthPage() {
   }, [user, navigate, redirect]);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14">
-      <div className="lg:col-span-2 flex justify-start">
+    <div className="mx-auto grid w-full max-w-6xl gap-6 overflow-x-hidden px-4 py-6 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14" style={{ maxWidth: "100vw" }}>
+      <div className="flex min-w-0 justify-start lg:col-span-2">
         <Link
           to="/"
           className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
@@ -80,7 +80,7 @@ function AuthPage() {
           <Home className="h-4 w-4" /> Home
         </Link>
       </div>
-      <div className="relative hidden flex-col justify-center overflow-hidden rounded-md bg-primary p-10 text-primary-foreground shadow-sm lg:flex">
+      <div className="relative hidden min-w-0 flex-col justify-center overflow-hidden rounded-md bg-primary p-10 text-primary-foreground shadow-sm lg:flex">
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5 blur-3xl" />
         <BrandLockup />
@@ -97,7 +97,7 @@ function AuthPage() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[420px] rounded-[20px] border border-border bg-card p-5 shadow-sm sm:p-7 lg:max-w-none lg:p-8">
+      <div className="mx-auto w-full min-w-0 max-w-[420px] rounded-xl border border-border bg-card p-4 shadow-sm sm:rounded-2xl sm:p-7 lg:max-w-none lg:p-8">
         <div className="mb-5 flex flex-col items-center lg:hidden">
           <BrandMark size={64} />
         </div>
