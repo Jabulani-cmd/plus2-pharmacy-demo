@@ -461,7 +461,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                           <div className="text-xs font-bold text-foreground">
                             {d.id}
                           </div>
-                          <div className="text-xs font-bold text-primary">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                            {d.status === "Confirmed" && (
+                              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
+                                NEW
+                              </span>
+                            )}
                             {fmtUSD(d.total)}
                           </div>
                         </div>
@@ -493,12 +498,22 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                           </div>
                         )}
                         <div className="mt-2 flex gap-1">
+                          {d.status === "Confirmed" && (
+                            <button
+                              onClick={() =>
+                                advance(d.id, "Ready to dispatch")
+                              }
+                              className="flex-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary-dark"
+                            >
+                              Mark as Packed
+                            </button>
+                          )}
                           {d.status === "Ready to dispatch" && (
                             <button
                               onClick={() => setAssignFor(d)}
                               className="flex-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary-dark"
                             >
-                              Assign driver
+                              Assign Driver &amp; Dispatch
                             </button>
                           )}
                           {d.status === "Assigned" && (
@@ -508,7 +523,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                               }
                               className="flex-1 rounded bg-violet-600 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-violet-700"
                             >
-                              Mark out
+                              Start Delivery
                             </button>
                           )}
                           {d.status === "Out for delivery" && (
@@ -518,7 +533,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                               }
                               className="flex-1 rounded bg-emerald-600 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700"
                             >
-                              Mark delivered
+                              Mark as Delivered
                             </button>
                           )}
                         </div>
