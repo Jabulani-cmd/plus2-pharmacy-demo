@@ -94,7 +94,10 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const counts = useMemo(
     () => ({
       ready:
-        deliveries.filter((d) => d.status === "Ready to dispatch").length +
+        deliveries.filter(
+          (d) =>
+            d.status === "Confirmed" || d.status === "Ready to dispatch"
+        ).length +
         rxOrders.filter(
           (p) => p.status === "Paid" || p.status === "Dispensing"
         ).length,
