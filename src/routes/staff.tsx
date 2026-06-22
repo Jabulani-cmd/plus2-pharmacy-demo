@@ -224,7 +224,7 @@ function StaffLayout() {
   const activeView = search.view ?? "";
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6]">
+    <div className="min-h-screen bg-[#EFEFEF]">
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 lg:px-6">
