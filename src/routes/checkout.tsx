@@ -554,6 +554,18 @@ function Checkout() {
                 </div>
               </div>
 
+              {/* Coupon code */}
+              <div className="mt-4">
+                <CouponInput
+                  applied={coupon}
+                  onApply={(c) => {
+                    setCoupon(c);
+                    toast.success("Coupon applied — " + c.label);
+                  }}
+                  onClear={() => setCoupon(null)}
+                />
+              </div>
+
               <div
                 className="mt-4 rounded-lg p-3 text-sm"
                 style={{
@@ -585,6 +597,14 @@ function Checkout() {
                     {formatUSD(vat)}
                   </span>
                 </div>
+                {coupon && (
+                  <div className="flex justify-between py-1 text-emerald-700">
+                    <span>Discount ({coupon.label})</span>
+                    <span className="font-semibold">
+                      -{formatUSD(discountAmount)}
+                    </span>
+                  </div>
+                )}
                 <div
                   className="flex justify-between border-t
                     border-gray-200 mt-1 pt-2"
@@ -672,6 +692,12 @@ function Checkout() {
                   label="VAT (15%)"
                   value={formatUSD(vat)}
                 />
+                {coupon && (
+                  <Row
+                    label={<span className="text-emerald-700">Coupon ({coupon.code})</span>}
+                    value={<span className="text-emerald-700">-{formatUSD(discountAmount)}</span>}
+                  />
+                )}
                 <div className="my-2 border-t border-border" />
                 <Row
                   label={
