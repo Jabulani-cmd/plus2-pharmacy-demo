@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { ReceiptModal } from "@/components/receipt/ReceiptModal";
 import { buildReceipt, type Receipt } from "@/lib/receipts";
+import { ActiveOrderBanner } from "@/components/dashboard/ActiveOrderBanner";
+import { LoyaltyCard } from "@/components/dashboard/LoyaltyCard";
+import { RatingPrompt } from "@/components/tracking/RatingPrompt";
+import { useOrderExtras } from "@/store/orderExtras";
 
 export const Route = createFileRoute("/account")({
   head: () => ({ meta: [{ title: "My Account — Kings Pharmacy" }] }),
@@ -256,6 +260,7 @@ function AccountPage() {
   const sharedPrescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const markSharedPaid = useSharedPrescriptions((s) => s.markPaid);
   const allSharedOrders = useSharedOrders((s) => s.orders);
+  const allRatings = useOrderExtras((s) => s.ratings);
   const wishlist = useShop((s) => s.wishlist).map(getProduct).filter(Boolean);
   const [tab, setTab] = useState("dash");
   const [activeReceipt, setActiveReceipt] = useState(null as Receipt | null);
@@ -270,6 +275,14 @@ function AccountPage() {
 
   const mySharedOrders = allSharedOrders.filter(
     (o) => o.customerId === user.id || o.customerEmail === user.email
+  );
+
+  // Latest in-progress OTC order to surface in the dashboard banner.
+  const activeSharedOrder = mySharedOrders.find((o) => o.status !== "Delivered");
+
+  // Delivered OTC orders awaiting a rating.
+  const unratedDelivered = mySharedOrders.filter(
+    (o) => o.status === "Delivered" && !allRatings.some((r) => r.orderId === o.id)
   );
 
   const mySharedPrescriptions = sharedPrescriptions.filter(
