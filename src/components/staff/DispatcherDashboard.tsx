@@ -121,7 +121,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         assignDriverSharedOrder(deliveryId, drv.name, drv.phone, drv.vehicle);
         setAssignFor(null);
         toast.success(
-          "Order " + deliveryId + " assigned to " + drv.name.split(" ")[0]
+          "Order " + deliveryId + " → assigned to " + drv.name.split(" ")[0] + ". Driver must Start Delivery."
         );
         return;
       }
@@ -167,12 +167,13 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     next: StaffDelivery["status"]
   ) => {
     if (isLiveOrder(deliveryId)) {
-      if (next === "Out for delivery") {
-        updateOrderStatus(deliveryId, "Out for delivery");
+      if (next === "Ready to dispatch") {
+        // staff marked a NEW order as packed → ready for driver assignment
+        markPackedShared(deliveryId);
+      } else if (next === "Out for delivery") {
+        startDeliveryShared(deliveryId);
       } else if (next === "Delivered") {
         updateOrderStatus(deliveryId, "Delivered");
-      } else if (next === "Assigned") {
-        markPackedShared(deliveryId);
       }
       toast.success("Order " + deliveryId + " → " + next);
       return;
