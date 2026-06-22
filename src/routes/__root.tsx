@@ -151,9 +151,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen flex-col bg-background font-sans antialiased" style={{ fontFamily: "'Open Sans', 'Inter', system-ui, sans-serif" }}>
+      <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-background font-sans antialiased" style={{ fontFamily: "'Open Sans', 'Inter', system-ui, sans-serif" }}>
         {!isStaff && <Navbar />}
-        <main className={isStaff ? "flex-1" : "flex-1 pb-20 md:pb-0"}>
+        <main className={isStaff ? "flex-1 w-full overflow-x-hidden" : "flex-1 w-full overflow-x-hidden pb-20 md:pb-0"}>
           <Outlet />
         </main>
         {!isStaff && <Footer />}
