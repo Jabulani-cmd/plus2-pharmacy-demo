@@ -10,6 +10,8 @@ import PaymentModal from "@/components/checkout/PaymentModal";
 import { useSharedOrders } from "@/store/sharedOrders";
 import { useAuth } from "@/store/auth";
 import { useBranch } from "@/store/branch";
+import { CouponInput, type AppliedCoupon } from "@/components/checkout/CouponInput";
+import { useOrderExtras } from "@/store/orderExtras";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Kings Pharmacy" }] }),
@@ -36,9 +38,14 @@ function Checkout() {
   );
   const deliveryFee = subtotal >= 50 ? 0 : 5;
   const vat = parseFloat((subtotal * 0.15).toFixed(2));
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const discountAmount = coupon
+    ? +(subtotal * coupon.discount).toFixed(2)
+    : 0;
   const total = parseFloat(
-    (subtotal + deliveryFee + vat).toFixed(2)
+    (subtotal + deliveryFee + vat - discountAmount).toFixed(2)
   );
+  const addPoints = useOrderExtras((s) => s.addPoints);
 
   const [step, setStep] = useState(0);
   const [delivery_, setDelivery] = useState({
@@ -176,6 +183,8 @@ function Checkout() {
 
     clearCart();
     setStep(3);
+    // Award OTC loyalty points
+    addPoints(10);
     toast.success("Payment confirmed — order placed");
   };
 
