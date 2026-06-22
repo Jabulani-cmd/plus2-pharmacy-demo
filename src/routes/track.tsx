@@ -7,8 +7,14 @@ import { formatUSD } from "@/store/shop";
 import {
   Search, MapPin, Phone, Truck, CheckCircle2,
   Circle, Navigation, FileText, Car, Clock,
-  Package, Store,
+  Package, Store, MessageSquare, MessageCircle,
 } from "lucide-react";
+import { useBranch } from "@/store/branch";
+import { getBranch } from "@/data/branches";
+import { OrderChat } from "@/components/comms/OrderChat";
+import { CallButton } from "@/components/comms/CallScreen";
+import { DeliveryCountdown } from "@/components/tracking/DeliveryCountdown";
+import { RatingPrompt } from "@/components/tracking/RatingPrompt";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -1076,6 +1082,9 @@ const SHARED_STAGES: { key: SharedOrder["status"]; label: string }[] = [
 ];
 
 function SharedOrderTracker({ order }: { order: SharedOrder }) {
+  const branchId = useBranch((s) => s.selectedBranchId);
+  const branch = getBranch(order.branchId ?? branchId);
+  const [chatOpen, setChatOpen] = useState(false);
   const stageIdx = Math.max(
     0,
     SHARED_STAGES.findIndex(
@@ -1085,6 +1094,10 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
     )
   );
   const isDelivered = order.status === "Delivered";
+  const isOutForDelivery = order.status === "Out for delivery";
+  const hasDriverContact =
+    Boolean(order.driverName) &&
+    (order.status === "Assigned" || isOutForDelivery || isDelivered);
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -1182,6 +1195,17 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
           )}
         </div>
 
+        {/* Live countdown */}
+        {isOutForDelivery && (
+          <DeliveryCountdown
+            startTs={order.outForDeliveryTs ?? Date.now()}
+            durationMinutes={20}
+          />
+        )}
+
+        {/* Post-delivery rating */}
+        {isDelivered && <RatingPrompt orderId={order.id} />}
+
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h3 className="font-extrabold">Items</h3>
           <ul className="mt-3 divide-y divide-border">
@@ -1212,6 +1236,20 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
           <p className="mt-2 text-sm text-muted-foreground">{order.address}</p>
           <p className="mt-1 text-xs text-muted-foreground">{order.phone}</p>
         </div>
+
+        {/* Message Pharmacy via WhatsApp */}
+        <a
+          href={`https://wa.me/${branch.whatsapp}?text=${encodeURIComponent(
+            "Hi Kings Pharmacy, I'm following up on order " + order.id + "."
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-extrabold text-emerald-800 transition hover:bg-emerald-100"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Message Pharmacy ({branch.shortName})
+        </a>
+
         {order.driverName && (
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="flex items-center gap-2 font-extrabold">
@@ -1228,16 +1266,24 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
                   {order.driverVehicle}
                 </div>
               </div>
-              {order.driverPhone && (
-                <a
-                  href={"tel:" + order.driverPhone}
-                  className="rounded-md bg-primary p-2 text-primary-foreground hover:bg-primary-dark"
-                  aria-label="Call driver"
-                >
-                  <Phone className="h-4 w-4" />
-                </a>
-              )}
             </div>
+            {hasDriverContact && !isDelivered && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <CallButton
+                  partnerName={order.driverName}
+                  partnerSubtitle={order.driverVehicle ?? order.driverPhone}
+                  label="Call Driver"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-xs font-extrabold text-white hover:bg-emerald-700"
+                />
+                <button
+                  onClick={() => setChatOpen(true)}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-extrabold text-primary-foreground hover:bg-primary-dark"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Chat
+                </button>
+              </div>
+            )}
           </div>
         )}
         <Link
@@ -1247,6 +1293,16 @@ function SharedOrderTracker({ order }: { order: SharedOrder }) {
           View all orders &rarr;
         </Link>
       </aside>
+
+      {chatOpen && hasDriverContact && (
+        <OrderChat
+          orderId={order.id}
+          perspective="customer"
+          partnerName={order.driverName ?? "Driver"}
+          floating
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }

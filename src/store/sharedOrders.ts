@@ -46,6 +46,8 @@ export type SharedOrder = {
   dispatchedAt?: string;
   deliveredAt?: string;
   eta?: string;
+  /** Numeric timestamp when status became "Out for delivery" — used by countdown timer. */
+  outForDeliveryTs?: number;
 };
 
 type State = {
@@ -165,7 +167,7 @@ export const useSharedOrders = create<State>()(
         set((s) => ({
           orders: s.orders.map((x) =>
             x.id === id
-              ? { ...x, status: "Out for delivery", eta: "20 min" }
+              ? { ...x, status: "Out for delivery", eta: "20 min", outForDeliveryTs: Date.now() }
               : x
           ),
         }));
