@@ -455,6 +455,34 @@ function Checkout() {
                   ))}
                 </div>
               </div>
+
+              <div className="mt-6">
+                <h3 className="mb-2 text-sm font-bold">Delivery Time</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {DELIVERY_SLOTS.map((s) => (
+                    <label
+                      key={s.id}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm transition ${
+                        delivery_.slot === s.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="slot"
+                        checked={delivery_.slot === s.id}
+                        onChange={() => setDelivery({ ...delivery_, slot: s.id })}
+                        className="accent-[var(--color-primary)]"
+                      />
+                      <span className="font-semibold">{s.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Branch: <span className="font-semibold text-foreground">{branch.shortName}</span> · change in the header.
+                </p>
+              </div>
             </div>
           )}
 
