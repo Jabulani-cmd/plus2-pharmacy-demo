@@ -387,7 +387,7 @@ export const useAuth = create<AuthState>()(
         if (u.isReal) {
           await supabase
             .from("profiles")
-            .update({ last_address: address as unknown as Record<string, unknown> })
+            .update({ last_address: address as unknown as never })
             .eq("id", u.id);
         }
       },
