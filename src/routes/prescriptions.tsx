@@ -705,9 +705,9 @@ function Step1Files({
         </div>
       </div>
 
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-      <input ref={galleryRef} type="file" accept={ACCEPTED} multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-      <input ref={cloudRef} type="file" accept={ACCEPTED} multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={galleryRef} type="file" accept={ACCEPTED} multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={cloudRef} type="file" accept={ACCEPTED} multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
       {hasHeic && (
         <div className="flex items-start gap-2 rounded-md border border-[#FDE68A] bg-[#FEFCE8] p-3 text-xs text-[#854D0E]">
