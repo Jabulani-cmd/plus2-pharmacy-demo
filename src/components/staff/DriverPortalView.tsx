@@ -85,7 +85,7 @@ export function DriverPortalView() {
               {driver.vehicle} · {driver.phone}
             </div>
           </div>
-          <StatusPill tone="success" label={driver.status} />
+          <StatusPill status={driver.status} />
         </div>
       )}
 
@@ -108,7 +108,7 @@ export function DriverPortalView() {
                       <div className="text-sm font-bold text-foreground">{o.id}</div>
                       <div className="text-xs text-muted-foreground">{o.customer} · {o.phone}</div>
                     </div>
-                    <StatusPill tone={o.status === "Out for delivery" ? "info" : "warn"} label={o.status} />
+                    <StatusPill status={o.status} />
                   </div>
                   <div className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -165,7 +165,7 @@ export function DriverPortalView() {
                       <div className="text-sm font-bold text-foreground">{p.id}</div>
                       <div className="text-xs text-muted-foreground">{p.patientName} · {p.customerPhone}</div>
                     </div>
-                    <StatusPill tone="info" label={p.status} />
+                    <StatusPill status={p.status} />
                   </div>
                   {p.deliveryAddress && (
                     <div className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
