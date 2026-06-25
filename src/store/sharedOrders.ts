@@ -182,7 +182,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
           body:
             "Order " + o.id + " received — staff have been notified to pack it.",
           link: "/track",
-          linkSearch: { order: o.id },
+          linkSearch: { id: o.id },
           tone: "success",
         });
 
@@ -213,7 +213,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
           title: "Order packed",
           body: "Order " + id + " has been packed and is awaiting a driver.",
           link: "/track",
-          linkSearch: { order: id },
+          linkSearch: { id },
           tone: "info",
         });
       },
@@ -253,7 +253,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
           body:
             driverName + " has been assigned to order " + id + " — awaiting dispatch.",
           link: "/track",
-          linkSearch: { order: id },
+          linkSearch: { id },
           tone: "info",
         });
       },
@@ -285,7 +285,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
             id +
             " — ETA 20 minutes.",
           link: "/track",
-          linkSearch: { order: id },
+          linkSearch: { id },
           tone: "success",
         });
       },

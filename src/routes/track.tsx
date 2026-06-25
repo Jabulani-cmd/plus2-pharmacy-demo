@@ -12,6 +12,7 @@ import {
   Clock,
   Package,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useOrders, ORDER_FLOW, type LiveStatus } from "@/lib/orders";
 import {
   useSharedOrders,
@@ -816,10 +817,20 @@ function Track() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-        <div className="text-lg font-bold text-[#1B3A6B]">No active orders</div>
-        <div className="text-sm text-slate-500 mt-1">
-          Place an order from the shop to start tracking.
+        <div className="text-lg font-bold text-[#1B3A6B]">
+          {trackId ? "Order not found" : "No active orders"}
         </div>
+        <div className="text-sm text-slate-500 mt-1">
+          {trackId
+            ? "We couldn't find this order. Check My Orders for your order history."
+            : "Place an order from the shop to start tracking."}
+        </div>
+        <Link
+          to="/account"
+          className="inline-block mt-6 rounded-md bg-[#1E5BC6] text-white px-5 py-2.5 text-sm font-bold hover:bg-[#1B3A6B]"
+        >
+          Go to My Orders
+        </Link>
       </div>
     );
   }
