@@ -620,14 +620,41 @@ function Step1Files({
         f.size > MAX_BYTES ? "File too large — max 10MB" : undefined;
       const local: LocalFile = {
         id: crypto.randomUUID(), file: f, error,
+        progress: error ? undefined : 0,
       };
-      if (!error && f.type.startsWith("image/")) {
+      if (!error) {
         const reader = new FileReader();
+        reader.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            local.progress = Math.min(
+              99,
+              Math.round((ev.loaded / ev.total) * 100),
+            );
+            setFiles([...next]);
+          }
+        };
         reader.onload = () => {
-          local.preview = reader.result as string;
+          if (f.type.startsWith("image/")) {
+            local.preview = reader.result as string;
+          }
+          local.progress = 100;
+          setFiles([...next]);
+          // Clear progress shortly after to hide the bar
+          setTimeout(() => {
+            local.progress = undefined;
+            setFiles([...next]);
+          }, 350);
+        };
+        reader.onerror = () => {
+          local.error = "Upload failed";
+          local.progress = undefined;
           setFiles([...next]);
         };
-        reader.readAsDataURL(f);
+        if (f.type.startsWith("image/")) {
+          reader.readAsDataURL(f);
+        } else {
+          reader.readAsArrayBuffer(f);
+        }
       }
       next.push(local);
     }
@@ -640,6 +667,10 @@ function Step1Files({
   const totalMB = (
     files.reduce((s, f) => s + f.file.size, 0) / 1024 / 1024
   ).toFixed(1);
+
+  const isUploading = files.some(
+    (f) => typeof f.progress === "number" && f.progress < 100,
+  );
 
   return (
     <div className="space-y-5">
