@@ -380,6 +380,93 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_orders: {
+        Row: {
+          address: string
+          branch_id: string | null
+          created_at: string
+          customer: string
+          customer_email: string | null
+          customer_id: string | null
+          delivered_at: string | null
+          delivery_method: string
+          dispatched_at: string | null
+          driver_name: string | null
+          driver_phone: string | null
+          driver_vehicle: string | null
+          eta: string | null
+          id: string
+          item_count: number
+          items: Json
+          out_for_delivery_ts: number | null
+          packed_at: string | null
+          payment_method: string
+          payment_ref: string
+          phone: string
+          placed_at: string
+          placed_ts: number
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          branch_id?: string | null
+          created_at?: string
+          customer: string
+          customer_email?: string | null
+          customer_id?: string | null
+          delivered_at?: string | null
+          delivery_method?: string
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          driver_vehicle?: string | null
+          eta?: string | null
+          id: string
+          item_count?: number
+          items?: Json
+          out_for_delivery_ts?: number | null
+          packed_at?: string | null
+          payment_method?: string
+          payment_ref?: string
+          phone?: string
+          placed_at?: string
+          placed_ts?: number
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          branch_id?: string | null
+          created_at?: string
+          customer?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          delivered_at?: string | null
+          delivery_method?: string
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          driver_vehicle?: string | null
+          eta?: string | null
+          id?: string
+          item_count?: number
+          items?: Json
+          out_for_delivery_ts?: number | null
+          packed_at?: string | null
+          payment_method?: string
+          payment_ref?: string
+          phone?: string
+          placed_at?: string
+          placed_ts?: number
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
