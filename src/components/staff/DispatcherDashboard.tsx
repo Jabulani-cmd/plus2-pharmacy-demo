@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  STAFF_DELIVERIES,
   STAFF_DRIVERS,
   type StaffDelivery,
   type StaffDriver,
@@ -60,11 +59,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     [sharedOrders]
   );
 
-  const [demoDeliveries, setDemoDeliveries] =
-    useState<StaffDelivery[]>(STAFF_DELIVERIES);
-  const deliveries = [...liveDeliveries, ...demoDeliveries];
-  const setDeliveries = setDemoDeliveries;
-  const isLiveOrder = (id: string) => sharedOrders.some((o) => o.id === id);
+  // Demo seed data removed — dispatch board only shows real customer orders.
+  const deliveries = liveDeliveries;
+  const isLiveOrder = (_id: string) => true;
+  const setDeliveries: (
+    updater: (prev: StaffDelivery[]) => StaffDelivery[]
+  ) => void = () => {};
 
   const [drivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
   const [assignFor, setAssignFor] =
@@ -196,7 +196,6 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     return (
       <HistoryView
         sharedOrders={sharedOrders}
-        demoDeliveries={demoDeliveries}
         rxDelivered={sharedPrescriptions.filter((p) => p.status === "Delivered")}
         drivers={drivers}
       />
@@ -866,17 +865,15 @@ function toMs(v: unknown): number {
 
 function HistoryView({
   sharedOrders,
-  demoDeliveries,
   rxDelivered,
   drivers,
 }: {
   sharedOrders: ReturnType<typeof useSharedOrders.getState>["orders"];
-  demoDeliveries: StaffDelivery[];
   rxDelivered: ReturnType<typeof useSharedPrescriptions.getState>["prescriptions"];
   drivers: StaffDriver[];
 }) {
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("all");
 
   const driverById = (id?: string) => drivers.find((d) => d.id === id);
 
@@ -905,21 +902,6 @@ function HistoryView({
         };
       });
 
-    const otcDemo: HistoryRow[] = demoDeliveries
-      .filter((d) => d.status === "Delivered")
-      .map((d) => ({
-        id: d.id,
-        kind: "OTC",
-        customer: d.customer,
-        address: d.address,
-        itemsLabel: d.items + " item" + (d.items > 1 ? "s" : ""),
-        total: d.total,
-        payment: d.paymentMethod,
-        driverName: driverById(d.driverId)?.name,
-        placedAtMs: toMs(d.placedAt),
-        placedAtLabel: d.placedAt,
-      }));
-
     const rx: HistoryRow[] = rxDelivered.map((p) => {
       const placedMs = toMs(p.paidAt ?? p.uploadedAt);
       const addr = p.deliveryAddress
@@ -942,10 +924,10 @@ function HistoryView({
       };
     });
 
-    return [...otcLive, ...otcDemo, ...rx].sort(
+    return [...otcLive, ...rx].sort(
       (a, b) => (b.deliveredAtMs ?? b.placedAtMs) - (a.deliveredAtMs ?? a.placedAtMs)
     );
-  }, [sharedOrders, demoDeliveries, rxDelivered, drivers]);
+  }, [sharedOrders, rxDelivered, drivers]);
 
   const now = Date.now();
   const startOfToday = new Date();
