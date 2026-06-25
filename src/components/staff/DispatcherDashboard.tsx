@@ -12,7 +12,7 @@ import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
-  X, Clock, UserCheck, FileText, User,
+  X, Clock, UserCheck, FileText, User, Search, CalendarDays,
 } from "lucide-react";
 
 const COLUMNS: {
@@ -24,7 +24,6 @@ const COLUMNS: {
   { key: "Ready to dispatch", label: "Ready to dispatch", color: "#F59E0B" },
   { key: "Assigned", label: "Assigned to driver", color: "#3B82F6" },
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
-  { key: "Delivered", label: "Delivered", color: "#059669" },
 ];
 
 export function DispatcherDashboard({ view }: { view?: string }) {
