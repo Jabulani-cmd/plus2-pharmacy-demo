@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
+import { useAuth } from "@/store/auth";
 import { getProduct, PRODUCTS } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Minus, Plus, Trash2, Tag, ShoppingBag } from "lucide-react";
@@ -9,8 +10,21 @@ import { FileText, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Cart — Kings Pharmacy" }] }),
-  component: CartPage,
+  component: CartGate,
 });
+
+function CartGate() {
+  const user = useAuth((s) => s.user);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!user) {
+      toast.error("Please sign in to continue to checkout");
+      navigate({ to: "/auth", search: { redirect: "/cart" } });
+    }
+  }, [user, navigate]);
+  if (!user) return null;
+  return <CartPage />;
+}
 
 function CartPage() {
   const cart = useShop((s) => s.cart);

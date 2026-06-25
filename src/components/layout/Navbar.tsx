@@ -1,7 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search, Heart, ShoppingCart, User, Menu, MapPin, Phone, HelpCircle, Truck, FileText, LogIn, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { Logo } from "./Logo";
 import { useShop } from "@/store/shop";
 import { useAuth } from "@/store/auth";
@@ -16,16 +17,33 @@ import { LiveStatusBadge } from "@/components/LiveStatusBadge";
 
 export function Navbar() {
   const cart = useShop((s) => s.cart);
+  const clearCart = useShop((s) => s.clearCart);
   const wishlist = useShop((s) => s.wishlist);
   const user = useAuth((s) => s.user);
   const branchId = useBranch((s) => s.selectedBranchId);
   const branch = getBranch(branchId);
-  const cartCount = cart.reduce((a, c) => a + c.qty, 0);
+  // Guests never see a cart count — cart is per-user.
+  const cartCount = user ? cart.reduce((a, c) => a + c.qty, 0) : 0;
   const [q, setQ] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Wipe any persisted cart whenever there's no logged-in user so a guest
+  // (or a freshly logged-out session) never sees the previous user's items.
+  useEffect(() => {
+    if (!user && cart.length > 0) clearCart();
+  }, [user, cart.length, clearCart]);
+
+  const handleCartClick = () => {
+    if (!user) {
+      toast.error("Please sign in to view your cart");
+      navigate({ to: "/auth", search: { redirect: "/cart" } });
+      return;
+    }
+    setCartOpen(true);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,15 +136,15 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
-          <LiveStatusBadge className="hidden sm:inline-flex" />
+          {user && <LiveStatusBadge className="hidden sm:inline-flex" />}
           {user && (
             <NotificationsBell audience="customer" userId={user.id ?? user.email} />
           )}
           <Link to={user ? "/account" : "/auth"} className="hidden items-center gap-2 rounded-md px-3 py-2 text-left text-xs hover:bg-[#F0F9F4] lg:flex">
             <User className="h-5 w-5 text-[#374151]" />
             <span className="leading-tight">
-              <span className="block text-[11px] text-[#6B7280]">{user ? `Hi, ${user.firstName}` : "Hello, Guest"}</span>
-              <span className="block text-sm font-semibold text-[#111827]">{user ? "My Account" : "Sign in"}</span>
+              <span className="block text-[11px] text-[#6B7280]">{user ? `Hi, ${user.firstName}` : "Welcome"}</span>
+              <span className="block text-sm font-semibold text-[#111827]">{user ? "My Account" : "Sign In / Register"}</span>
             </span>
           </Link>
           <Link to="/account" className="relative hidden items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4] sm:flex" aria-label="Wishlist">
@@ -135,10 +153,10 @@ export function Navbar() {
               <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{wishlist.length}</span>
             )}
           </Link>
-          <button onClick={() => setCartOpen(true)} className="relative flex items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4]" aria-label="Open cart">
+          <button onClick={handleCartClick} className="relative flex items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4]" aria-label="Open cart">
             <ShoppingCart className="h-5 w-5 text-[#374151]" />
             <AnimatePresence>
-              {cartCount > 0 && (
+              {user && cartCount > 0 && (
                 <motion.span
                   key={cartCount}
                   initial={{ scale: 0.6 }}
