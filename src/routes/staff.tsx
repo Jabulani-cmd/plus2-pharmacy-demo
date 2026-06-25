@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
 import { ROLE_BADGE_BG } from "@/data/demoAccounts";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
+import { LiveStatusBadge } from "@/components/LiveStatusBadge";
 import kingsLogo from "@/assets/kings-logo.png";
 import {
   LayoutDashboard,
@@ -243,6 +244,7 @@ function StaffLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <LiveStatusBadge />
             <NotificationsBell audience="staff" />
 
             <Link
