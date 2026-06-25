@@ -21,6 +21,69 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// ─── Helpers for shared_orders row ↔ SharedOrder ──────────────────────────────
+function rowToShared(r: Record<string, unknown>): SharedOrder {
+  const g = (k: string) => r[k] as unknown;
+  return {
+    id: String(g("id")),
+    customerId: (g("customer_id") as string | null) ?? undefined,
+    customerEmail: (g("customer_email") as string | null) ?? undefined,
+    customer: String(g("customer") ?? ""),
+    phone: String(g("phone") ?? ""),
+    branchId: (g("branch_id") as string | null) ?? undefined,
+    items: (g("items") as SharedOrder["items"]) ?? [],
+    itemCount: Number(g("item_count") ?? 0),
+    address: String(g("address") ?? ""),
+    deliveryMethod: String(g("delivery_method") ?? ""),
+    paymentMethod: String(g("payment_method") ?? ""),
+    paymentRef: String(g("payment_ref") ?? ""),
+    total: Number(g("total") ?? 0),
+    status: g("status") as SharedOrderStatus,
+    placedAt: String(g("placed_at") ?? ""),
+    placedTs: Number(g("placed_ts") ?? Date.now()),
+    driverName: (g("driver_name") as string | null) ?? undefined,
+    driverPhone: (g("driver_phone") as string | null) ?? undefined,
+    driverVehicle: (g("driver_vehicle") as string | null) ?? undefined,
+    packedAt: (g("packed_at") as string | null) ?? undefined,
+    dispatchedAt: (g("dispatched_at") as string | null) ?? undefined,
+    deliveredAt: (g("delivered_at") as string | null) ?? undefined,
+    eta: (g("eta") as string | null) ?? undefined,
+    outForDeliveryTs: (g("out_for_delivery_ts") as number | null) ?? undefined,
+  };
+}
+
+function bannerFor(status: SharedOrderStatus): { text: string; tone: "info" | "success" } {
+  switch (status) {
+    case "Packed":
+      return { text: "📦 Order packed — awaiting driver", tone: "info" };
+    case "Assigned":
+      return { text: "🚗 Driver assigned — out for delivery soon", tone: "info" };
+    case "Out for delivery":
+      return { text: "🛵 Driver is on the way!", tone: "info" };
+    case "Delivered":
+      return { text: "✅ Your order has been delivered!", tone: "success" };
+    case "Ready to dispatch":
+      return { text: "📋 Order being prepared", tone: "info" };
+    default:
+      return { text: "📦 Order status updated", tone: "info" };
+  }
+}
+
+function sharedHistory(o: SharedOrder | null) {
+  if (!o) return [] as { status: LiveStatus; at: number }[];
+  const out: { status: LiveStatus; at: number }[] = [];
+  out.push({ status: "Order Confirmed", at: o.placedTs });
+  if (o.packedAt || ["Packed", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Preparing Order", at: o.placedTs + 60_000 });
+  if (o.dispatchedAt || ["Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Driver Assigned", at: o.placedTs + 120_000 });
+  if (o.outForDeliveryTs || ["Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Out for Delivery", at: o.outForDeliveryTs ?? o.placedTs + 180_000 });
+  if (o.status === "Delivered")
+    out.push({ status: "Delivered", at: o.placedTs + 480_000 });
+  return out;
+}
+
 export const Route = createFileRoute("/track")({
   validateSearch: (s: Record<string, unknown>) => ({
     id: typeof s.id === "string" ? s.id : undefined,
