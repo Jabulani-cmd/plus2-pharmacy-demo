@@ -782,7 +782,7 @@ function Checkout() {
                   value={formatUSD(subtotal)}
                 />
                 <Row
-                  label="Delivery"
+                  label={`Delivery (${selectedMethod.label})`}
                   value={
                     deliveryFee === 0
                       ? "FREE"
@@ -790,8 +790,8 @@ function Checkout() {
                   }
                 />
                 <Row
-                  label={<span className="text-xs">incl. VAT (15%)</span>}
-                  value={<span className="text-xs text-muted-foreground">in total</span>}
+                  label={<span className="text-xs text-muted-foreground">All prices include 15% VAT</span>}
+                  value={<span />}
                 />
                 {coupon && (
                   <Row
