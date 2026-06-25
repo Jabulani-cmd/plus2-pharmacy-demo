@@ -164,6 +164,26 @@ function RootComponent() {
       ratings: s.ratings,
       points: s.points,
     }));
+
+    // Cross-tab sync (same browser, different tabs/windows).
+    // Supabase Broadcast handles cross-device, but inside one browser the
+    // storage event is the cheapest way to keep tabs in sync without races.
+    const STORE_KEY_MAP: Record<string, { rehydrate?: () => void }> = {
+      "kings-shared-orders": (useSharedOrders as any).persist ?? {},
+      "kings-shared-prescriptions": (useSharedPrescriptions as any).persist ?? {},
+      "kings-notifications": (useNotifications as any).persist ?? {},
+      "kings-order-extras": (useOrderExtras as any).persist ?? {},
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || !(e.key in STORE_KEY_MAP)) return;
+      try {
+        STORE_KEY_MAP[e.key].rehydrate?.();
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   return (
