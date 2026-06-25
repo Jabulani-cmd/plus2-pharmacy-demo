@@ -144,14 +144,7 @@ function Checkout() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const makeReceipt = (auth: string, method: string) => {
-    const deliveryLabel = (
-      {
-        standard: "Standard Delivery",
-        express: "Same-day Express",
-        national: "Nationwide Courier",
-        collect: "Click & Collect",
-      } as Record<string, string>
-    )[delivery_.method] ?? "Standard";
+    const deliveryLabel = selectedMethod.label;
 
     const addr =
       delivery_.method === "collect"
@@ -422,34 +415,7 @@ function Checkout() {
                   Delivery Method
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    {
-                      id: "standard",
-                      label: "Standard Delivery (Bulawayo metro)",
-                      desc: "1–2 working days",
-                      price:
-                        subtotal >= 50 ? "FREE" : "$5.00",
-                    },
-                    {
-                      id: "express",
-                      label: "Same-day Express (Bulawayo)",
-                      desc: "Within 4 hours",
-                      price: "$8.00",
-                    },
-                    {
-                      id: "national",
-                      label: "Nationwide Courier",
-                      desc:
-                        "Bulawayo, Mutare, Gweru — 2–4 days",
-                      price: "$12.00",
-                    },
-                    {
-                      id: "collect",
-                      label: "Click & Collect",
-                      desc: "Borrowdale or Avondale branch",
-                      price: "FREE",
-                    },
-                  ].map((d) => (
+                  {DELIVERY_METHODS.map((d) => (
                     <label
                       key={d.id}
                       className={`flex cursor-pointer
@@ -481,7 +447,7 @@ function Checkout() {
                         </div>
                       </div>
                       <div className="font-bold text-primary">
-                        {d.price}
+                        {priceLabel(d, subtotal)}
                       </div>
                     </label>
                   ))}
