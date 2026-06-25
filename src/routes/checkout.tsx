@@ -81,10 +81,6 @@ function Checkout() {
   const discountAmount = coupon
     ? +(subtotal * coupon.discount).toFixed(2)
     : 0;
-  // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
-  const total = parseFloat(
-    (subtotal + deliveryFee - discountAmount).toFixed(2)
-  );
   const addPoints = useOrderExtras((s) => s.addPoints);
 
   const [step, setStep] = useState(0);
@@ -110,6 +106,10 @@ function Checkout() {
   // Derive the selected delivery method + fee from a single source of truth.
   const selectedMethod = methodById(delivery_.method);
   const deliveryFee = priceFor(selectedMethod, subtotal);
+  // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
+  const total = parseFloat(
+    (subtotal + deliveryFee - discountAmount).toFixed(2)
+  );
 
   // Generate ONE stable order ID at checkout entry — same ID used on receipt,
   // tracking, dispatcher, notifications and My Orders.
