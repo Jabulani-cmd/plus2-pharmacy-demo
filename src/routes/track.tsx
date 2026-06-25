@@ -888,18 +888,60 @@ function Track() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4">
+      {/* Status-change banner */}
+      <AnimatePresence>
+        {banner && (
+          <motion.div
+            key={banner.text}
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 240, damping: 24 }}
+            className={`fixed top-2 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full font-bold text-sm shadow-lg ${
+              banner.tone === "success"
+                ? "bg-[#1E5BC6] text-white"
+                : "bg-white text-[#1B3A6B] border border-[#1E5BC6]/30"
+            }`}
+          >
+            {banner.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Connection pill */}
+      <div className="flex justify-end">
+        <div
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
+            connected ? "bg-blue-50 text-[#1E5BC6]" : "bg-red-50 text-red-500"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              connected ? "bg-[#1E5BC6] animate-pulse" : "bg-red-400"
+            }`}
+          />
+          {connected ? "Live tracking" : "Reconnecting…"}
+        </div>
+      </div>
+
       {/* Top status card */}
       <div className="bg-gradient-to-r from-[#1B3A6B] to-[#1E5BC6] rounded-2xl p-4 md:p-5 text-white">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-[11px] opacity-70 font-bold uppercase tracking-wider">
-              Order #{order.id}
+              Order #{orderId}
             </div>
-            <div className="text-lg md:text-xl font-black mt-0.5">
-              {STEP_META[order.status]?.e} {order.status}
-            </div>
+            <motion.div
+              key={displayStatus}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="text-lg md:text-xl font-black mt-0.5"
+            >
+              {STEP_META[displayStatus]?.e} {displayStatus}
+            </motion.div>
             <div className="text-[12px] opacity-80 mt-0.5">
-              {STEP_META[order.status]?.label}
+              {STEP_META[displayStatus]?.label}
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -907,7 +949,13 @@ function Track() {
               <Clock className="h-3 w-3" /> Arriving in
             </div>
             <div className="text-xl md:text-2xl font-black mt-0.5">
-              <CountdownTimer stepIdx={safeStepIdx} />
+              {delivered ? (
+                <span>Delivered ✓</span>
+              ) : etaMinutes !== null ? (
+                <span className="tabular-nums">{etaMinutes.toString().padStart(2, "0")}:00</span>
+              ) : (
+                <CountdownTimer stepIdx={safeStepIdx} />
+              )}
             </div>
           </div>
         </div>
@@ -946,10 +994,11 @@ function Track() {
           </div>
 
           <DeliveryMap
-            progress={isOutForDelivery ? progress : 0}
+            progress={mapProgress}
             driverName={driverName}
             isActive={isOutForDelivery}
             branchName={branchName}
+            demoMode={demoMode}
           />
 
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
@@ -974,19 +1023,30 @@ function Track() {
           </div>
 
           {!delivered && (
-            <button
-              onClick={() => {
-                advance(order.id);
-                toast.success(
-                  `Status updated: ${
-                    ORDER_FLOW[Math.min(safeStepIdx + 1, ORDER_FLOW.length - 1)]
-                  }`
-                );
-              }}
-              className="w-full h-11 rounded-full bg-[#1B3A6B] hover:bg-[#1E5BC6] text-white font-bold text-sm transition"
-            >
-              ▶ Simulate Next Delivery Stage
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={simulateNextStage}
+                className="h-11 rounded-full bg-[#1B3A6B] hover:bg-[#1E5BC6] text-white font-bold text-sm transition"
+              >
+                ▶ Simulate Next Stage
+              </button>
+              {liveShared && !isOutForDelivery && (
+                <button
+                  onClick={startLiveDemo}
+                  className="h-11 rounded-full bg-yellow-400 hover:bg-yellow-500 text-[#1B3A6B] font-black text-sm transition"
+                >
+                  ▶ Start Live Demo
+                </button>
+              )}
+              {demoMode && isOutForDelivery && (
+                <button
+                  onClick={() => setDemoPaused((p) => !p)}
+                  className="h-11 rounded-full bg-white border-2 border-[#1E5BC6] text-[#1E5BC6] font-black text-sm transition"
+                >
+                  {demoPaused ? "▶ Resume Demo" : "⏸ Pause Demo"}
+                </button>
+              )}
+            </div>
           )}
           {delivered && (
             <div className="w-full h-11 rounded-full bg-[#EAF3FF] text-[#1E5BC6] font-black text-sm flex items-center justify-center gap-2">
@@ -1002,11 +1062,17 @@ function Track() {
             {ORDER_FLOW.map((s, i) => {
               const done = i < safeStepIdx;
               const current = i === safeStepIdx;
-              const event = history.find((h) => h.status === s);
+              const event = history.find((h: { status: LiveStatus; at: number }) => h.status === s);
               const ts = event ? new Date(event.at) : null;
               const isLast = i === ORDER_FLOW.length - 1;
               return (
-                <li key={s} className="flex items-start gap-3 relative pb-4">
+                <motion.li
+                  key={s}
+                  initial={current ? { scale: 0.9, opacity: 0 } : false}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex items-start gap-3 relative pb-4"
+                >
                   {!isLast && (
                     <span
                       className={`absolute left-4 top-8 -translate-x-1/2 w-0.5 h-full transition-colors duration-500 ${
@@ -1047,7 +1113,7 @@ function Track() {
                       </div>
                     )}
                   </div>
-                </li>
+                </motion.li>
               );
             })}
           </ol>
@@ -1117,17 +1183,17 @@ function Track() {
         <div className="grid md:grid-cols-2 gap-4">
           <RatingCard
             title="Rate this order"
-            existing={order.rating}
+            existing={localOrder?.rating}
             onSubmit={(s, t) => {
-              rate(order.id, s, t);
+              if (localOrder) rate(localOrder.id, s, t);
               toast.success("Thanks for your rating!");
             }}
           />
           <RatingCard
             title="Rate your driver"
-            existing={order.deliveryRating}
+            existing={localOrder?.deliveryRating}
             onSubmit={(s, t) => {
-              rateDelivery(order.id, s, t);
+              if (localOrder) rateDelivery(localOrder.id, s, t);
               toast.success("Driver rated — thank you!");
             }}
           />
