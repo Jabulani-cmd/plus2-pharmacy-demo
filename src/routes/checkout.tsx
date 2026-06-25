@@ -30,6 +30,35 @@ const DELIVERY_SLOTS = [
   { id: "evening", label: "This evening · 5pm – 7pm" },
 ] as const;
 
+// Single source of truth for delivery methods + prices.
+// Used by the radio list, the totals calc, the review summary,
+// the order summary sidebar, the receipt, and Supabase.
+type DeliveryMethodId = "standard" | "express" | "national" | "collect";
+type DeliveryMethod = {
+  id: DeliveryMethodId;
+  label: string;
+  desc: string;
+  price: number; // USD; "standard" uses freeOverFifty()
+  freeOverFifty?: boolean;
+};
+const DELIVERY_METHODS: readonly DeliveryMethod[] = [
+  { id: "standard", label: "Standard Delivery (Bulawayo metro)", desc: "1–2 working days", price: 5, freeOverFifty: true },
+  { id: "express",  label: "Same-day Express (Bulawayo)",         desc: "Within 4 hours",   price: 8 },
+  { id: "national", label: "Nationwide Courier",                  desc: "Bulawayo, Mutare, Gweru — 2–4 days", price: 12 },
+  { id: "collect",  label: "Click & Collect",                     desc: "Borrowdale or Avondale branch",      price: 0 },
+] as const;
+
+function priceFor(m: DeliveryMethod, subtotal: number) {
+  if (m.freeOverFifty && subtotal >= 50) return 0;
+  return m.price;
+}
+function priceLabel(m: DeliveryMethod, subtotal: number) {
+  const p = priceFor(m, subtotal);
+  return p === 0 ? "FREE" : formatUSD(p);
+}
+const methodById = (id: string) =>
+  DELIVERY_METHODS.find((m) => m.id === id) ?? DELIVERY_METHODS[0];
+
 function Checkout() {
   const cart = useShop((s) => s.cart);
   const clearCart = useShop((s) => s.clearCart);
