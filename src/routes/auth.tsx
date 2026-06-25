@@ -2,12 +2,22 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { DEMO_CUSTOMERS } from "@/data/demoAccounts";
 import kingsLogo from "@/assets/kings-logo.png";
+import { z } from "zod";
 
-type Mode = "login" | "register" | "forgot";
+const authSearchSchema = z.object({
+  redirect: z.string().optional(),
+  mode: z.enum(["login", "register", "forgot"]).optional(),
+});
+
+type AuthSearch = z.infer<typeof authSearchSchema>;
+
+type Mode = NonNullable<AuthSearch["mode"]>;
+
 
 function BrandMark({ size = 108 }: { size?: number }) {
   return (
