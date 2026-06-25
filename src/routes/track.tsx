@@ -655,18 +655,101 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
 // ─── Main Track Component ─────────────────────────────────────────────────────
 
 function Track() {
-  const { id } = Route.useSearch();
-  const orders = useOrders((s) => s.orders);
+  const { id, order: orderParam } = Route.useSearch();
+  const trackId = id ?? orderParam;
+
+  // Local seeded orders (legacy demo fallback)
+  const localOrders = useOrders((s) => s.orders);
   const advance = useOrders((s) => s.advance);
   const rate = useOrders((s) => s.rate);
   const rateDelivery = useOrders((s) => s.rateDelivery);
-  const order = id ? orders.find((o) => o.id === id) : orders[0];
+
+  // Realtime-synced shared orders (cross-device source of truth)
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const markPacked = useSharedOrders((s) => s.markPacked);
+  const assignDriver = useSharedOrders((s) => s.assignDriver);
+  const startDelivery = useSharedOrders((s) => s.startDelivery);
+  const updateSharedStatus = useSharedOrders((s) => s.updateStatus);
+
+  // Per-order realtime channel (used for connection indicator + toast)
+  const [shared, setShared] = useState<SharedOrder | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [banner, setBanner] = useState<{ text: string; tone: "info" | "success" } | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoPaused, setDemoPaused] = useState(false);
+  const prevStatusRef = useRef<SharedOrderStatus | null>(null);
+
+  // Resolve which order we're tracking
+  const fromShared = trackId
+    ? sharedOrders.find((o) => o.id === trackId)
+    : sharedOrders[0];
+  const liveShared = shared ?? fromShared ?? null;
+  const localOrder = trackId
+    ? localOrders.find((o) => o.id === trackId)
+    : !fromShared && !shared
+      ? localOrders[0]
+      : undefined;
+
+  // Initial fetch + per-order Supabase Realtime subscription
+  useEffect(() => {
+    if (!trackId) return;
+    let cancelled = false;
+
+    void supabase
+      .from("shared_orders")
+      .select("*")
+      .eq("id", trackId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setShared(rowToShared(data));
+      });
+
+    const channel = supabase
+      .channel(`order_${trackId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "shared_orders",
+          filter: `id=eq.${trackId}`,
+        },
+        (payload) => {
+          const next = rowToShared(payload.new as Record<string, unknown>);
+          setShared(next);
+        },
+      )
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [trackId]);
+
+  // Detect status transitions → banner + toast
+  useEffect(() => {
+    if (!liveShared) return;
+    const prev = prevStatusRef.current;
+    const curr = liveShared.status;
+    if (prev && prev !== curr) {
+      const t = bannerFor(curr);
+      setBanner(t);
+      toast.success(`Order status updated: ${curr}`);
+      const id = window.setTimeout(() => setBanner(null), 3000);
+      return () => window.clearTimeout(id);
+    }
+    prevStatusRef.current = curr;
+  }, [liveShared?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [chat, setChat] = useState(false);
   const [calling, setCalling] = useState(false);
 
-  // Handle missing order
-  if (!order) {
+  // Handle missing order (no shared + no local)
+  if (!liveShared && !localOrder) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
@@ -678,19 +761,67 @@ function Track() {
     );
   }
 
-  // Safely compute step index
-  const stepIdx = ORDER_FLOW.indexOf(order.status as LiveStatus);
+  // Resolve the unified display model (prefer shared/realtime)
+  const displayStatus: LiveStatus = liveShared
+    ? SHARED_STATUS_TO_FLOW[liveShared.status]
+    : (localOrder!.status as LiveStatus);
+  const stepIdx = ORDER_FLOW.indexOf(displayStatus);
   const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, ORDER_FLOW.length - 1);
   const progress = safeStepIdx / (ORDER_FLOW.length - 1);
-  const delivered = order.status === "Delivered";
-  const isOutForDelivery = safeStepIdx >= 4; // "Out for Delivery" or later
-  const driverName = order.driverName ?? "Awaiting driver";
-  const branchName = "9th Ave CBD"; // default branch
+  const delivered = displayStatus === "Delivered";
+  const isOutForDelivery = safeStepIdx >= 4;
+  const driverName =
+    liveShared?.driverName ?? localOrder?.driverName ?? "Awaiting driver";
+  const branchName = liveShared?.branchId ?? "9th Ave CBD";
+  const orderId = liveShared?.id ?? localOrder!.id;
 
-  // Safely access history and items
-  const history = order.history ?? [];
-  const items = order.items ?? [];
-  const total = order.total ?? 0;
+  // Items + history
+  const items =
+    liveShared?.items?.map((i) => ({ name: i.name, qty: i.qty, price: i.price })) ??
+    localOrder?.items ??
+    [];
+  const total = liveShared?.total ?? localOrder?.total ?? 0;
+  const history = localOrder?.history ?? sharedHistory(liveShared);
+
+  // Driver continuous animation
+  const startTs = liveShared?.outForDeliveryTs;
+  const driverProgress = useDriverPosition(displayStatus, startTs);
+  const mapProgress = isOutForDelivery ? (delivered ? 1 : driverProgress) : 0;
+
+  // ETA derived from driver progress
+  const etaMinutes = isOutForDelivery
+    ? Math.max(0, Math.round((1 - driverProgress) * 4))
+    : null;
+
+  // ── Live demo presentation mode ──
+  function startLiveDemo() {
+    if (!liveShared) {
+      toast.error("Live demo needs a shared order.");
+      return;
+    }
+    setDemoMode(true);
+    setDemoPaused(false);
+    if (!liveShared.driverName) {
+      assignDriver(liveShared.id, "Tendai Moyo", "+263 77 123 4567", "Honda CB125");
+    }
+    setTimeout(() => startDelivery(liveShared.id), 800);
+    toast.success("Live demo started — driver dispatching now");
+  }
+
+  // ── Simulate next stage (writes to Supabase) ──
+  function simulateNextStage() {
+    if (liveShared) {
+      const s = liveShared.status;
+      if (s === "Confirmed") updateSharedStatus(liveShared.id, "Ready to dispatch");
+      else if (s === "Ready to dispatch") markPacked(liveShared.id);
+      else if (s === "Packed")
+        assignDriver(liveShared.id, "Tendai Moyo", "+263 77 123 4567", "Honda CB125");
+      else if (s === "Assigned") startDelivery(liveShared.id);
+      else if (s === "Out for delivery") updateSharedStatus(liveShared.id, "Delivered");
+    } else if (localOrder) {
+      advance(localOrder.id);
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4">
