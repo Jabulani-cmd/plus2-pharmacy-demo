@@ -10,10 +10,10 @@ import { FileText, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Cart — Kings Pharmacy" }] }),
-  component: CartPage,
+  component: CartGate,
 });
 
-function CartPage() {
+function CartGate() {
   const user = useAuth((s) => s.user);
   const navigate = useNavigate();
   useEffect(() => {
@@ -23,7 +23,10 @@ function CartPage() {
     }
   }, [user, navigate]);
   if (!user) return null;
+  return <CartPage />;
+}
 
+function CartPage() {
   const cart = useShop((s) => s.cart);
   const updateQty = useShop((s) => s.updateQty);
   const removeFromCart = useShop((s) => s.removeFromCart);
