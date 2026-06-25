@@ -12,7 +12,7 @@ import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
-  X, Clock, UserCheck, FileText, User,
+  X, Clock, UserCheck, FileText, User, Search, CalendarDays,
 } from "lucide-react";
 
 const COLUMNS: {
@@ -24,7 +24,6 @@ const COLUMNS: {
   { key: "Ready to dispatch", label: "Ready to dispatch", color: "#F59E0B" },
   { key: "Assigned", label: "Assigned to driver", color: "#3B82F6" },
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
-  { key: "Delivered", label: "Delivered", color: "#059669" },
 ];
 
 export function DispatcherDashboard({ view }: { view?: string }) {
@@ -195,7 +194,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   if (view === "driver-portal") return <DriverPortalView />;
   if (view === "history")
     return (
-      <HistoryView deliveries={deliveries} drivers={drivers} />
+      <HistoryView
+        sharedOrders={sharedOrders}
+        demoDeliveries={demoDeliveries}
+        rxDelivered={sharedPrescriptions.filter((p) => p.status === "Delivered")}
+        drivers={drivers}
+      />
     );
 
   const newCount = deliveries.filter((d) => d.status === "Confirmed").length;
@@ -837,52 +841,280 @@ function DriversView({
   );
 }
 
+type HistoryRow = {
+  id: string;
+  kind: "OTC" | "Rx";
+  customer: string;
+  phone?: string;
+  address: string;
+  itemsLabel: string;
+  total: number;
+  payment: string;
+  driverName?: string;
+  placedAtMs: number;
+  placedAtLabel: string;
+  deliveredAtMs?: number;
+  deliveredAtLabel?: string;
+};
+
+function toMs(v: unknown): number {
+  if (!v) return 0;
+  if (typeof v === "number") return v;
+  const n = Date.parse(String(v));
+  return isNaN(n) ? 0 : n;
+}
+
 function HistoryView({
-  deliveries,
+  sharedOrders,
+  demoDeliveries,
+  rxDelivered,
   drivers,
 }: {
-  deliveries: StaffDelivery[];
+  sharedOrders: ReturnType<typeof useSharedOrders.getState>["orders"];
+  demoDeliveries: StaffDelivery[];
+  rxDelivered: ReturnType<typeof useSharedPrescriptions.getState>["prescriptions"];
   drivers: StaffDriver[];
 }) {
-  const done = deliveries.filter((d) => d.status === "Delivered");
-  const driverById = (id?: string) =>
-    drivers.find((d) => d.id === id);
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
+
+  const driverById = (id?: string) => drivers.find((d) => d.id === id);
+
+  const rows: HistoryRow[] = useMemo(() => {
+    const otcLive: HistoryRow[] = sharedOrders
+      .filter((o) => o.status === "Delivered")
+      .map((o) => {
+        const placedMs = toMs(o.placedAt);
+        const delMs = toMs(o.deliveredAt);
+        return {
+          id: o.id,
+          kind: "OTC",
+          customer: o.customer,
+          phone: o.phone,
+          address: o.address,
+          itemsLabel: (o.items ?? [])
+            .map((it: { name: string; qty: number }) => it.name + " ×" + it.qty)
+            .join(", "),
+          total: o.total,
+          payment: o.paymentMethod,
+          driverName: o.driverName,
+          placedAtMs: placedMs,
+          placedAtLabel: placedMs ? new Date(placedMs).toLocaleString() : o.placedAt,
+          deliveredAtMs: delMs || undefined,
+          deliveredAtLabel: delMs ? new Date(delMs).toLocaleString() : undefined,
+        };
+      });
+
+    const otcDemo: HistoryRow[] = demoDeliveries
+      .filter((d) => d.status === "Delivered")
+      .map((d) => ({
+        id: d.id,
+        kind: "OTC",
+        customer: d.customer,
+        address: d.address,
+        itemsLabel: d.items + " item" + (d.items > 1 ? "s" : ""),
+        total: d.total,
+        payment: d.paymentMethod,
+        driverName: driverById(d.driverId)?.name,
+        placedAtMs: toMs(d.placedAt),
+        placedAtLabel: d.placedAt,
+      }));
+
+    const rx: HistoryRow[] = rxDelivered.map((p) => {
+      const placedMs = toMs(p.paidAt ?? p.uploadedAt);
+      const addr = p.deliveryAddress
+        ? p.deliveryAddress.streetAddress + ", " + p.deliveryAddress.suburb + ", " + p.deliveryAddress.city
+        : "Collection at branch";
+      return {
+        id: p.id,
+        kind: "Rx",
+        customer: p.patientName,
+        phone: p.customerPhone,
+        address: addr,
+        itemsLabel: p.quotation
+          ? p.quotation.medicationName + " · " + p.quotation.quantity
+          : "Prescription",
+        total: p.quotation?.total ?? 0,
+        payment: p.paymentMethod ?? "Paid",
+        driverName: p.driverName,
+        placedAtMs: placedMs,
+        placedAtLabel: placedMs ? new Date(placedMs).toLocaleString() : (p.paidAt ?? p.uploadedAt ?? ""),
+      };
+    });
+
+    return [...otcLive, ...otcDemo, ...rx].sort(
+      (a, b) => (b.deliveredAtMs ?? b.placedAtMs) - (a.deliveredAtMs ?? a.placedAtMs)
+    );
+  }, [sharedOrders, demoDeliveries, rxDelivered, drivers]);
+
+  const now = Date.now();
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const filtered = rows.filter((r) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      r.id.toLowerCase().includes(q) ||
+      r.customer.toLowerCase().includes(q);
+    const matchesDate =
+      dateFilter === "all" ||
+      (dateFilter === "today" && r.placedAtMs >= startOfToday.getTime()) ||
+      (dateFilter === "week" && now - r.placedAtMs < 7 * 24 * 60 * 60 * 1000);
+    return matchesSearch && matchesDate;
+  });
+
+  const todayRows = rows.filter((r) => r.placedAtMs >= startOfToday.getTime());
+  const todayRevenue = todayRows.reduce((s, r) => s + (r.total ?? 0), 0);
+  const avgMin =
+    todayRows.length > 0
+      ? Math.round(
+          todayRows.reduce((s, r) => {
+            const d = r.deliveredAtMs ?? r.placedAtMs;
+            return s + (d - r.placedAtMs) / 60000;
+          }, 0) / todayRows.length
+        )
+      : 0;
+
   return (
     <div>
       <PageHeader
         title="Delivery History"
-        subtitle="Completed deliveries — today"
+        subtitle="Completed OTC and prescription deliveries"
       />
-      <Card>
-        <table className="w-full text-sm">
-          <thead className="text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="py-2">Order</th>
-              <th>Customer</th>
-              <th>Driver</th>
-              <th>Placed</th>
-              <th className="text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {done.map((d) => (
-              <tr key={d.id}>
-                <td className="py-2 font-mono text-xs">{d.id}</td>
-                <td>{d.customer}</td>
-                <td className="text-xs">
-                  {driverById(d.driverId)?.name ?? "—"}
-                </td>
-                <td className="text-xs text-muted-foreground">
-                  {d.placedAt}
-                </td>
-                <td className="text-right font-bold">
-                  {fmtUSD(d.total)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <div className="rounded-xl bg-white p-3 text-center shadow-sm ring-1 ring-border">
+          <div className="text-2xl font-black text-[#1B3A6B]">{todayRows.length}</div>
+          <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Delivered today
+          </div>
+        </div>
+        <div className="rounded-xl bg-white p-3 text-center shadow-sm ring-1 ring-border">
+          <div className="text-2xl font-black text-[#1B3A6B]">{fmtUSD(todayRevenue)}</div>
+          <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Revenue today
+          </div>
+        </div>
+        <div className="rounded-xl bg-white p-3 text-center shadow-sm ring-1 ring-border">
+          <div className="text-2xl font-black text-[#1B3A6B]">{avgMin}m</div>
+          <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Avg delivery time
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by order ID or customer..."
+            className="h-9 w-full rounded-full border border-slate-200 bg-white pl-9 pr-4 text-sm outline-none focus:border-[#1E5BC6]"
+          />
+        </div>
+        {(["today", "week", "all"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setDateFilter(f)}
+            className={
+              "inline-flex items-center gap-1 h-9 rounded-full px-4 text-xs font-bold capitalize transition " +
+              (dateFilter === f
+                ? "bg-[#1E5BC6] text-white"
+                : "bg-white border border-slate-200 text-slate-600 hover:border-[#1E5BC6]")
+            }
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            {f === "today" ? "Today" : f === "week" ? "This week" : "All time"}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl bg-white py-16 text-center shadow-sm ring-1 ring-border">
+          <div className="mb-3 text-5xl">📋</div>
+          <div className="text-lg font-bold text-[#1B3A6B]">
+            No delivered orders yet
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Delivered orders will appear here
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((r) => {
+            const minutes =
+              r.deliveredAtMs && r.placedAtMs
+                ? Math.max(1, Math.round((r.deliveredAtMs - r.placedAtMs) / 60000))
+                : null;
+            return (
+              <div
+                key={r.kind + "-" + r.id}
+                className="rounded-2xl border-l-4 border-[#1E5BC6] bg-white p-4 shadow-sm transition hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-black text-[#1B3A6B]">
+                        #{r.id}
+                      </span>
+                      <span className="rounded-full bg-[#EAF3FF] px-2 py-0.5 text-[10px] font-bold text-[#1E5BC6]">
+                        ✓ Delivered
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                        {r.kind}
+                      </span>
+                      {minutes && (
+                        <span className="text-[11px] text-slate-400">
+                          in {minutes} min
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-700">
+                      {r.customer}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {r.phone ? r.phone + " · " : ""}
+                      {r.address}
+                    </div>
+                    {r.itemsLabel && (
+                      <div className="mt-2 text-[11px] text-slate-500">
+                        {r.itemsLabel}
+                      </div>
+                    )}
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <div>
+                        <span className="font-semibold">Ordered:</span>{" "}
+                        {r.placedAtLabel}
+                      </div>
+                      {r.deliveredAtLabel && (
+                        <div>
+                          <span className="font-semibold">Delivered:</span>{" "}
+                          {r.deliveredAtLabel}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-black text-[#1B3A6B]">
+                      {fmtUSD(r.total)}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-400">
+                      {r.payment}
+                    </div>
+                    {r.driverName && (
+                      <div className="mt-0.5 text-xs text-slate-400">
+                        🚗 {r.driverName}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
