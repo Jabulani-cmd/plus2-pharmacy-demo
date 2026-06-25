@@ -173,7 +173,7 @@ function RootComponent() {
 
   useEffect(() => {
     runMigrationWipe();
-    installBroadcastSync(useSharedOrders, "orders", (s: any) => ({ orders: s.orders }));
+    // Orders are now backed by Supabase directly (see src/store/sharedOrders.ts).
     installBroadcastSync(useSharedPrescriptions, "prescriptions", (s: any) => ({ prescriptions: s.prescriptions }));
     installBroadcastSync(useNotifications, "notifications", (s: any) => ({ items: s.items }));
     installBroadcastSync(useOrderExtras, "order-extras", (s: any) => ({
@@ -186,7 +186,6 @@ function RootComponent() {
     // Supabase Broadcast handles cross-device, but inside one browser the
     // storage event is the cheapest way to keep tabs in sync without races.
     const STORE_KEY_MAP: Record<string, { rehydrate?: () => void }> = {
-      "kings-shared-orders": (useSharedOrders as any).persist ?? {},
       "kings-shared-prescriptions": (useSharedPrescriptions as any).persist ?? {},
       "kings-notifications": (useNotifications as any).persist ?? {},
       "kings-order-extras": (useOrderExtras as any).persist ?? {},
