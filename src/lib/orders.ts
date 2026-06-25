@@ -6,16 +6,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export const ORDER_FLOW = [
+// OTC / Online Shopping Order Stages — NO pharmacist review
+export const OTC_ORDER_FLOW = [
   "Order Confirmed",
-  "Pharmacist Reviewing",
   "Preparing Order",
   "Driver Assigned",
   "Out for Delivery",
   "Delivered",
 ] as const;
 
-export type LiveStatus = (typeof ORDER_FLOW)[number];
+// Prescription Order Stages — includes pharmacist review
+export const RX_ORDER_FLOW = [
+  "Prescription Submitted",
+  "Pharmacist Reviewing",
+  "Quotation Sent",
+  "Payment Received",
+  "Preparing Order",
+  "Driver Assigned",
+  "Out for Delivery",
+  "Delivered",
+] as const;
+
+export type OTCStatus = (typeof OTC_ORDER_FLOW)[number];
+export type RXStatus = (typeof RX_ORDER_FLOW)[number];
+export type LiveStatus = OTCStatus | RXStatus;
+
+/** Legacy alias — the /track route is OTC-only (shared_orders). */
+export const ORDER_FLOW = OTC_ORDER_FLOW;
 
 export type LiveOrderItem = { name: string; qty: number; price: number };
 export type LiveOrderHistory = { status: LiveStatus; at: number };
@@ -51,7 +68,6 @@ const seedOrder = (): LiveOrder => ({
   total: 15.0,
   history: [
     { status: "Order Confirmed", at: Date.now() - 1000 * 60 * 15 },
-    { status: "Pharmacist Reviewing", at: Date.now() - 1000 * 60 * 10 },
     { status: "Preparing Order", at: Date.now() - 1000 * 60 * 4 },
   ],
 });
@@ -64,8 +80,8 @@ export const useOrders = create<State>()(
         set((s) => ({
           orders: s.orders.map((o) => {
             if (o.id !== id) return o;
-            const idx = ORDER_FLOW.indexOf(o.status);
-            const next = ORDER_FLOW[Math.min(idx + 1, ORDER_FLOW.length - 1)];
+            const idx = OTC_ORDER_FLOW.indexOf(o.status as OTCStatus);
+            const next = OTC_ORDER_FLOW[Math.min(idx + 1, OTC_ORDER_FLOW.length - 1)];
             if (next === o.status) return o;
             return {
               ...o,
