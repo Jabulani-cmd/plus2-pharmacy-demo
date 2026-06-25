@@ -13,7 +13,7 @@ import {
   Package,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useOrders, ORDER_FLOW, type LiveStatus } from "@/lib/orders";
+import { useOrders, OTC_ORDER_FLOW, type LiveStatus, type OTCStatus } from "@/lib/orders";
 import {
   useSharedOrders,
   type SharedOrder,
@@ -101,16 +101,21 @@ export const Route = createFileRoute("/track")({
 });
 
 const STEP_META: Record<string, { e: string; label: string }> = {
+  // OTC stages
   "Order Confirmed": { e: "✅", label: "Order received and confirmed" },
-  "Pharmacist Reviewing": { e: "👨‍⚕️", label: "Pharmacist verifying items" },
-  "Preparing Order": { e: "📦", label: "Order being packed at branch" },
+  "Preparing Order": { e: "📦", label: "Staff packing your order" },
   "Driver Assigned": { e: "🚗", label: "Driver assigned and collecting" },
   "Out for Delivery": { e: "🛵", label: "Driver on the way to you" },
   "Delivered": { e: "🏠", label: "Order delivered successfully" },
+  // Prescription-only stages (used by RX tracking surfaces)
+  "Prescription Submitted": { e: "📋", label: "Prescription received by pharmacy" },
+  "Pharmacist Reviewing": { e: "👨‍⚕️", label: "Pharmacist verifying prescription" },
+  "Quotation Sent": { e: "💰", label: "Quotation sent — awaiting payment" },
+  "Payment Received": { e: "💳", label: "Payment confirmed" },
 };
 
-// Map shared_orders status → display step in ORDER_FLOW
-const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, LiveStatus> = {
+// Map shared_orders status → display step in the OTC flow (shared_orders is OTC-only)
+const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, OTCStatus> = {
   Confirmed: "Order Confirmed",
   "Ready to dispatch": "Preparing Order",
   Packed: "Preparing Order",
@@ -488,13 +493,13 @@ function DeliveryMap({
 // ─── Countdown Timer ──────────────────────────────────────────────────────────
 
 function CountdownTimer({ stepIdx }: { stepIdx: number }) {
-  // Ensure stepIdx is within bounds (0 to ORDER_FLOW.length-1)
-  const safeIdx = Math.min(Math.max(stepIdx, 0), ORDER_FLOW.length - 1);
-  const totalSeconds = Math.max(30, (5 - safeIdx) * 3 * 60);
+  // Ensure stepIdx is within bounds (0 to OTC_ORDER_FLOW.length-1)
+  const safeIdx = Math.min(Math.max(stepIdx, 0), OTC_ORDER_FLOW.length - 1);
+  const totalSeconds = Math.max(30, (OTC_ORDER_FLOW.length - 1 - safeIdx) * 3 * 60);
   const [secs, setSecs] = useState(totalSeconds);
 
   useEffect(() => {
-    setSecs(Math.max(30, (5 - safeIdx) * 3 * 60));
+    setSecs(Math.max(30, (OTC_ORDER_FLOW.length - 1 - safeIdx) * 3 * 60));
   }, [safeIdx]);
 
   useEffect(() => {
@@ -843,14 +848,15 @@ function Track() {
   }
 
   // Resolve the unified display model (prefer shared/realtime)
-  const displayStatus: LiveStatus = liveShared
+  const displayStatus: OTCStatus = liveShared
     ? SHARED_STATUS_TO_FLOW[liveShared.status]
-    : (localOrder!.status as LiveStatus);
-  const stepIdx = ORDER_FLOW.indexOf(displayStatus);
-  const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, ORDER_FLOW.length - 1);
-  const progress = safeStepIdx / (ORDER_FLOW.length - 1);
+    : (localOrder!.status as OTCStatus);
+  const stepIdx = OTC_ORDER_FLOW.indexOf(displayStatus);
+  const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, OTC_ORDER_FLOW.length - 1);
+  const progress = safeStepIdx / (OTC_ORDER_FLOW.length - 1);
   const delivered = displayStatus === "Delivered";
-  const isOutForDelivery = safeStepIdx >= 4;
+  const OUT_FOR_DELIVERY_IDX = OTC_ORDER_FLOW.indexOf("Out for Delivery");
+  const isOutForDelivery = safeStepIdx >= OUT_FOR_DELIVERY_IDX;
   const driverName =
     liveShared?.driverName ?? localOrder?.driverName ?? "Awaiting driver";
   const branchName = liveShared?.branchId ?? "9th Ave CBD";
@@ -1077,12 +1083,12 @@ function Track() {
         <div className="bg-white rounded-2xl p-4">
           <div className="font-black text-[#1B3A6B] mb-4">Delivery Timeline</div>
           <ol>
-            {ORDER_FLOW.map((s, i) => {
+            {OTC_ORDER_FLOW.map((s, i) => {
               const done = i < safeStepIdx;
               const current = i === safeStepIdx;
               const event = history.find((h: { status: LiveStatus; at: number }) => h.status === s);
               const ts = event ? new Date(event.at) : null;
-              const isLast = i === ORDER_FLOW.length - 1;
+              const isLast = i === OTC_ORDER_FLOW.length - 1;
               return (
                 <motion.li
                   key={s}
