@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { findDemoCustomer } from "@/data/demoAccounts";
 import { pushNotification } from "@/store/notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { useShop } from "@/store/shop";
 
 export type User = {
   id: string;
@@ -372,6 +373,8 @@ export const useAuth = create<AuthState>()(
 
       logout: () => {
         void supabase.auth.signOut().catch(() => {});
+        // Wipe the previous user's cart so a guest / next user never sees ghost items.
+        try { useShop.getState().clearCart(); } catch { /* noop */ }
         set({ user: null });
       },
 
