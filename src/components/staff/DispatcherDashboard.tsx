@@ -194,7 +194,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   if (view === "driver-portal") return <DriverPortalView />;
   if (view === "history")
     return (
-      <HistoryView deliveries={deliveries} drivers={drivers} />
+      <HistoryView
+        sharedOrders={sharedOrders}
+        demoDeliveries={demoDeliveries}
+        rxDelivered={sharedPrescriptions.filter((p) => p.status === "Delivered")}
+        drivers={drivers}
+      />
     );
 
   const newCount = deliveries.filter((d) => d.status === "Confirmed").length;
