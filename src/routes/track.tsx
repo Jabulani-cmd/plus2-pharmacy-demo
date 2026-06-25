@@ -925,6 +925,18 @@ function Track() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4">
+      {/* TEMP DIAGNOSTIC PANEL — remove after presentation */}
+      <div className="rounded-lg border-2 border-yellow-400 bg-yellow-50 px-3 py-2 text-[11px] font-mono text-[#1B3A6B] flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="font-black text-yellow-700">REALTIME DEBUG</span>
+        <span>order: <b>{(liveShared?.id ?? localOrder?.id ?? "none").slice(-6)}</b></span>
+        <span>db status: <b>{liveShared?.status ?? "—"}</b></span>
+        <span>display: <b>{displayStatus}</b></span>
+        <span>stage: <b>{safeStepIdx + 1}/{OTC_ORDER_FLOW.length}</b></span>
+        <span className={connected ? "text-emerald-700" : "text-red-600"}>
+          {connected ? "● connected" : "○ disconnected"}
+        </span>
+      </div>
+
       {/* Status-change banner */}
       <AnimatePresence>
         {banner && (
