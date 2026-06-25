@@ -260,7 +260,6 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
       <Field label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       <div className="flex items-center justify-between text-xs">
         <label className="flex items-center gap-2"><input type="checkbox" defaultChecked /> Remember me</label>
-        <button type="button" onClick={onForgot} className="font-semibold text-primary hover:underline">Forgot password?</button>
       </div>
       <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Signing in…" : "Sign in"}
@@ -275,6 +274,7 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
     </form>
   );
 }
+
 
 
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
