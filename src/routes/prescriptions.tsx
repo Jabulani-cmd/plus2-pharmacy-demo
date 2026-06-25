@@ -20,6 +20,7 @@ import {
   Truck,
   Store,
   MapPin,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/prescriptions")({
@@ -86,6 +87,7 @@ type LocalFile = {
   file: File;
   preview?: string;
   error?: string;
+  progress?: number; // 0-100, undefined once finished
 };
 
 type DeliveryMode = "delivery" | "collect";
@@ -619,14 +621,41 @@ function Step1Files({
         f.size > MAX_BYTES ? "File too large — max 10MB" : undefined;
       const local: LocalFile = {
         id: crypto.randomUUID(), file: f, error,
+        progress: error ? undefined : 0,
       };
-      if (!error && f.type.startsWith("image/")) {
+      if (!error) {
         const reader = new FileReader();
+        reader.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            local.progress = Math.min(
+              99,
+              Math.round((ev.loaded / ev.total) * 100),
+            );
+            setFiles([...next]);
+          }
+        };
         reader.onload = () => {
-          local.preview = reader.result as string;
+          if (f.type.startsWith("image/")) {
+            local.preview = reader.result as string;
+          }
+          local.progress = 100;
+          setFiles([...next]);
+          // Clear progress shortly after to hide the bar
+          setTimeout(() => {
+            local.progress = undefined;
+            setFiles([...next]);
+          }, 350);
+        };
+        reader.onerror = () => {
+          local.error = "Upload failed";
+          local.progress = undefined;
           setFiles([...next]);
         };
-        reader.readAsDataURL(f);
+        if (f.type.startsWith("image/")) {
+          reader.readAsDataURL(f);
+        } else {
+          reader.readAsArrayBuffer(f);
+        }
       }
       next.push(local);
     }
@@ -639,6 +668,10 @@ function Step1Files({
   const totalMB = (
     files.reduce((s, f) => s + f.file.size, 0) / 1024 / 1024
   ).toFixed(1);
+
+  const isUploading = files.some(
+    (f) => typeof f.progress === "number" && f.progress < 100,
+  );
 
   return (
     <div className="space-y-5">
@@ -672,7 +705,7 @@ function Step1Files({
             if (isMobile) { cameraRef.current?.click(); }
             else { toast.info("Camera is only available on mobile. Please use the file picker."); }
           }}
-          disabled={!isMobile}
+          disabled={!isMobile || isUploading}
           badge={isMobile ? undefined : "Mobile only"}
           badgeColor="#854D0E"
           badgeBg="#FEF9C3"
@@ -682,21 +715,23 @@ function Step1Files({
           title="Choose from Gallery or Files"
           subtitle="Select a photo, PDF or image from your device"
           onClick={() => galleryRef.current?.click()}
+          disabled={isUploading}
         />
         <MethodCard
           icon={Mail}
           title="From Email or Cloud Storage"
           subtitle="Access from Gmail, Outlook, Google Drive or iCloud"
           onClick={() => cloudRef.current?.click()}
+          disabled={isUploading}
         />
       </div>
 
       <div
-        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-primary","bg-[#F0F9F4]"); }}
+        onDragOver={(e) => { if (isUploading) return; e.preventDefault(); e.currentTarget.classList.add("border-primary","bg-[#F0F9F4]"); }}
         onDragLeave={(e) => e.currentTarget.classList.remove("border-primary","bg-[#F0F9F4]")}
-        onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("border-primary","bg-[#F0F9F4]"); handleFiles(e.dataTransfer.files); }}
-        className="hidden h-[160px] cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] transition hover:border-primary hover:bg-[#F0F9F4] md:flex"
-        onClick={() => galleryRef.current?.click()}
+        onDrop={(e) => { if (isUploading) return; e.preventDefault(); e.currentTarget.classList.remove("border-primary","bg-[#F0F9F4]"); handleFiles(e.dataTransfer.files); }}
+        className={"hidden h-[160px] items-center justify-center rounded-lg border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] transition md:flex " + (isUploading ? "pointer-events-none opacity-50" : "cursor-pointer hover:border-primary hover:bg-[#F0F9F4]")}
+        onClick={() => { if (!isUploading) galleryRef.current?.click(); }}
       >
         <div className="text-center">
           <Upload className="mx-auto h-8 w-8 text-[#9CA3AF]" />
@@ -741,16 +776,43 @@ function Step1Files({
                 {f.error && (
                   <div className="absolute inset-x-0 bottom-0 bg-[#DC2626] px-2 py-1 text-center text-[10px] font-semibold text-white">{f.error}</div>
                 )}
+                {typeof f.progress === "number" && f.progress < 100 && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-end bg-black/40 backdrop-blur-[1px]">
+                    <div className="w-full px-2 pb-2">
+                      <div className="mb-1 flex items-center justify-between text-[10px] font-semibold text-white">
+                        <span className="inline-flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Uploading…
+                        </span>
+                        <span>{f.progress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/30">
+                        <div
+                          className="h-full bg-white transition-[width] duration-150 ease-out"
+                          style={{ width: f.progress + "%" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6B7280]">
             <button
               onClick={() => galleryRef.current?.click()}
-              disabled={files.length >= MAX_FILES}
+              disabled={files.length >= MAX_FILES || isUploading}
               className="inline-flex items-center gap-1.5 rounded-md border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-[#F0F9F4] disabled:opacity-50"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Another Script
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" /> Add Another Script
+                </>
+              )}
             </button>
             <span>{files.length} file{files.length !== 1 ? "s" : ""} (max {MAX_FILES}) · {totalMB} MB</span>
           </div>
