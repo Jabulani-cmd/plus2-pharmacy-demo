@@ -143,6 +143,11 @@ const ROLE_NAV: Record<string, NavItem[]> = {
       icon: Users,
     },
     {
+      to: "/staff/dashboard?view=driver-portal",
+      label: "Driver Portal",
+      icon: Truck,
+    },
+    {
       to: "/staff/dashboard?view=history",
       label: "History",
       icon: ClipboardList,
