@@ -339,7 +339,7 @@ function AccountPage() {
   );
 
   const handleTrackRx = (id: string) => {
-    navigate({ to: "/track", search: { order: id } });
+    navigate({ to: "/track", search: { id } });
   };
 
   const openReceiptFor = (orderId: string) => {
@@ -633,7 +633,7 @@ function AccountPage() {
                       </span>
                       <Link
                         to="/track"
-                        search={{ order: activeOtc.id }}
+                        search={{ id: activeOtc.id }}
                         className="mt-3 flex items-center gap-1 text-sm font-bold text-primary hover:underline"
                       >
                         <Truck className="h-4 w-4" /> Track delivery &rarr;
@@ -708,7 +708,7 @@ function AccountPage() {
                         <td className="px-4 py-3 text-right">
                           <Link
                             to="/track"
-                            search={{ order: o.id }}
+                            search={{ id: o.id }}
                             className="text-sm font-bold text-primary hover:underline"
                           >
                             Track &rarr;
@@ -739,7 +739,7 @@ function AccountPage() {
                           >
                             <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
                           </button>
-                          <Link to="/track" search={{ order: o.id }} className="text-sm font-bold text-primary hover:underline">
+                          <Link to="/track" search={{ id: o.id }} className="text-sm font-bold text-primary hover:underline">
                             Track &rarr;
                           </Link>
                         </div>
