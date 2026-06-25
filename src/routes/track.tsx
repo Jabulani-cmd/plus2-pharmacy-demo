@@ -793,10 +793,18 @@ function Track() {
         },
         (payload) => {
           const next = rowToShared(payload.new as Record<string, unknown>);
+          // eslint-disable-next-line no-console
+          console.log("[track] === REALTIME UPDATE ===", {
+            id: next.id,
+            status: next.status,
+            at: new Date().toISOString(),
+          });
           setShared(next);
         },
       )
       .subscribe((status) => {
+        // eslint-disable-next-line no-console
+        console.log("[track] === SUBSCRIPTION STATUS ===", status);
         setConnected(status === "SUBSCRIBED");
       });
 
