@@ -29,12 +29,29 @@ export type SharedOrder = {
   customer: string;
   phone: string;
   branchId?: string;
+  branchName?: string;
   items: SharedOrderItem[];
   itemCount: number;
   address: string;
+  deliveryAddress?: {
+    firstName: string;
+    lastName: string;
+    street: string;
+    suburb: string;
+    city: string;
+    province: string;
+    postal: string;
+    phone: string;
+    email?: string;
+  };
   deliveryMethod: string;
+  deliverySlot?: string;
   paymentMethod: string;
   paymentRef: string;
+  subtotal: number;
+  deliveryFee: number;
+  discountAmount: number;
+  discountCode?: string;
   total: number;
   status: SharedOrderStatus;
   placedAt: string;
@@ -82,12 +99,19 @@ type Row = {
   customer: string;
   phone: string;
   branch_id: string | null;
+  branch_name: string | null;
   items: SharedOrderItem[];
   item_count: number;
   address: string;
+  delivery_address: SharedOrder["deliveryAddress"] | null;
   delivery_method: string;
+  delivery_slot: string | null;
   payment_method: string;
   payment_ref: string;
+  subtotal: number;
+  delivery_fee: number;
+  discount_amount: number;
+  discount_code: string | null;
   total: number;
   status: SharedOrderStatus;
   placed_at: string;
@@ -109,12 +133,19 @@ const rowToOrder = (r: Row): SharedOrder => ({
   customer: r.customer,
   phone: r.phone,
   branchId: r.branch_id ?? undefined,
+  branchName: r.branch_name ?? undefined,
   items: r.items ?? [],
   itemCount: r.item_count,
   address: r.address,
+  deliveryAddress: r.delivery_address ?? undefined,
   deliveryMethod: r.delivery_method,
+  deliverySlot: r.delivery_slot ?? undefined,
   paymentMethod: r.payment_method,
   paymentRef: r.payment_ref,
+  subtotal: Number(r.subtotal ?? 0),
+  deliveryFee: Number(r.delivery_fee ?? 0),
+  discountAmount: Number(r.discount_amount ?? 0),
+  discountCode: r.discount_code ?? undefined,
   total: Number(r.total),
   status: r.status,
   placedAt: r.placed_at,
@@ -136,12 +167,19 @@ const orderToRow = (o: SharedOrder) => ({
   customer: o.customer,
   phone: o.phone,
   branch_id: o.branchId ?? null,
+  branch_name: o.branchName ?? null,
   items: o.items,
   item_count: o.itemCount,
   address: o.address,
+  delivery_address: o.deliveryAddress ?? null,
   delivery_method: o.deliveryMethod,
+  delivery_slot: o.deliverySlot ?? null,
   payment_method: o.paymentMethod,
   payment_ref: o.paymentRef,
+  subtotal: o.subtotal,
+  delivery_fee: o.deliveryFee,
+  discount_amount: o.discountAmount,
+  discount_code: o.discountCode ?? null,
   total: o.total,
   status: o.status,
   placed_at: o.placedAt,
