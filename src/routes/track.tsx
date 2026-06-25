@@ -861,7 +861,7 @@ function Track() {
   const stepIdx = OTC_ORDER_FLOW.indexOf(displayStatus);
   const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, OTC_ORDER_FLOW.length - 1);
   const progress = safeStepIdx / (OTC_ORDER_FLOW.length - 1);
-  const delivered = displayStatus === "Delivered";
+  const delivered = displayStatus.trim().toLowerCase() === "delivered";
   const OUT_FOR_DELIVERY_IDX = OTC_ORDER_FLOW.indexOf("Out for Delivery");
   const isOutForDelivery = safeStepIdx >= OUT_FOR_DELIVERY_IDX;
   const driverName =
@@ -1141,9 +1141,14 @@ function Track() {
                     ) : (
                       <div className="text-[11px] text-slate-300 mt-0.5">Pending</div>
                     )}
-                    {current && (
+                    {current && s !== "Delivered" && (
                       <div className="text-[11px] text-[#1E5BC6] font-semibold mt-0.5">
                         In progress…
+                      </div>
+                    )}
+                    {delivered && s === "Delivered" && (
+                      <div className="text-[11px] text-[#1E5BC6] font-semibold mt-0.5">
+                        Delivered
                       </div>
                     )}
                   </div>
