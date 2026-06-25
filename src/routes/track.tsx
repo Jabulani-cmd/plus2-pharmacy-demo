@@ -116,6 +116,54 @@ function interpolateRoute(pts: { x: number; y: number }[], progress: number) {
   };
 }
 
+function routeHeading(pts: { x: number; y: number }[], progress: number) {
+  const eps = 0.01;
+  const a = interpolateRoute(pts, Math.max(0, progress - eps));
+  const b = interpolateRoute(pts, Math.min(1, progress + eps));
+  return Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI);
+}
+
+// ─── useDriverPosition hook ───────────────────────────────────────────────────
+// Continuously animates 0→0.95 over the configured duration while
+// `status === "Out for Delivery"`. Snaps to 1 when delivered.
+function useDriverPosition(
+  status: LiveStatus | string,
+  startTs: number | undefined,
+  durationMs = 240000,
+) {
+  const [position, setPosition] = useState(() => {
+    if (status === "Delivered") return 1;
+    if (status !== "Out for Delivery") return 0;
+    if (!startTs) return 0.05;
+    const elapsed = Date.now() - startTs;
+    return Math.min(0.05 + (elapsed / durationMs) * 0.95, 0.95);
+  });
+
+  useEffect(() => {
+    if (status === "Delivered") {
+      setPosition(1);
+      return;
+    }
+    if (status !== "Out for Delivery") {
+      setPosition(0);
+      return;
+    }
+    const base = startTs ?? Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - base;
+      // Small random speed factor for realism, kept within bounds
+      const speedFactor = 0.8 + Math.random() * 0.4;
+      const raw = 0.05 + (elapsed / durationMs) * 0.95 * speedFactor;
+      setPosition(Math.min(0.95, Math.max(0.05, raw)));
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [status, startTs, durationMs]);
+
+  return position;
+}
+
 // ─── Delivery Map Component ───────────────────────────────────────────────────
 
 function DeliveryMap({
