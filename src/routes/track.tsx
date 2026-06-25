@@ -171,13 +171,16 @@ function DeliveryMap({
   driverName,
   isActive,
   branchName,
+  demoMode = false,
 }: {
   progress: number;
   driverName: string;
   isActive: boolean;
   branchName: string;
+  demoMode?: boolean;
 }) {
   const driverPos = interpolateRoute(ROUTE_WAYPOINTS, progress);
+  const heading = routeHeading(ROUTE_WAYPOINTS, progress);
   const branch = BRANCHES[branchName] ?? BRANCHES["9th Ave CBD"];
   const routePath = waypointsToPath(ROUTE_WAYPOINTS);
 
@@ -282,7 +285,7 @@ function DeliveryMap({
             initial={false}
             animate={{ strokeDasharray: `${progress} ${1 - progress}` }}
             style={{ strokeDashoffset: 0 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
           />
         )}
 
@@ -353,17 +356,27 @@ function DeliveryMap({
         </text>
 
         {isActive && (
-          <g transform={`translate(${driverPos.x}, ${driverPos.y + bounce})`}>
+          <motion.g
+            animate={{ x: driverPos.x, y: driverPos.y + bounce }}
+            transition={{ type: "tween", duration: 0.5, ease: "easeInOut" }}
+          >
+            {/* Pulsing Google-Maps-style ring */}
+            <circle r="14" fill="#1E5BC6" opacity="0.25">
+              <animate attributeName="r" values="14;28;14" dur="1.5s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.3;0;0.3" dur="1.5s" repeatCount="indefinite" />
+            </circle>
             <ellipse cx={0} cy={14} rx={10} ry={4} fill="rgba(0,0,0,0.15)" />
             <circle r="13" fill="white" stroke="#1E5BC6" strokeWidth="2.5" />
-            <text x="0" y="5" fontSize="14" textAnchor="middle">
-              🚗
-            </text>
+            <g transform={`rotate(${heading})`}>
+              <text x="0" y="5" fontSize="14" textAnchor="middle">
+                🚗
+              </text>
+            </g>
             <rect x={-28} y={16} width={56} height={14} rx={7} fill="#1E5BC6" />
             <text x={0} y={26} fontSize="7" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
               {driverName.split(" ")[0] || "Driver"}
             </text>
-          </g>
+          </motion.g>
         )}
 
         <rect x={8} y={8} width={84} height={20} rx={10} fill="rgba(255,255,255,0.92)" />
@@ -378,6 +391,15 @@ function DeliveryMap({
               {(3.2 * (1 - progress)).toFixed(1)} km away
             </text>
           </>
+        )}
+
+        {demoMode && (
+          <g transform={`translate(${MAP_W / 2 - 22}, 8)`}>
+            <rect width={44} height={18} rx={4} fill="#FACC15" />
+            <text x={22} y={13} fontSize="9" fill="#1B3A6B" textAnchor="middle" fontFamily="sans-serif" fontWeight="900">
+              DEMO
+            </text>
+          </g>
         )}
 
         <g transform={`translate(${MAP_W - 22}, ${MAP_H - 22})`}>
