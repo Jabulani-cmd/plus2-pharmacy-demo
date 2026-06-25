@@ -13,6 +13,11 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installBroadcastSync, runMigrationWipe } from "@/lib/realtime";
+import { useSharedOrders } from "@/store/sharedOrders";
+import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useNotifications } from "@/store/notifications";
+import { useOrderExtras } from "@/store/orderExtras";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -148,6 +153,18 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isStaff = pathname.startsWith("/staff");
+
+  useEffect(() => {
+    runMigrationWipe();
+    installBroadcastSync(useSharedOrders, "orders", (s: any) => ({ orders: s.orders }));
+    installBroadcastSync(useSharedPrescriptions, "prescriptions", (s: any) => ({ prescriptions: s.prescriptions }));
+    installBroadcastSync(useNotifications, "notifications", (s: any) => ({ items: s.items }));
+    installBroadcastSync(useOrderExtras, "order-extras", (s: any) => ({
+      messages: s.messages,
+      ratings: s.ratings,
+      points: s.points,
+    }));
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
