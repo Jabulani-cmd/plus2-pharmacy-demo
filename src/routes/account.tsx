@@ -683,6 +683,7 @@ function AccountPage() {
                   Your recent orders
                 </div>
               )}
+              {(mySharedOrders.length > 0 || orders.length > 0) && (
               <table className="w-full text-sm">
                 <thead className="bg-surface text-left text-xs uppercase text-muted-foreground">
                   <tr>
@@ -766,6 +767,7 @@ function AccountPage() {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           )}
 
