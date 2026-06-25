@@ -251,6 +251,8 @@ export type Database = {
       prescriptions: {
         Row: {
           approved_at: string | null
+          branch_id: string | null
+          branch_name: string | null
           collection_branch_id: string | null
           customer_email: string | null
           customer_id: string | null
@@ -285,6 +287,8 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          branch_id?: string | null
+          branch_name?: string | null
           collection_branch_id?: string | null
           customer_email?: string | null
           customer_id?: string | null
@@ -319,6 +323,8 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          branch_id?: string | null
+          branch_name?: string | null
           collection_branch_id?: string | null
           customer_email?: string | null
           customer_id?: string | null
@@ -358,24 +364,33 @@ export type Database = {
           branch_id: string | null
           created_at: string
           email: string | null
+          first_name: string | null
           full_name: string | null
           id: string
+          last_address: Json | null
+          last_name: string | null
           phone: string | null
         }
         Insert: {
           branch_id?: string | null
           created_at?: string
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id: string
+          last_address?: Json | null
+          last_name?: string | null
           phone?: string | null
         }
         Update: {
           branch_id?: string | null
           created_at?: string
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_address?: Json | null
+          last_name?: string | null
           phone?: string | null
         }
         Relationships: []
@@ -384,12 +399,19 @@ export type Database = {
         Row: {
           address: string
           branch_id: string | null
+          branch_name: string | null
           created_at: string
           customer: string
           customer_email: string | null
+          customer_email_lower: string | null
           customer_id: string | null
           delivered_at: string | null
+          delivery_address: Json | null
+          delivery_fee: number
           delivery_method: string
+          delivery_slot: string | null
+          discount_amount: number
+          discount_code: string | null
           dispatched_at: string | null
           driver_name: string | null
           driver_phone: string | null
@@ -406,18 +428,26 @@ export type Database = {
           placed_at: string
           placed_ts: number
           status: string
+          subtotal: number
           total: number
           updated_at: string
         }
         Insert: {
           address?: string
           branch_id?: string | null
+          branch_name?: string | null
           created_at?: string
           customer: string
           customer_email?: string | null
+          customer_email_lower?: string | null
           customer_id?: string | null
           delivered_at?: string | null
+          delivery_address?: Json | null
+          delivery_fee?: number
           delivery_method?: string
+          delivery_slot?: string | null
+          discount_amount?: number
+          discount_code?: string | null
           dispatched_at?: string | null
           driver_name?: string | null
           driver_phone?: string | null
@@ -434,18 +464,26 @@ export type Database = {
           placed_at?: string
           placed_ts?: number
           status?: string
+          subtotal?: number
           total?: number
           updated_at?: string
         }
         Update: {
           address?: string
           branch_id?: string | null
+          branch_name?: string | null
           created_at?: string
           customer?: string
           customer_email?: string | null
+          customer_email_lower?: string | null
           customer_id?: string | null
           delivered_at?: string | null
+          delivery_address?: Json | null
+          delivery_fee?: number
           delivery_method?: string
+          delivery_slot?: string | null
+          discount_amount?: number
+          discount_code?: string | null
           dispatched_at?: string | null
           driver_name?: string | null
           driver_phone?: string | null
@@ -462,6 +500,7 @@ export type Database = {
           placed_at?: string
           placed_ts?: number
           status?: string
+          subtotal?: number
           total?: number
           updated_at?: string
         }
