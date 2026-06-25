@@ -1,15 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
+import { Home, LayoutGrid, ShoppingCart, User, LogIn } from "lucide-react";
 import { useShop } from "@/store/shop";
+import { useAuth } from "@/store/auth";
 
 export function MobileBottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const count = useShop((s) => s.cart.reduce((a, c) => a + c.qty, 0));
+  const user = useAuth((s) => s.user);
+  const accountItem = user
+    ? { to: "/account", label: "Account", icon: User, match: pathname === "/account" }
+    : { to: "/auth", label: "Sign In", icon: LogIn, match: pathname === "/auth" };
   const items = [
     { to: "/", label: "Home", icon: Home, match: pathname === "/" },
     { to: "/category/$slug", label: "Shop", icon: LayoutGrid, params: { slug: "all" }, match: pathname.startsWith("/category") },
     { to: "/cart", label: "Cart", icon: ShoppingCart, match: pathname === "/cart", badge: count },
-    { to: "/account", label: "Account", icon: User, match: pathname === "/account" },
+    accountItem,
   ] as const;
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background/95 backdrop-blur md:hidden">

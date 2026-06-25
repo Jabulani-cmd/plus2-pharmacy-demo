@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
 import { useAuth, type Order } from "@/store/auth";
@@ -12,7 +12,7 @@ import {
   Package, Heart, MapPin, Settings, LayoutDashboard,
   FileText, Truck, LogOut, Phone, Syringe, Store,
   Receipt as ReceiptIcon, CheckCircle2, Bell, X,
-  Car, Clock, Navigation,
+  Car, Clock, Navigation, LogIn, Users, User,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/receipt/ReceiptModal";
 import { buildReceipt, type Receipt } from "@/lib/receipts";
@@ -267,11 +267,42 @@ function AccountPage() {
   const [payingRx, setPayingRx] = useState(null as (typeof sharedPrescriptions)[0] | null);
   const [dismissedIds, setDismissedIds] = useState([] as string[]);
 
-  useEffect(() => {
-    if (!user) navigate({ to: "/auth" });
-  }, [user, navigate]);
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-8 md:py-12">
+        <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:p-8">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <User className="h-8 w-8" />
+          </div>
+          <h1 className="text-xl font-black text-[#111827] sm:text-2xl">Sign in to your account</h1>
+          <p className="mt-2 text-sm text-[#6B7280]">
+            Track orders, manage prescriptions, view loyalty points and shop faster across all Kings Pharmacy branches.
+          </p>
+          <div className="mt-6 grid gap-3">
+            <Link
+              to="/auth"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+            >
+              <LogIn className="h-4 w-4" /> Sign In
+            </Link>
+            <Link
+              to="/auth"
+              search={{ mode: "register" }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary bg-white px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/5"
+            >
+              <Users className="h-4 w-4" /> Create Account
+            </Link>
+          </div>
+          <div className="mt-6 space-y-2 rounded-xl bg-[#F9FAFB] p-4 text-left text-xs text-[#6B7280]">
+            <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /> Upload prescriptions and get pharmacist quotations</div>
+            <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /> Re-order favourites and track deliveries live</div>
+            <div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /> Earn loyalty points on every purchase</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!user) return null;
 
   const mySharedOrders = allSharedOrders.filter(
     (o) => o.customerId === user.id || o.customerEmail === user.email

@@ -50,16 +50,17 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in or Register — Kings Pharmacy" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    mode: search.mode === "register" || search.mode === "forgot" || search.mode === "login" ? search.mode : undefined,
   }),
   component: AuthPage,
 });
 
 function AuthPage() {
-  const [mode, setMode] = useState<Mode>("login");
+  const { redirect, mode: searchMode } = Route.useSearch();
+  const [mode, setMode] = useState<Mode>(searchMode ?? "login");
   const user = useAuth((s) => s.user);
   const navigate = useNavigate();
   const router = useRouter();
-  const { redirect } = Route.useSearch();
   useEffect(() => {
     if (user) {
       if (redirect) {
@@ -69,6 +70,9 @@ function AuthPage() {
       }
     }
   }, [user, navigate, redirect]);
+  useEffect(() => {
+    if (searchMode) setMode(searchMode);
+  }, [searchMode]);
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 overflow-x-hidden px-4 py-6 sm:py-8 lg:grid-cols-2 lg:gap-8 lg:py-14" style={{ maxWidth: "100vw" }}>
