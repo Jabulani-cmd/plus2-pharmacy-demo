@@ -300,7 +300,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
         set((s) => ({
           orders: s.orders.map((x) => (x.id === id ? { ...x, ...patch } : x)),
         }));
-        void supabase.from(TABLE).update(dbPatch).eq("id", id);
+        void supabase.from(TABLE).update(dbPatch as never).eq("id", id);
         if (status === "Delivered") {
           pushNotification({
             audience: "customer",
@@ -326,7 +326,7 @@ if (typeof window !== "undefined") {
         console.error("[sharedOrders] initial fetch failed", error);
         return;
       }
-      useSharedOrders.setState({ orders: (data ?? []).map((r) => rowToOrder(r as Row)) });
+          useSharedOrders.setState({ orders: (data ?? []).map((r) => rowToOrder(r as unknown as Row)) });
     } catch (e) {
       console.error("[sharedOrders] bootstrap error", e);
     }
@@ -341,7 +341,7 @@ if (typeof window !== "undefined") {
       (payload) => {
         const evt = payload.eventType;
         if (evt === "INSERT" || evt === "UPDATE") {
-          const order = rowToOrder(payload.new as Row);
+          const order = rowToOrder(payload.new as unknown as Row);
           useSharedOrders.setState((s) => {
             const exists = s.orders.some((o) => o.id === order.id);
             const orders = exists
