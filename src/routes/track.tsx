@@ -824,6 +824,13 @@ function Track() {
   const [chat, setChat] = useState(false);
   const [calling, setCalling] = useState(false);
 
+  const preliminaryStatus: OTCStatus = liveShared
+    ? SHARED_STATUS_TO_FLOW[liveShared.status]
+    : localOrder
+      ? (localOrder.status as OTCStatus)
+      : "Order Confirmed";
+  const driverProgress = useDriverPosition(preliminaryStatus, liveShared?.outForDeliveryTs);
+
   // Handle missing order (no shared + no local)
   if (!liveShared && !localOrder) {
     return (
@@ -876,8 +883,6 @@ function Track() {
     : localOrder?.history ?? [];
 
   // Driver continuous animation
-  const startTs = liveShared?.outForDeliveryTs;
-  const driverProgress = useDriverPosition(displayStatus, startTs);
   const mapProgress = isOutForDelivery ? (delivered ? 1 : driverProgress) : 0;
 
   // ETA derived from driver progress
@@ -1089,8 +1094,8 @@ function Track() {
           <div className="font-black text-[#1B3A6B] mb-4">Delivery Timeline</div>
           <ol>
             {OTC_ORDER_FLOW.map((s, i) => {
-              const done = i < safeStepIdx;
-              const current = i === safeStepIdx;
+              const done = delivered ? i <= safeStepIdx : i < safeStepIdx;
+              const current = !delivered && i === safeStepIdx;
               const event = history.find((h: { status: LiveStatus; at: number }) => h.status === s);
               const ts = event ? new Date(event.at) : null;
               const isLast = i === OTC_ORDER_FLOW.length - 1;
