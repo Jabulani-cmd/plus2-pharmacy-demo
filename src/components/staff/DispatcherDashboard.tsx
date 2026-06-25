@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  STAFF_DELIVERIES,
   STAFF_DRIVERS,
   type StaffDelivery,
   type StaffDriver,
@@ -60,11 +59,12 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     [sharedOrders]
   );
 
-  const [demoDeliveries, setDemoDeliveries] =
-    useState<StaffDelivery[]>(STAFF_DELIVERIES);
-  const deliveries = [...liveDeliveries, ...demoDeliveries];
-  const setDeliveries = setDemoDeliveries;
-  const isLiveOrder = (id: string) => sharedOrders.some((o) => o.id === id);
+  // Demo seed data removed — dispatch board only shows real customer orders.
+  const deliveries = liveDeliveries;
+  const isLiveOrder = (_id: string) => true;
+  const setDeliveries: (
+    updater: (prev: StaffDelivery[]) => StaffDelivery[]
+  ) => void = () => {};
 
   const [drivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
   const [assignFor, setAssignFor] =
@@ -196,7 +196,6 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     return (
       <HistoryView
         sharedOrders={sharedOrders}
-        demoDeliveries={demoDeliveries}
         rxDelivered={sharedPrescriptions.filter((p) => p.status === "Delivered")}
         drivers={drivers}
       />
