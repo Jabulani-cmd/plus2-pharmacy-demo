@@ -176,6 +176,7 @@ function RootComponent() {
     };
     const onStorage = (e: StorageEvent) => {
       if (!e.key || !(e.key in STORE_KEY_MAP)) return;
+      console.log("[cross-tab] rehydrate", e.key, !!STORE_KEY_MAP[e.key].rehydrate);
       try {
         STORE_KEY_MAP[e.key].rehydrate?.();
       } catch {
