@@ -105,11 +105,13 @@ export const ReceiptDocument = forwardRef<HTMLDivElement, Props>(function Receip
           <Line label={`Discount${r.pricing.discountCode ? ` (${r.pricing.discountCode})` : ""}`} value={`−${formatUSD(r.pricing.discount)}`} color="#059669" />
         )}
         <Line label={`Delivery (${r.delivery.method})`} value={r.pricing.deliveryFee === 0 ? "FREE" : formatUSD(r.pricing.deliveryFee)} valueColor={r.pricing.deliveryFee === 0 ? "#059669" : undefined} />
-        <Line label="VAT (15%)" value={formatUSD(r.pricing.vatAmount)} />
         <div style={{ borderTop: "1px solid #E5E7EB", margin: "8px 0" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontWeight: 700, fontSize: 16 }}>TOTAL</span>
           <span style={{ fontWeight: 700, fontSize: 18, color: "#0EA5E9" }}>{formatUSD(r.pricing.total)}</span>
+        </div>
+        <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4, textAlign: "right" }}>
+          VAT inclusive (15%) · {formatUSD(r.pricing.vatAmount)}
         </div>
       </div>
 
