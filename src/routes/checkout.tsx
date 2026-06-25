@@ -30,6 +30,35 @@ const DELIVERY_SLOTS = [
   { id: "evening", label: "This evening · 5pm – 7pm" },
 ] as const;
 
+// Single source of truth for delivery methods + prices.
+// Used by the radio list, the totals calc, the review summary,
+// the order summary sidebar, the receipt, and Supabase.
+type DeliveryMethodId = "standard" | "express" | "national" | "collect";
+type DeliveryMethod = {
+  id: DeliveryMethodId;
+  label: string;
+  desc: string;
+  price: number; // USD; "standard" uses freeOverFifty()
+  freeOverFifty?: boolean;
+};
+const DELIVERY_METHODS: readonly DeliveryMethod[] = [
+  { id: "standard", label: "Standard Delivery (Bulawayo metro)", desc: "1–2 working days", price: 5, freeOverFifty: true },
+  { id: "express",  label: "Same-day Express (Bulawayo)",         desc: "Within 4 hours",   price: 8 },
+  { id: "national", label: "Nationwide Courier",                  desc: "Bulawayo, Mutare, Gweru — 2–4 days", price: 12 },
+  { id: "collect",  label: "Click & Collect",                     desc: "Borrowdale or Avondale branch",      price: 0 },
+] as const;
+
+function priceFor(m: DeliveryMethod, subtotal: number) {
+  if (m.freeOverFifty && subtotal >= 50) return 0;
+  return m.price;
+}
+function priceLabel(m: DeliveryMethod, subtotal: number) {
+  const p = priceFor(m, subtotal);
+  return p === 0 ? "FREE" : formatUSD(p);
+}
+const methodById = (id: string) =>
+  DELIVERY_METHODS.find((m) => m.id === id) ?? DELIVERY_METHODS[0];
+
 function Checkout() {
   const cart = useShop((s) => s.cart);
   const clearCart = useShop((s) => s.clearCart);
@@ -48,15 +77,10 @@ function Checkout() {
     (s, i) => s + i.product.price * i.qty,
     0
   );
-  const deliveryFee = subtotal >= 50 ? 0 : 5;
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const discountAmount = coupon
     ? +(subtotal * coupon.discount).toFixed(2)
     : 0;
-  // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
-  const total = parseFloat(
-    (subtotal + deliveryFee - discountAmount).toFixed(2)
-  );
   const addPoints = useOrderExtras((s) => s.addPoints);
 
   const [step, setStep] = useState(0);
@@ -78,6 +102,14 @@ function Checkout() {
     [user],
   );
   const [delivery_, setDelivery] = useState(initialDelivery);
+
+  // Derive the selected delivery method + fee from a single source of truth.
+  const selectedMethod = methodById(delivery_.method);
+  const deliveryFee = priceFor(selectedMethod, subtotal);
+  // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
+  const total = parseFloat(
+    (subtotal + deliveryFee - discountAmount).toFixed(2)
+  );
 
   // Generate ONE stable order ID at checkout entry — same ID used on receipt,
   // tracking, dispatcher, notifications and My Orders.
@@ -112,14 +144,7 @@ function Checkout() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const makeReceipt = (auth: string, method: string) => {
-    const deliveryLabel = (
-      {
-        standard: "Standard Delivery",
-        express: "Same-day Express",
-        national: "Nationwide Courier",
-        collect: "Click & Collect",
-      } as Record<string, string>
-    )[delivery_.method] ?? "Standard";
+    const deliveryLabel = selectedMethod.label;
 
     const addr =
       delivery_.method === "collect"
@@ -390,34 +415,7 @@ function Checkout() {
                   Delivery Method
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    {
-                      id: "standard",
-                      label: "Standard Delivery (Bulawayo metro)",
-                      desc: "1–2 working days",
-                      price:
-                        subtotal >= 50 ? "FREE" : "$5.00",
-                    },
-                    {
-                      id: "express",
-                      label: "Same-day Express (Bulawayo)",
-                      desc: "Within 4 hours",
-                      price: "$8.00",
-                    },
-                    {
-                      id: "national",
-                      label: "Nationwide Courier",
-                      desc:
-                        "Bulawayo, Mutare, Gweru — 2–4 days",
-                      price: "$12.00",
-                    },
-                    {
-                      id: "collect",
-                      label: "Click & Collect",
-                      desc: "Borrowdale or Avondale branch",
-                      price: "FREE",
-                    },
-                  ].map((d) => (
+                  {DELIVERY_METHODS.map((d) => (
                     <label
                       key={d.id}
                       className={`flex cursor-pointer
@@ -449,7 +447,7 @@ function Checkout() {
                         </div>
                       </div>
                       <div className="font-bold text-primary">
-                        {d.price}
+                        {priceLabel(d, subtotal)}
                       </div>
                     </label>
                   ))}
@@ -646,15 +644,11 @@ function Checkout() {
                   <div className="font-bold">
                     Delivery method:
                   </div>
-                  <div className="text-muted-foreground capitalize">
-                    {(
-                      {
-                        standard: "Standard Delivery",
-                        express: "Same-day Express",
-                        national: "Nationwide Courier",
-                        collect: "Click & Collect",
-                      } as Record<string, string>
-                    )[delivery_.method] ?? "Standard"}
+                  <div className="text-muted-foreground flex items-center justify-between gap-2">
+                    <span>{selectedMethod.label}</span>
+                    <span className="font-semibold text-foreground">
+                      {deliveryFee === 0 ? "FREE" : formatUSD(deliveryFee)}
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -693,7 +687,7 @@ function Checkout() {
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-gray-500">
-                    Delivery
+                    Delivery ({selectedMethod.label})
                   </span>
                   <span className="font-semibold">
                     {deliveryFee === 0
@@ -701,9 +695,8 @@ function Checkout() {
                       : formatUSD(deliveryFee)}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 text-xs text-gray-400">
-                  <span>Includes VAT (15%)</span>
-                  <span></span>
+                <div className="py-1 text-xs text-gray-400">
+                  All prices include 15% VAT
                 </div>
                 {coupon && (
                   <div className="flex justify-between py-1 text-emerald-700">
@@ -789,7 +782,7 @@ function Checkout() {
                   value={formatUSD(subtotal)}
                 />
                 <Row
-                  label="Delivery"
+                  label={`Delivery (${selectedMethod.label})`}
                   value={
                     deliveryFee === 0
                       ? "FREE"
@@ -797,8 +790,8 @@ function Checkout() {
                   }
                 />
                 <Row
-                  label={<span className="text-xs">incl. VAT (15%)</span>}
-                  value={<span className="text-xs text-muted-foreground">in total</span>}
+                  label={<span className="text-xs text-muted-foreground">All prices include 15% VAT</span>}
+                  value={<span />}
                 />
                 {coupon && (
                   <Row
