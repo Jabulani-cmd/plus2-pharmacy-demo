@@ -13,11 +13,18 @@ import {
   Package,
 } from "lucide-react";
 import { useOrders, ORDER_FLOW, type LiveStatus } from "@/lib/orders";
+import {
+  useSharedOrders,
+  type SharedOrder,
+  type SharedOrderStatus,
+} from "@/store/sharedOrders";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (s: Record<string, unknown>) => ({
     id: typeof s.id === "string" ? s.id : undefined,
+    order: typeof s.order === "string" ? s.order : undefined,
   }),
   component: Track,
 });
@@ -29,6 +36,16 @@ const STEP_META: Record<string, { e: string; label: string }> = {
   "Driver Assigned": { e: "🚗", label: "Driver assigned and collecting" },
   "Out for Delivery": { e: "🛵", label: "Driver on the way to you" },
   "Delivered": { e: "🏠", label: "Order delivered successfully" },
+};
+
+// Map shared_orders status → display step in ORDER_FLOW
+const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, LiveStatus> = {
+  Confirmed: "Order Confirmed",
+  "Ready to dispatch": "Preparing Order",
+  Packed: "Preparing Order",
+  Assigned: "Driver Assigned",
+  "Out for delivery": "Out for Delivery",
+  Delivered: "Delivered",
 };
 
 // ─── Bulawayo map data (SVG viewport 520×340) ────────────────────────────────
