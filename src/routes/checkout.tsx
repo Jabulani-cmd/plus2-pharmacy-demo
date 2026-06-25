@@ -644,15 +644,11 @@ function Checkout() {
                   <div className="font-bold">
                     Delivery method:
                   </div>
-                  <div className="text-muted-foreground capitalize">
-                    {(
-                      {
-                        standard: "Standard Delivery",
-                        express: "Same-day Express",
-                        national: "Nationwide Courier",
-                        collect: "Click & Collect",
-                      } as Record<string, string>
-                    )[delivery_.method] ?? "Standard"}
+                  <div className="text-muted-foreground flex items-center justify-between gap-2">
+                    <span>{selectedMethod.label}</span>
+                    <span className="font-semibold text-foreground">
+                      {deliveryFee === 0 ? "FREE" : formatUSD(deliveryFee)}
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -691,7 +687,7 @@ function Checkout() {
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-gray-500">
-                    Delivery
+                    Delivery ({selectedMethod.label})
                   </span>
                   <span className="font-semibold">
                     {deliveryFee === 0
@@ -699,9 +695,8 @@ function Checkout() {
                       : formatUSD(deliveryFee)}
                   </span>
                 </div>
-                <div className="flex justify-between py-1 text-xs text-gray-400">
-                  <span>Includes VAT (15%)</span>
-                  <span></span>
+                <div className="py-1 text-xs text-gray-400">
+                  All prices include 15% VAT
                 </div>
                 {coupon && (
                   <div className="flex justify-between py-1 text-emerald-700">
