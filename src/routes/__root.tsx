@@ -162,8 +162,7 @@ function RootComponent() {
     installBroadcastSync(useOrderExtras, "order-extras", (s: any) => ({
       messages: s.messages,
       ratings: s.ratings,
-      coupons: s.coupons,
-      loyalty: s.loyalty,
+      points: s.points,
     }));
   }, []);
 
