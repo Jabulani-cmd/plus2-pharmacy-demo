@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Search, Heart, ShoppingCart, User, Menu, MapPin, Phone, HelpCircle, Truck, FileText } from "lucide-react";
+import { Search, Heart, ShoppingCart, User, Menu, MapPin, Phone, HelpCircle, Truck, FileText, LogIn, Users } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
@@ -60,6 +60,25 @@ export function Navbar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[85vw] max-w-sm overflow-y-auto p-4">
             <div className="mt-6 flex flex-col gap-1">
+              {!user && (
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <Link
+                    to="/auth"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-md border border-primary bg-white px-3 py-2.5 text-sm font-bold text-primary active:bg-primary/10"
+                  >
+                    <LogIn className="h-4 w-4" /> Sign In
+                  </Link>
+                  <Link
+                    to="/auth"
+                    search={{ mode: "register" }}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2.5 text-sm font-bold text-white active:bg-primary/90"
+                  >
+                    <Users className="h-4 w-4" /> Register
+                  </Link>
+                </div>
+              )}
               <div className="mb-3">
                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your branch</div>
                 <BranchSelector variant="full" />
