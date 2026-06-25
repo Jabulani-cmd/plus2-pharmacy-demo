@@ -2,12 +2,22 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/store/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { DEMO_CUSTOMERS } from "@/data/demoAccounts";
 import kingsLogo from "@/assets/kings-logo.png";
+import { z } from "zod";
 
-type Mode = "login" | "register" | "forgot";
+const authSearchSchema = z.object({
+  redirect: z.string().optional(),
+  mode: z.enum(["login", "register", "forgot"]).optional(),
+});
+
+type AuthSearch = z.infer<typeof authSearchSchema>;
+
+type Mode = NonNullable<AuthSearch["mode"]>;
+
 
 function BrandMark({ size = 108 }: { size?: number }) {
   return (
@@ -48,12 +58,10 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in or Register — Kings Pharmacy" }] }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-    mode: search.mode === "register" || search.mode === "forgot" || search.mode === "login" ? search.mode : undefined,
-  }),
+  validateSearch: authSearchSchema.parse,
   component: AuthPage,
 });
+
 
 function AuthPage() {
   const { redirect, mode: searchMode } = Route.useSearch();
@@ -252,14 +260,22 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
       <Field label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       <div className="flex items-center justify-between text-xs">
         <label className="flex items-center gap-2"><input type="checkbox" defaultChecked /> Remember me</label>
-        <button type="button" onClick={onForgot} className="font-semibold text-primary hover:underline">Forgot password?</button>
       </div>
       <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Signing in…" : "Sign in"}
       </button>
+      <button
+        type="button"
+        onClick={onForgot}
+        className="flex w-full items-center justify-center gap-2 rounded-full border border-primary/30 bg-white py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+      >
+        <KeyRound className="h-4 w-4" /> Forgot password?
+      </button>
     </form>
   );
 }
+
+
 
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const register = useAuth((s) => s.register);
@@ -302,16 +318,29 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [supabaseSent, setSupabaseSent] = useState(false);
 
   const sendLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.includes("@")) return toast.error("Enter a valid email");
     setBusy(true);
-    await reset(email);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setSupabaseSent(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not send reset email";
+      toast.error(message, { description: "Showing demo code for presentation." });
+    }
+
     const t = String(Math.floor(100000 + Math.random() * 900000));
     setDemoToken(t);
     setBusy(false);
     setStep("sent");
-    toast.success("Reset email sent", { description: `Demo token: ${t}` });
+    toast.success("Reset instructions sent", { description: `Demo token: ${t}` });
   };
 
   const setDigit = (i: number, v: string) => {
@@ -347,13 +376,24 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
   if (step === "email") {
     return (
       <form onSubmit={sendLink} className="space-y-4">
-        <h1 className="text-2xl font-extrabold">Reset your password</h1>
-        <p className="-mt-2 text-sm text-muted-foreground">Enter your email and we'll send you a secure 6-digit reset code.</p>
-        <Field label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark disabled:opacity-60">
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Send reset code"}
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
         </button>
-        <button type="button" onClick={onBack} className="w-full text-sm font-semibold text-primary hover:underline">← Back to sign in</button>
+        <h1 className="text-2xl font-extrabold">Reset your password</h1>
+        <p className="-mt-2 text-sm text-muted-foreground">
+          Enter your email and we'll send a secure reset link. For this demo, a 6-digit code is also shown below.
+        </p>
+        <Field label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60"
+        >
+          {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Send reset link"}
+        </button>
       </form>
     );
   }
@@ -361,17 +401,33 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
   if (step === "sent") {
     return (
       <div className="space-y-4 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-success"><Mail className="h-7 w-7" /></div>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Mail className="h-7 w-7" />
+        </div>
         <h2 className="text-xl font-extrabold">Check your email</h2>
-        <p className="text-sm text-muted-foreground">We sent a 6-digit reset code to <strong>{email}</strong>.</p>
+        <p className="text-sm text-muted-foreground">
+          We sent a reset link to <strong>{email}</strong>.
+        </p>
+        {supabaseSent && (
+          <p className="text-xs text-muted-foreground">
+            If the email is registered, follow the link to create a new password.
+          </p>
+        )}
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-left">
           <div className="text-[10px] font-bold uppercase tracking-widest text-primary">Demo Inbox</div>
           <div className="mt-1 text-sm text-foreground">Your Kings password reset code is:</div>
           <div className="mt-2 font-mono text-3xl font-extrabold tracking-[0.4em] text-primary">{demoToken}</div>
           <div className="mt-2 text-xs text-muted-foreground">Code expires in 10 minutes.</div>
         </div>
-        <button onClick={() => setStep("token")} className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark">Enter code</button>
-        <button onClick={onBack} className="w-full text-sm font-semibold text-primary hover:underline">← Back to sign in</button>
+        <button
+          onClick={() => setStep("token")}
+          className="w-full rounded-full bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark"
+        >
+          Enter demo code
+        </button>
+        <button type="button" onClick={onBack} className="w-full text-sm font-semibold text-primary hover:underline">
+          ← Back to sign in
+        </button>
       </div>
     );
   }
@@ -379,7 +435,9 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
   if (step === "token") {
     return (
       <form onSubmit={verifyToken} className="space-y-4 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><KeyRound className="h-7 w-7" /></div>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <KeyRound className="h-7 w-7" />
+        </div>
         <h2 className="text-xl font-extrabold">Enter reset code</h2>
         <p className="-mt-2 text-sm text-muted-foreground">6-digit code sent to <strong>{email}</strong></p>
         <div className="flex justify-center gap-2">
@@ -401,10 +459,12 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
             />
           ))}
         </div>
-        <button className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark">Verify code</button>
+        <button className="w-full rounded-full bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark">
+          Verify code
+        </button>
         <div className="flex items-center justify-between text-xs">
           <button type="button" onClick={onBack} className="font-semibold text-primary hover:underline">← Cancel</button>
-          <button type="button" onClick={() => { setStep("email"); setCode(["","","","","",""]); }} className="font-semibold text-primary hover:underline">Resend code</button>
+          <button type="button" onClick={() => { setStep("email"); setCode(["", "", "", "", "", ""]); }} className="font-semibold text-primary hover:underline">Resend code</button>
         </div>
       </form>
     );
@@ -417,7 +477,10 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
         <p className="-mt-2 text-sm text-muted-foreground">Pick a strong password you haven't used before.</p>
         <Field label="New password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <Field label="Confirm password" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark disabled:opacity-60">
+        <button
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark disabled:opacity-60"
+        >
           {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Updating…</> : "Update password"}
         </button>
       </form>
@@ -431,7 +494,7 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
       </div>
       <h2 className="text-2xl font-extrabold">Password reset!</h2>
       <p className="text-sm text-muted-foreground">Your password has been updated for <strong>{email}</strong>. You can now sign in with your new password.</p>
-      <button onClick={onBack} className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark">Back to sign in</button>
+      <button onClick={onBack} className="w-full rounded-full bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark">Back to sign in</button>
     </div>
   );
 }
