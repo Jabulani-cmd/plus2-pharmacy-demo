@@ -167,7 +167,7 @@ export function InstallPWA() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-xl border border-sky-200 bg-white shadow-xl">
+      <div className="fixed bottom-20 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-xl border border-sky-200 bg-white shadow-xl md:bottom-4">
         <div className="flex items-start gap-3 p-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
             <Download className="h-5 w-5" />
