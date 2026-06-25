@@ -507,6 +507,8 @@ if (typeof window !== "undefined") {
     if (event === "SIGNED_OUT") {
       const u = useAuth.getState().user;
       if (u?.isReal) useAuth.setState({ user: null });
+      // Always clear any persisted cart on sign-out so it can't bleed into a guest/next session.
+      try { useShop.getState().clearCart(); } catch { /* noop */ }
       return;
     }
     if (event === "SIGNED_IN" && session?.user) {
