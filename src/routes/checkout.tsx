@@ -77,7 +77,6 @@ function Checkout() {
     (s, i) => s + i.product.price * i.qty,
     0
   );
-  const deliveryFee = subtotal >= 50 ? 0 : 5;
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const discountAmount = coupon
     ? +(subtotal * coupon.discount).toFixed(2)
