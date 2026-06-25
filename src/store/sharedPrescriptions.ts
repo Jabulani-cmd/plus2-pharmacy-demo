@@ -132,7 +132,7 @@ export const useSharedPrescriptions = create<SharedState>()(
         set((state) => ({
           prescriptions: [record, ...state.prescriptions.filter((x) => x.id !== record.id)],
         }));
-        void supabase.from("prescriptions").insert(rxToRow(record)).then(({ error }) => {
+        void supabase.from("prescriptions").insert(rxToRow(record) as never).then(({ error }) => {
           if (error) console.error("[sharedPrescriptions] insert failed", error);
         });
         pushNotification({
