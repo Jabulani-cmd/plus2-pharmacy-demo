@@ -876,7 +876,12 @@ function Track() {
     localOrder?.items ??
     [];
   const total = liveShared?.total ?? localOrder?.total ?? 0;
-  const history = localOrder?.history ?? sharedHistory(liveShared);
+  // When tracking a shared (cloud-synced) order, always derive history
+  // from its live status — never from a stale local-seeded order, or the
+  // timeline freezes when realtime updates arrive.
+  const history = liveShared
+    ? sharedHistory(liveShared)
+    : localOrder?.history ?? [];
 
   // Driver continuous animation
   const startTs = liveShared?.outForDeliveryTs;
