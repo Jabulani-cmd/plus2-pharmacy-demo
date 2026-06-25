@@ -265,9 +265,17 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
       <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Signing in…" : "Sign in"}
       </button>
+      <button
+        type="button"
+        onClick={onForgot}
+        className="flex w-full items-center justify-center gap-2 rounded-full border border-primary/30 bg-white py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+      >
+        <KeyRound className="h-4 w-4" /> Forgot password?
+      </button>
     </form>
   );
 }
+
 
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const register = useAuth((s) => s.register);
