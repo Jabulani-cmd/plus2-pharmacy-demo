@@ -244,7 +244,13 @@ export const useSharedOrders = create<State>()((set, get) => ({
             x.id === id ? { ...x, status: "Packed", packedAt } : x
           ),
         }));
-        void supabase.from(TABLE).update({ status: "Packed", packed_at: packedAt, updated_at: new Date().toISOString() }).eq("id", id);
+        void supabase
+          .from(TABLE)
+          .update({ status: "Packed", packed_at: packedAt, updated_at: new Date().toISOString() })
+          .eq("id", id)
+          .then(({ error }) => {
+            if (error) console.error("[sharedOrders] markPacked update failed", error);
+          });
         pushNotification({
           audience: "customer",
           userId: o.customerId ?? o.customerEmail,
@@ -275,15 +281,21 @@ export const useSharedOrders = create<State>()((set, get) => ({
               : x
           ),
         }));
-        void supabase.from(TABLE).update({
-          status: "Assigned",
-          driver_name: driverName,
-          driver_phone: driverPhone,
-          driver_vehicle: driverVehicle,
-          dispatched_at: dispatchedAt,
-          eta: "30 min",
-          updated_at: new Date().toISOString(),
-        }).eq("id", id);
+        void supabase
+          .from(TABLE)
+          .update({
+            status: "Assigned",
+            driver_name: driverName,
+            driver_phone: driverPhone,
+            driver_vehicle: driverVehicle,
+            dispatched_at: dispatchedAt,
+            eta: "30 min",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .then(({ error }) => {
+            if (error) console.error("[sharedOrders] assignDriver update failed", error);
+          });
         pushNotification({
           audience: "customer",
           userId: o.customerId ?? o.customerEmail,
@@ -307,12 +319,18 @@ export const useSharedOrders = create<State>()((set, get) => ({
               : x
           ),
         }));
-        void supabase.from(TABLE).update({
-          status: "Out for delivery",
-          eta: "20 min",
-          out_for_delivery_ts: ts,
-          updated_at: new Date().toISOString(),
-        }).eq("id", id);
+        void supabase
+          .from(TABLE)
+          .update({
+            status: "Out for delivery",
+            eta: "20 min",
+            out_for_delivery_ts: ts,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .then(({ error }) => {
+            if (error) console.error("[sharedOrders] startDelivery update failed", error);
+          });
         pushNotification({
           audience: "customer",
           userId: o.customerId ?? o.customerEmail,
@@ -338,7 +356,13 @@ export const useSharedOrders = create<State>()((set, get) => ({
         set((s) => ({
           orders: s.orders.map((x) => (x.id === id ? { ...x, ...patch } : x)),
         }));
-        void supabase.from(TABLE).update(dbPatch as never).eq("id", id);
+        void supabase
+          .from(TABLE)
+          .update(dbPatch as never)
+          .eq("id", id)
+          .then(({ error }) => {
+            if (error) console.error("[sharedOrders] updateStatus update failed", error);
+          });
         if (status === "Delivered") {
           pushNotification({
             audience: "customer",
