@@ -155,7 +155,7 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
 
       {/* SECTION 6 — Bottom buttons */}
       <div className="flex flex-col gap-2 border-t border-border bg-card p-4 sm:flex-row sm:justify-center">
-        <Link to="/track" search={{ order: receipt.orderNumber }} className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark">
+        <Link to="/track" search={{ id: receipt.orderNumber }} className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark">
           <MapPin className="h-4 w-4" /> Track My Order
         </Link>
         <Link to="/" className="inline-flex items-center justify-center rounded-md border-2 border-primary px-6 py-3 text-sm font-bold text-primary hover:bg-primary/5">
