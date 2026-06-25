@@ -136,7 +136,7 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
-          <LiveStatusBadge className="hidden sm:inline-flex" />
+          {user && <LiveStatusBadge className="hidden sm:inline-flex" />}
           {user && (
             <NotificationsBell audience="customer" userId={user.id ?? user.email} />
           )}
@@ -153,10 +153,10 @@ export function Navbar() {
               <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{wishlist.length}</span>
             )}
           </Link>
-          <button onClick={() => setCartOpen(true)} className="relative flex items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4]" aria-label="Open cart">
+          <button onClick={handleCartClick} className="relative flex items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4]" aria-label="Open cart">
             <ShoppingCart className="h-5 w-5 text-[#374151]" />
             <AnimatePresence>
-              {cartCount > 0 && (
+              {user && cartCount > 0 && (
                 <motion.span
                   key={cartCount}
                   initial={{ scale: 0.6 }}
