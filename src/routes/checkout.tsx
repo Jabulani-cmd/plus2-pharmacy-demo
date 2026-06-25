@@ -673,13 +673,9 @@ function Checkout() {
                       : formatUSD(deliveryFee)}
                   </span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-gray-500">
-                    VAT (15%)
-                  </span>
-                  <span className="font-semibold">
-                    {formatUSD(vat)}
-                  </span>
+                <div className="flex justify-between py-1 text-xs text-gray-400">
+                  <span>Includes VAT (15%)</span>
+                  <span></span>
                 </div>
                 {coupon && (
                   <div className="flex justify-between py-1 text-emerald-700">
@@ -773,8 +769,8 @@ function Checkout() {
                   }
                 />
                 <Row
-                  label="VAT (15%)"
-                  value={formatUSD(vat)}
+                  label={<span className="text-xs">incl. VAT (15%)</span>}
+                  value={<span className="text-xs text-muted-foreground">in total</span>}
                 />
                 {coupon && (
                   <Row
