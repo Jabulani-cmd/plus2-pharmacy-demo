@@ -94,17 +94,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "A responsive pharmacy e-commerce app for browsing, ordering medicines, and managing prescriptions." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "A responsive pharmacy e-commerce app for browsing, ordering medicines, and managing prescriptions." },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
+      { title: "Kings Pharmacy" },
+      { name: "description", content: "Order medicines, manage prescriptions, and chat with your local Kings Pharmacy branch in Bulawayo." },
+      { name: "author", content: "Mavingtech Business Solutions" },
+      { property: "og:title", content: "Kings Pharmacy" },
+      { property: "og:description", content: "Order medicines, manage prescriptions, and chat with your local Kings Pharmacy branch in Bulawayo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "A responsive pharmacy e-commerce app for browsing, ordering medicines, and managing prescriptions." },
+      { name: "twitter:site", content: "@KingsPharmacy" },
+      { name: "twitter:title", content: "Kings Pharmacy" },
+      { name: "twitter:description", content: "Order medicines, manage prescriptions, and chat with your local Kings Pharmacy branch in Bulawayo." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
       { name: "theme-color", content: "#0EA5E9" },
@@ -126,6 +126,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "text/javascript",
+        children: `
+          (function() {
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+            }
+            window.addEventListener('beforeinstallprompt', function(e) {
+              e.preventDefault();
+              window.__kingsPwaDeferredPrompt = e;
+            });
+          })();
+        `,
       },
     ],
   }),
