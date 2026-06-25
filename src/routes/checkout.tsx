@@ -871,6 +871,52 @@ function Checkout() {
           itemSummary={itemSummary}
         />
       )}
+
+      {askSaveAddress && (
+        <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl">
+            <h3 className="text-lg font-extrabold">Save this delivery address?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We can pre-fill it on your next order — you can still edit it any time at checkout.
+            </p>
+            <div className="mt-4 rounded-md bg-muted p-3 text-sm">
+              <div className="font-semibold">{delivery_.firstName} {delivery_.lastName}</div>
+              <div className="text-muted-foreground">
+                {delivery_.street}, {delivery_.suburb}, {delivery_.city}
+              </div>
+              <div className="text-muted-foreground">{delivery_.phone}</div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setAskSaveAddress(false)}
+                className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-bold hover:bg-muted"
+              >
+                Not now
+              </button>
+              <button
+                onClick={async () => {
+                  await saveAddress({
+                    firstName: delivery_.firstName,
+                    lastName: delivery_.lastName,
+                    phone: delivery_.phone,
+                    email: delivery_.email,
+                    street: delivery_.street,
+                    suburb: delivery_.suburb,
+                    city: delivery_.city,
+                    province: delivery_.province,
+                    postal: delivery_.postal,
+                  });
+                  setAskSaveAddress(false);
+                  toast.success("Address saved to your profile");
+                }}
+                className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-dark"
+              >
+                Save address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
