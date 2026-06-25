@@ -143,8 +143,8 @@ export function Navbar() {
           <Link to={user ? "/account" : "/auth"} className="hidden items-center gap-2 rounded-md px-3 py-2 text-left text-xs hover:bg-[#F0F9F4] lg:flex">
             <User className="h-5 w-5 text-[#374151]" />
             <span className="leading-tight">
-              <span className="block text-[11px] text-[#6B7280]">{user ? `Hi, ${user.firstName}` : "Hello, Guest"}</span>
-              <span className="block text-sm font-semibold text-[#111827]">{user ? "My Account" : "Sign in"}</span>
+              <span className="block text-[11px] text-[#6B7280]">{user ? `Hi, ${user.firstName}` : "Welcome"}</span>
+              <span className="block text-sm font-semibold text-[#111827]">{user ? "My Account" : "Sign In / Register"}</span>
             </span>
           </Link>
           <Link to="/account" className="relative hidden items-center justify-center rounded-md p-2 hover:bg-[#F0F9F4] sm:flex" aria-label="Wishlist">
