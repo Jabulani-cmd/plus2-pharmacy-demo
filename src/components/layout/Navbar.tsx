@@ -12,6 +12,7 @@ import { BranchSelector } from "./BranchSelector";
 import { getBranch } from "@/data/branches";
 import { useBranch } from "@/store/branch";
 import { NotificationsBell } from "./NotificationsBell";
+import { LiveStatusBadge } from "@/components/LiveStatusBadge";
 
 export function Navbar() {
   const cart = useShop((s) => s.cart);
@@ -98,6 +99,7 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
+          <LiveStatusBadge className="hidden sm:inline-flex" />
           {user && (
             <NotificationsBell audience="customer" userId={user.id ?? user.email} />
           )}
