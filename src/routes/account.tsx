@@ -670,6 +670,14 @@ function AccountPage() {
 
           {tab === "orders" && (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
+              {mySharedOrders.length === 0 && orders.length === 0 && (
+                <div className="px-6 py-12 text-center">
+                  <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                  <h3 className="mt-3 text-base font-bold">No orders yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">When you place your first order it'll show up here in real time.</p>
+                  <Link to="/" className="mt-4 inline-block rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">Start Shopping</Link>
+                </div>
+              )}
               {mySharedOrders.length > 0 && (
                 <div className="border-b border-border bg-[#F0F9F4] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#0EA5E9]">
                   Your recent orders
