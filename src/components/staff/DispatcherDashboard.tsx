@@ -9,6 +9,7 @@ import {
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
+import { DriverPortalView } from "./DriverPortalView";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
   X, Clock, UserCheck, FileText, User,
@@ -191,6 +192,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   if (view === "drivers")
     return <DriversView drivers={drivers} deliveries={deliveries} />;
+  if (view === "driver-portal") return <DriverPortalView />;
   if (view === "history")
     return (
       <HistoryView deliveries={deliveries} drivers={drivers} />
