@@ -13,11 +13,81 @@ import {
   Package,
 } from "lucide-react";
 import { useOrders, ORDER_FLOW, type LiveStatus } from "@/lib/orders";
+import {
+  useSharedOrders,
+  type SharedOrder,
+  type SharedOrderStatus,
+} from "@/store/sharedOrders";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// ─── Helpers for shared_orders row ↔ SharedOrder ──────────────────────────────
+function rowToShared(r: Record<string, unknown>): SharedOrder {
+  const g = (k: string) => r[k] as unknown;
+  return {
+    id: String(g("id")),
+    customerId: (g("customer_id") as string | null) ?? undefined,
+    customerEmail: (g("customer_email") as string | null) ?? undefined,
+    customer: String(g("customer") ?? ""),
+    phone: String(g("phone") ?? ""),
+    branchId: (g("branch_id") as string | null) ?? undefined,
+    items: (g("items") as SharedOrder["items"]) ?? [],
+    itemCount: Number(g("item_count") ?? 0),
+    address: String(g("address") ?? ""),
+    deliveryMethod: String(g("delivery_method") ?? ""),
+    paymentMethod: String(g("payment_method") ?? ""),
+    paymentRef: String(g("payment_ref") ?? ""),
+    total: Number(g("total") ?? 0),
+    status: g("status") as SharedOrderStatus,
+    placedAt: String(g("placed_at") ?? ""),
+    placedTs: Number(g("placed_ts") ?? Date.now()),
+    driverName: (g("driver_name") as string | null) ?? undefined,
+    driverPhone: (g("driver_phone") as string | null) ?? undefined,
+    driverVehicle: (g("driver_vehicle") as string | null) ?? undefined,
+    packedAt: (g("packed_at") as string | null) ?? undefined,
+    dispatchedAt: (g("dispatched_at") as string | null) ?? undefined,
+    deliveredAt: (g("delivered_at") as string | null) ?? undefined,
+    eta: (g("eta") as string | null) ?? undefined,
+    outForDeliveryTs: (g("out_for_delivery_ts") as number | null) ?? undefined,
+  };
+}
+
+function bannerFor(status: SharedOrderStatus): { text: string; tone: "info" | "success" } {
+  switch (status) {
+    case "Packed":
+      return { text: "📦 Order packed — awaiting driver", tone: "info" };
+    case "Assigned":
+      return { text: "🚗 Driver assigned — out for delivery soon", tone: "info" };
+    case "Out for delivery":
+      return { text: "🛵 Driver is on the way!", tone: "info" };
+    case "Delivered":
+      return { text: "✅ Your order has been delivered!", tone: "success" };
+    case "Ready to dispatch":
+      return { text: "📋 Order being prepared", tone: "info" };
+    default:
+      return { text: "📦 Order status updated", tone: "info" };
+  }
+}
+
+function sharedHistory(o: SharedOrder | null) {
+  if (!o) return [] as { status: LiveStatus; at: number }[];
+  const out: { status: LiveStatus; at: number }[] = [];
+  out.push({ status: "Order Confirmed", at: o.placedTs });
+  if (o.packedAt || ["Packed", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Preparing Order", at: o.placedTs + 60_000 });
+  if (o.dispatchedAt || ["Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Driver Assigned", at: o.placedTs + 120_000 });
+  if (o.outForDeliveryTs || ["Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Out for Delivery", at: o.outForDeliveryTs ?? o.placedTs + 180_000 });
+  if (o.status === "Delivered")
+    out.push({ status: "Delivered", at: o.placedTs + 480_000 });
+  return out;
+}
 
 export const Route = createFileRoute("/track")({
   validateSearch: (s: Record<string, unknown>) => ({
     id: typeof s.id === "string" ? s.id : undefined,
+    order: typeof s.order === "string" ? s.order : undefined,
   }),
   component: Track,
 });
@@ -29,6 +99,16 @@ const STEP_META: Record<string, { e: string; label: string }> = {
   "Driver Assigned": { e: "🚗", label: "Driver assigned and collecting" },
   "Out for Delivery": { e: "🛵", label: "Driver on the way to you" },
   "Delivered": { e: "🏠", label: "Order delivered successfully" },
+};
+
+// Map shared_orders status → display step in ORDER_FLOW
+const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, LiveStatus> = {
+  Confirmed: "Order Confirmed",
+  "Ready to dispatch": "Preparing Order",
+  Packed: "Preparing Order",
+  Assigned: "Driver Assigned",
+  "Out for delivery": "Out for Delivery",
+  Delivered: "Delivered",
 };
 
 // ─── Bulawayo map data (SVG viewport 520×340) ────────────────────────────────
@@ -99,6 +179,54 @@ function interpolateRoute(pts: { x: number; y: number }[], progress: number) {
   };
 }
 
+function routeHeading(pts: { x: number; y: number }[], progress: number) {
+  const eps = 0.01;
+  const a = interpolateRoute(pts, Math.max(0, progress - eps));
+  const b = interpolateRoute(pts, Math.min(1, progress + eps));
+  return Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI);
+}
+
+// ─── useDriverPosition hook ───────────────────────────────────────────────────
+// Continuously animates 0→0.95 over the configured duration while
+// `status === "Out for Delivery"`. Snaps to 1 when delivered.
+function useDriverPosition(
+  status: LiveStatus | string,
+  startTs: number | undefined,
+  durationMs = 240000,
+) {
+  const [position, setPosition] = useState(() => {
+    if (status === "Delivered") return 1;
+    if (status !== "Out for Delivery") return 0;
+    if (!startTs) return 0.05;
+    const elapsed = Date.now() - startTs;
+    return Math.min(0.05 + (elapsed / durationMs) * 0.95, 0.95);
+  });
+
+  useEffect(() => {
+    if (status === "Delivered") {
+      setPosition(1);
+      return;
+    }
+    if (status !== "Out for Delivery") {
+      setPosition(0);
+      return;
+    }
+    const base = startTs ?? Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - base;
+      // Small random speed factor for realism, kept within bounds
+      const speedFactor = 0.8 + Math.random() * 0.4;
+      const raw = 0.05 + (elapsed / durationMs) * 0.95 * speedFactor;
+      setPosition(Math.min(0.95, Math.max(0.05, raw)));
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [status, startTs, durationMs]);
+
+  return position;
+}
+
 // ─── Delivery Map Component ───────────────────────────────────────────────────
 
 function DeliveryMap({
@@ -106,13 +234,16 @@ function DeliveryMap({
   driverName,
   isActive,
   branchName,
+  demoMode = false,
 }: {
   progress: number;
   driverName: string;
   isActive: boolean;
   branchName: string;
+  demoMode?: boolean;
 }) {
   const driverPos = interpolateRoute(ROUTE_WAYPOINTS, progress);
+  const heading = routeHeading(ROUTE_WAYPOINTS, progress);
   const branch = BRANCHES[branchName] ?? BRANCHES["9th Ave CBD"];
   const routePath = waypointsToPath(ROUTE_WAYPOINTS);
 
@@ -217,7 +348,7 @@ function DeliveryMap({
             initial={false}
             animate={{ strokeDasharray: `${progress} ${1 - progress}` }}
             style={{ strokeDashoffset: 0 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
           />
         )}
 
@@ -288,17 +419,27 @@ function DeliveryMap({
         </text>
 
         {isActive && (
-          <g transform={`translate(${driverPos.x}, ${driverPos.y + bounce})`}>
+          <motion.g
+            animate={{ x: driverPos.x, y: driverPos.y + bounce }}
+            transition={{ type: "tween", duration: 0.5, ease: "easeInOut" }}
+          >
+            {/* Pulsing Google-Maps-style ring */}
+            <circle r="14" fill="#1E5BC6" opacity="0.25">
+              <animate attributeName="r" values="14;28;14" dur="1.5s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.3;0;0.3" dur="1.5s" repeatCount="indefinite" />
+            </circle>
             <ellipse cx={0} cy={14} rx={10} ry={4} fill="rgba(0,0,0,0.15)" />
             <circle r="13" fill="white" stroke="#1E5BC6" strokeWidth="2.5" />
-            <text x="0" y="5" fontSize="14" textAnchor="middle">
-              🚗
-            </text>
+            <g transform={`rotate(${heading})`}>
+              <text x="0" y="5" fontSize="14" textAnchor="middle">
+                🚗
+              </text>
+            </g>
             <rect x={-28} y={16} width={56} height={14} rx={7} fill="#1E5BC6" />
             <text x={0} y={26} fontSize="7" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold">
               {driverName.split(" ")[0] || "Driver"}
             </text>
-          </g>
+          </motion.g>
         )}
 
         <rect x={8} y={8} width={84} height={20} rx={10} fill="rgba(255,255,255,0.92)" />
@@ -313,6 +454,15 @@ function DeliveryMap({
               {(3.2 * (1 - progress)).toFixed(1)} km away
             </text>
           </>
+        )}
+
+        {demoMode && (
+          <g transform={`translate(${MAP_W / 2 - 22}, 8)`}>
+            <rect width={44} height={18} rx={4} fill="#FACC15" />
+            <text x={22} y={13} fontSize="9" fill="#1B3A6B" textAnchor="middle" fontFamily="sans-serif" fontWeight="900">
+              DEMO
+            </text>
+          </g>
         )}
 
         <g transform={`translate(${MAP_W - 22}, ${MAP_H - 22})`}>
@@ -568,18 +718,101 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
 // ─── Main Track Component ─────────────────────────────────────────────────────
 
 function Track() {
-  const { id } = Route.useSearch();
-  const orders = useOrders((s) => s.orders);
+  const { id, order: orderParam } = Route.useSearch();
+  const trackId = id ?? orderParam;
+
+  // Local seeded orders (legacy demo fallback)
+  const localOrders = useOrders((s) => s.orders);
   const advance = useOrders((s) => s.advance);
   const rate = useOrders((s) => s.rate);
   const rateDelivery = useOrders((s) => s.rateDelivery);
-  const order = id ? orders.find((o) => o.id === id) : orders[0];
+
+  // Realtime-synced shared orders (cross-device source of truth)
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const markPacked = useSharedOrders((s) => s.markPacked);
+  const assignDriver = useSharedOrders((s) => s.assignDriver);
+  const startDelivery = useSharedOrders((s) => s.startDelivery);
+  const updateSharedStatus = useSharedOrders((s) => s.updateStatus);
+
+  // Per-order realtime channel (used for connection indicator + toast)
+  const [shared, setShared] = useState<SharedOrder | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [banner, setBanner] = useState<{ text: string; tone: "info" | "success" } | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoPaused, setDemoPaused] = useState(false);
+  const prevStatusRef = useRef<SharedOrderStatus | null>(null);
+
+  // Resolve which order we're tracking
+  const fromShared = trackId
+    ? sharedOrders.find((o) => o.id === trackId)
+    : sharedOrders[0];
+  const liveShared = shared ?? fromShared ?? null;
+  const localOrder = trackId
+    ? localOrders.find((o) => o.id === trackId)
+    : !fromShared && !shared
+      ? localOrders[0]
+      : undefined;
+
+  // Initial fetch + per-order Supabase Realtime subscription
+  useEffect(() => {
+    if (!trackId) return;
+    let cancelled = false;
+
+    void supabase
+      .from("shared_orders")
+      .select("*")
+      .eq("id", trackId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setShared(rowToShared(data));
+      });
+
+    const channel = supabase
+      .channel(`order_${trackId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "shared_orders",
+          filter: `id=eq.${trackId}`,
+        },
+        (payload) => {
+          const next = rowToShared(payload.new as Record<string, unknown>);
+          setShared(next);
+        },
+      )
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [trackId]);
+
+  // Detect status transitions → banner + toast
+  useEffect(() => {
+    if (!liveShared) return;
+    const prev = prevStatusRef.current;
+    const curr = liveShared.status;
+    if (prev && prev !== curr) {
+      const t = bannerFor(curr);
+      setBanner(t);
+      toast.success(`Order status updated: ${curr}`);
+      const id = window.setTimeout(() => setBanner(null), 3000);
+      return () => window.clearTimeout(id);
+    }
+    prevStatusRef.current = curr;
+  }, [liveShared?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [chat, setChat] = useState(false);
   const [calling, setCalling] = useState(false);
 
-  // Handle missing order
-  if (!order) {
+  // Handle missing order (no shared + no local)
+  if (!liveShared && !localOrder) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
@@ -591,34 +824,124 @@ function Track() {
     );
   }
 
-  // Safely compute step index
-  const stepIdx = ORDER_FLOW.indexOf(order.status as LiveStatus);
+  // Resolve the unified display model (prefer shared/realtime)
+  const displayStatus: LiveStatus = liveShared
+    ? SHARED_STATUS_TO_FLOW[liveShared.status]
+    : (localOrder!.status as LiveStatus);
+  const stepIdx = ORDER_FLOW.indexOf(displayStatus);
   const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, ORDER_FLOW.length - 1);
   const progress = safeStepIdx / (ORDER_FLOW.length - 1);
-  const delivered = order.status === "Delivered";
-  const isOutForDelivery = safeStepIdx >= 4; // "Out for Delivery" or later
-  const driverName = order.driverName ?? "Awaiting driver";
-  const branchName = "9th Ave CBD"; // default branch
+  const delivered = displayStatus === "Delivered";
+  const isOutForDelivery = safeStepIdx >= 4;
+  const driverName =
+    liveShared?.driverName ?? localOrder?.driverName ?? "Awaiting driver";
+  const branchName = liveShared?.branchId ?? "9th Ave CBD";
+  const orderId = liveShared?.id ?? localOrder!.id;
 
-  // Safely access history and items
-  const history = order.history ?? [];
-  const items = order.items ?? [];
-  const total = order.total ?? 0;
+  // Items + history
+  const items =
+    liveShared?.items?.map((i) => ({ name: i.name, qty: i.qty, price: i.price })) ??
+    localOrder?.items ??
+    [];
+  const total = liveShared?.total ?? localOrder?.total ?? 0;
+  const history = localOrder?.history ?? sharedHistory(liveShared);
+
+  // Driver continuous animation
+  const startTs = liveShared?.outForDeliveryTs;
+  const driverProgress = useDriverPosition(displayStatus, startTs);
+  const mapProgress = isOutForDelivery ? (delivered ? 1 : driverProgress) : 0;
+
+  // ETA derived from driver progress
+  const etaMinutes = isOutForDelivery
+    ? Math.max(0, Math.round((1 - driverProgress) * 4))
+    : null;
+
+  // ── Live demo presentation mode ──
+  function startLiveDemo() {
+    if (!liveShared) {
+      toast.error("Live demo needs a shared order.");
+      return;
+    }
+    setDemoMode(true);
+    setDemoPaused(false);
+    if (!liveShared.driverName) {
+      assignDriver(liveShared.id, "Tendai Moyo", "+263 77 123 4567", "Honda CB125");
+    }
+    setTimeout(() => startDelivery(liveShared.id), 800);
+    toast.success("Live demo started — driver dispatching now");
+  }
+
+  // ── Simulate next stage (writes to Supabase) ──
+  function simulateNextStage() {
+    if (liveShared) {
+      const s = liveShared.status;
+      if (s === "Confirmed") updateSharedStatus(liveShared.id, "Ready to dispatch");
+      else if (s === "Ready to dispatch") markPacked(liveShared.id);
+      else if (s === "Packed")
+        assignDriver(liveShared.id, "Tendai Moyo", "+263 77 123 4567", "Honda CB125");
+      else if (s === "Assigned") startDelivery(liveShared.id);
+      else if (s === "Out for delivery") updateSharedStatus(liveShared.id, "Delivered");
+    } else if (localOrder) {
+      advance(localOrder.id);
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4">
+      {/* Status-change banner */}
+      <AnimatePresence>
+        {banner && (
+          <motion.div
+            key={banner.text}
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 240, damping: 24 }}
+            className={`fixed top-2 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full font-bold text-sm shadow-lg ${
+              banner.tone === "success"
+                ? "bg-[#1E5BC6] text-white"
+                : "bg-white text-[#1B3A6B] border border-[#1E5BC6]/30"
+            }`}
+          >
+            {banner.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Connection pill */}
+      <div className="flex justify-end">
+        <div
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
+            connected ? "bg-blue-50 text-[#1E5BC6]" : "bg-red-50 text-red-500"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              connected ? "bg-[#1E5BC6] animate-pulse" : "bg-red-400"
+            }`}
+          />
+          {connected ? "Live tracking" : "Reconnecting…"}
+        </div>
+      </div>
+
       {/* Top status card */}
       <div className="bg-gradient-to-r from-[#1B3A6B] to-[#1E5BC6] rounded-2xl p-4 md:p-5 text-white">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-[11px] opacity-70 font-bold uppercase tracking-wider">
-              Order #{order.id}
+              Order #{orderId}
             </div>
-            <div className="text-lg md:text-xl font-black mt-0.5">
-              {STEP_META[order.status]?.e} {order.status}
-            </div>
+            <motion.div
+              key={displayStatus}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="text-lg md:text-xl font-black mt-0.5"
+            >
+              {STEP_META[displayStatus]?.e} {displayStatus}
+            </motion.div>
             <div className="text-[12px] opacity-80 mt-0.5">
-              {STEP_META[order.status]?.label}
+              {STEP_META[displayStatus]?.label}
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -626,7 +949,13 @@ function Track() {
               <Clock className="h-3 w-3" /> Arriving in
             </div>
             <div className="text-xl md:text-2xl font-black mt-0.5">
-              <CountdownTimer stepIdx={safeStepIdx} />
+              {delivered ? (
+                <span>Delivered ✓</span>
+              ) : etaMinutes !== null ? (
+                <span className="tabular-nums">{etaMinutes.toString().padStart(2, "0")}:00</span>
+              ) : (
+                <CountdownTimer stepIdx={safeStepIdx} />
+              )}
             </div>
           </div>
         </div>
@@ -665,10 +994,11 @@ function Track() {
           </div>
 
           <DeliveryMap
-            progress={isOutForDelivery ? progress : 0}
+            progress={mapProgress}
             driverName={driverName}
             isActive={isOutForDelivery}
             branchName={branchName}
+            demoMode={demoMode}
           />
 
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
@@ -693,19 +1023,30 @@ function Track() {
           </div>
 
           {!delivered && (
-            <button
-              onClick={() => {
-                advance(order.id);
-                toast.success(
-                  `Status updated: ${
-                    ORDER_FLOW[Math.min(safeStepIdx + 1, ORDER_FLOW.length - 1)]
-                  }`
-                );
-              }}
-              className="w-full h-11 rounded-full bg-[#1B3A6B] hover:bg-[#1E5BC6] text-white font-bold text-sm transition"
-            >
-              ▶ Simulate Next Delivery Stage
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={simulateNextStage}
+                className="h-11 rounded-full bg-[#1B3A6B] hover:bg-[#1E5BC6] text-white font-bold text-sm transition"
+              >
+                ▶ Simulate Next Stage
+              </button>
+              {liveShared && !isOutForDelivery && (
+                <button
+                  onClick={startLiveDemo}
+                  className="h-11 rounded-full bg-yellow-400 hover:bg-yellow-500 text-[#1B3A6B] font-black text-sm transition"
+                >
+                  ▶ Start Live Demo
+                </button>
+              )}
+              {demoMode && isOutForDelivery && (
+                <button
+                  onClick={() => setDemoPaused((p) => !p)}
+                  className="h-11 rounded-full bg-white border-2 border-[#1E5BC6] text-[#1E5BC6] font-black text-sm transition"
+                >
+                  {demoPaused ? "▶ Resume Demo" : "⏸ Pause Demo"}
+                </button>
+              )}
+            </div>
           )}
           {delivered && (
             <div className="w-full h-11 rounded-full bg-[#EAF3FF] text-[#1E5BC6] font-black text-sm flex items-center justify-center gap-2">
@@ -721,11 +1062,17 @@ function Track() {
             {ORDER_FLOW.map((s, i) => {
               const done = i < safeStepIdx;
               const current = i === safeStepIdx;
-              const event = history.find((h) => h.status === s);
+              const event = history.find((h: { status: LiveStatus; at: number }) => h.status === s);
               const ts = event ? new Date(event.at) : null;
               const isLast = i === ORDER_FLOW.length - 1;
               return (
-                <li key={s} className="flex items-start gap-3 relative pb-4">
+                <motion.li
+                  key={s}
+                  initial={current ? { scale: 0.9, opacity: 0 } : false}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex items-start gap-3 relative pb-4"
+                >
                   {!isLast && (
                     <span
                       className={`absolute left-4 top-8 -translate-x-1/2 w-0.5 h-full transition-colors duration-500 ${
@@ -766,7 +1113,7 @@ function Track() {
                       </div>
                     )}
                   </div>
-                </li>
+                </motion.li>
               );
             })}
           </ol>
@@ -836,17 +1183,17 @@ function Track() {
         <div className="grid md:grid-cols-2 gap-4">
           <RatingCard
             title="Rate this order"
-            existing={order.rating}
+            existing={localOrder?.rating}
             onSubmit={(s, t) => {
-              rate(order.id, s, t);
+              if (localOrder) rate(localOrder.id, s, t);
               toast.success("Thanks for your rating!");
             }}
           />
           <RatingCard
             title="Rate your driver"
-            existing={order.deliveryRating}
+            existing={localOrder?.deliveryRating}
             onSubmit={(s, t) => {
-              rateDelivery(order.id, s, t);
+              if (localOrder) rateDelivery(localOrder.id, s, t);
               toast.success("Driver rated — thank you!");
             }}
           />
