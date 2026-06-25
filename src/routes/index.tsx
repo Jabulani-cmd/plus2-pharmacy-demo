@@ -9,7 +9,7 @@ import { Truck, ShieldCheck, Clock, HeartPulse } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kings Pharmacy — Your Health, Our Priority" },
+      { title: "Kings Pharmacy — At Your Service" },
       { name: "description", content: "Shop pharmacy, beauty, baby, vitamins and more. Free delivery over US$30 across Zimbabwe." },
       { property: "og:title", content: "Kings Pharmacy" },
       { property: "og:description", content: "Zimbabwe's trusted pharmacy — quality healthcare for every family." },
