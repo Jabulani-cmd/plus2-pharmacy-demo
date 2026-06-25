@@ -1094,8 +1094,8 @@ function Track() {
           <div className="font-black text-[#1B3A6B] mb-4">Delivery Timeline</div>
           <ol>
             {OTC_ORDER_FLOW.map((s, i) => {
-              const done = i < safeStepIdx;
-              const current = i === safeStepIdx;
+              const done = delivered ? i <= safeStepIdx : i < safeStepIdx;
+              const current = !delivered && i === safeStepIdx;
               const event = history.find((h: { status: LiveStatus; at: number }) => h.status === s);
               const ts = event ? new Date(event.at) : null;
               const isLast = i === OTC_ORDER_FLOW.length - 1;
