@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { findDemoCustomer } from "@/data/demoAccounts";
 import { pushNotification } from "@/store/notifications";
+import { supabase } from "@/integrations/supabase/client";
 
 export type User = {
   id: string;
@@ -11,6 +12,24 @@ export type User = {
   phone?: string;
   points: number;
   tier: "Silver" | "Gold" | "Platinum";
+  /** Preferred Kings Pharmacy branch id (e.g. "9th-ave"). */
+  branchId?: string;
+  /** Last delivery address used — pre-filled into checkout. */
+  lastAddress?: SavedAddress | null;
+  /** True when the user came from Supabase auth (not demo). */
+  isReal?: boolean;
+};
+
+export type SavedAddress = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
+  street: string;
+  suburb: string;
+  city: string;
+  province: string;
+  postal: string;
 };
 
 export type PrescriptionStatus =
@@ -111,9 +130,12 @@ type AuthState = {
     firstName: string;
     lastName: string;
     phone?: string;
+    branchId?: string;
   }) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   resetPassword: (email: string) => Promise<{ ok: boolean }>;
+  saveAddress: (address: SavedAddress) => Promise<void>;
+  setPreferredBranch: (branchId: string) => Promise<void>;
   addPrescription: (
     p: Omit<Prescription, "id" | "status" | "uploadedAt">
   ) => string;
@@ -255,13 +277,12 @@ export const useAuth = create<AuthState>()(
       orders: DEMO_ORDERS,
 
       login: async (email, password) => {
-        await new Promise((r) => setTimeout(r, 500));
         if (!email || !password)
           return { ok: false, error: "Email and password are required" };
-        if (password.length < 6)
-          return { ok: false, error: "Invalid email or password" };
         const demo = findDemoCustomer(email);
         if (demo) {
+          if (password.length < 6)
+            return { ok: false, error: "Invalid email or password" };
           set({
             user: demo.user,
             orders: demo.orders,
@@ -269,16 +290,15 @@ export const useAuth = create<AuthState>()(
           });
           return { ok: true };
         }
-        const user: User =
-          email.toLowerCase() === DEMO_USER.email
-            ? DEMO_USER
-            : {
-                ...DEMO_USER,
-                id: "u_" + Date.now(),
-                email,
-                firstName: email.split("@")[0],
-              };
-        set({ user });
+        // Real Supabase login
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error || !data.user)
+          return { ok: false, error: error?.message ?? "Invalid email or password" };
+        const user = await buildUserFromSupabase(data.user.id, data.user.email ?? email);
+        set({ user, orders: [], prescriptions: [] });
         return { ok: true };
       },
 
@@ -288,8 +308,8 @@ export const useAuth = create<AuthState>()(
         firstName,
         lastName,
         phone,
+        branchId,
       }) => {
-        await new Promise((r) => setTimeout(r, 600));
         if (!email.includes("@"))
           return { ok: false, error: "Enter a valid email" };
         if (password.length < 8)
@@ -297,22 +317,51 @@ export const useAuth = create<AuthState>()(
             ok: false,
             error: "Password must be at least 8 characters",
           };
-        const id = "u_" + Date.now();
-        set({
-          user: {
-            id,
-            email,
-            firstName,
-            lastName,
-            phone,
-            points: 250,
-            tier: "Silver",
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+            data: {
+              full_name: (firstName + " " + lastName).trim(),
+              first_name: firstName,
+              last_name: lastName,
+              phone,
+              branch_id: branchId,
+            },
           },
         });
+        if (error || !data.user)
+          return { ok: false, error: error?.message ?? "Could not create account" };
+        const userId = data.user.id;
+        // Ensure the profiles row carries first/last/branch (trigger only sets full_name).
+        await supabase
+          .from("profiles")
+          .upsert({
+            id: userId,
+            full_name: (firstName + " " + lastName).trim(),
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone ?? null,
+            email,
+            branch_id: branchId ?? null,
+          });
+        const user: User = {
+          id: userId,
+          email,
+          firstName,
+          lastName,
+          phone,
+          branchId,
+          points: 0,
+          tier: "Silver",
+          isReal: true,
+        };
+        set({ user, orders: [], prescriptions: [] });
         // Welcome notification on the bell + dashboard
         pushNotification({
           audience: "customer",
-          userId: id,
+          userId,
           title: "Welcome to Kings Pharmacy, " + firstName + "!",
           body: "Start shopping or upload your first prescription to get going.",
           link: "/account",
@@ -321,11 +370,35 @@ export const useAuth = create<AuthState>()(
         return { ok: true };
       },
 
-      logout: () => set({ user: null }),
+      logout: () => {
+        void supabase.auth.signOut().catch(() => {});
+        set({ user: null });
+      },
 
       resetPassword: async () => {
         await new Promise((r) => setTimeout(r, 400));
         return { ok: true };
+      },
+
+      saveAddress: async (address) => {
+        const u = get().user;
+        if (!u) return;
+        set({ user: { ...u, lastAddress: address } });
+        if (u.isReal) {
+          await supabase
+            .from("profiles")
+            .update({ last_address: address as unknown as never })
+            .eq("id", u.id);
+        }
+      },
+
+      setPreferredBranch: async (branchId) => {
+        const u = get().user;
+        if (!u) return;
+        set({ user: { ...u, branchId } });
+        if (u.isReal) {
+          await supabase.from("profiles").update({ branch_id: branchId }).eq("id", u.id);
+        }
       },
 
       addPrescription: (p) => {
@@ -391,3 +464,53 @@ export const useAuth = create<AuthState>()(
     }
   )
 );
+
+// ---- Supabase session hydration ----
+async function buildUserFromSupabase(id: string, email: string): Promise<User> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("first_name,last_name,full_name,phone,branch_id,last_address")
+    .eq("id", id)
+    .maybeSingle();
+  const fullName = profile?.full_name ?? "";
+  const parts = fullName.split(" ");
+  return {
+    id,
+    email,
+    firstName: profile?.first_name ?? parts[0] ?? email.split("@")[0],
+    lastName: profile?.last_name ?? parts.slice(1).join(" ") ?? "",
+    phone: profile?.phone ?? undefined,
+    branchId: profile?.branch_id ?? undefined,
+    lastAddress: (profile?.last_address as SavedAddress | null) ?? null,
+    points: 0,
+    tier: "Silver",
+    isReal: true,
+  };
+}
+
+if (typeof window !== "undefined") {
+  // Hydrate session on load so a refreshed tab keeps the real user signed in.
+  void supabase.auth.getSession().then(async ({ data }) => {
+    const session = data.session;
+    if (!session?.user) return;
+    const existing = useAuth.getState().user;
+    // Don't overwrite a demo session.
+    if (existing && !existing.isReal) return;
+    const user = await buildUserFromSupabase(session.user.id, session.user.email ?? "");
+    useAuth.setState({ user });
+  });
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === "SIGNED_OUT") {
+      const u = useAuth.getState().user;
+      if (u?.isReal) useAuth.setState({ user: null });
+      return;
+    }
+    if (event === "SIGNED_IN" && session?.user) {
+      const existing = useAuth.getState().user;
+      if (existing && !existing.isReal) return; // keep demo session
+      const user = await buildUserFromSupabase(session.user.id, session.user.email ?? "");
+      useAuth.setState({ user });
+    }
+  });
+}

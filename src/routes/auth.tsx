@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
 import { ShieldCheck, Truck, Sparkles, Mail, Users, ChevronDown, ChevronUp, KeyRound, CheckCircle2, Loader2, Home, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { DEMO_CUSTOMERS } from "@/data/demoAccounts";
+import { BRANCHES } from "@/data/branches";
+import { useBranch } from "@/store/branch";
 import kingsLogo from "@/assets/kings-logo.png";
 import { z } from "zod";
 
@@ -279,14 +281,37 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
 
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const register = useAuth((s) => s.register);
-  const [f, setF] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+  const setBranch = useBranch((s) => s.setBranch);
+  const [f, setF] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirm: "",
+    branchId: BRANCHES[0].id,
+  });
   const [loading, setLoading] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!f.firstName.trim() || !f.lastName.trim())
+      return toast.error("Enter your first and last name");
+    if (!f.phone.trim())
+      return toast.error("Phone number is required for delivery");
+    if (f.password !== f.confirm)
+      return toast.error("Passwords don't match");
     setLoading(true);
-    const r = await register(f);
+    const r = await register({
+      firstName: f.firstName,
+      lastName: f.lastName,
+      email: f.email,
+      phone: f.phone,
+      password: f.password,
+      branchId: f.branchId,
+    });
     setLoading(false);
     if (!r.ok) return toast.error(r.error ?? "Registration failed");
+    setBranch(f.branchId);
     toast.success("Account created. Welcome to Kings!");
     onSuccess();
   };
@@ -299,8 +324,22 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         <Field label="Last name" required value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} />
       </div>
       <Field label="Email" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
-      <Field label="Mobile" type="tel" placeholder="+27 82 000 0000" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+      <Field label="Mobile" type="tel" required placeholder="+263 77 234 5678" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+      <label className="block min-w-0">
+        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted-foreground">Preferred branch</span>
+        <select
+          required
+          value={f.branchId}
+          onChange={(e) => setF({ ...f, branchId: e.target.value })}
+          className="block h-12 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+        >
+          {BRANCHES.map((b) => (
+            <option key={b.id} value={b.id}>{b.shortName} — {b.address}</option>
+          ))}
+        </select>
+      </label>
       <Field label="Password (min 8 chars)" type="password" required value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+      <Field label="Confirm password" type="password" required value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} />
       <button disabled={loading} className="h-[52px] w-full rounded-full bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground transition hover:bg-primary-dark disabled:opacity-60">
         {loading ? "Creating…" : "Create account"}
       </button>

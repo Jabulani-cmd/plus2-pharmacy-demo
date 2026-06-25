@@ -670,11 +670,20 @@ function AccountPage() {
 
           {tab === "orders" && (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
+              {mySharedOrders.length === 0 && orders.length === 0 && (
+                <div className="px-6 py-12 text-center">
+                  <Package className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                  <h3 className="mt-3 text-base font-bold">No orders yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">When you place your first order it'll show up here in real time.</p>
+                  <Link to="/" className="mt-4 inline-block rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">Start Shopping</Link>
+                </div>
+              )}
               {mySharedOrders.length > 0 && (
                 <div className="border-b border-border bg-[#F0F9F4] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#0EA5E9]">
                   Your recent orders
                 </div>
               )}
+              {(mySharedOrders.length > 0 || orders.length > 0) && (
               <table className="w-full text-sm">
                 <thead className="bg-surface text-left text-xs uppercase text-muted-foreground">
                   <tr>
@@ -706,17 +715,27 @@ function AccountPage() {
                         </td>
                         <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
                         <td className="px-4 py-3 text-right">
-                          <Link
-                            to="/track"
-                            search={{ id: o.id }}
-                            className="text-sm font-bold text-primary hover:underline"
-                          >
-                            Track &rarr;
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to="/receipt"
+                              search={{ id: o.id }}
+                              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:border-primary hover:text-primary"
+                            >
+                              <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
+                            </Link>
+                            <Link
+                              to="/track"
+                              search={{ id: o.id }}
+                              className="text-sm font-bold text-primary hover:underline"
+                            >
+                              Track &rarr;
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
+                  {/* Demo orders only — real users have an empty `orders` array */}
                   {orders.map((o) => (
                     <tr key={o.id}>
                       <td className="px-4 py-3 font-bold">{o.id}</td>
@@ -748,6 +767,7 @@ function AccountPage() {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           )}
 

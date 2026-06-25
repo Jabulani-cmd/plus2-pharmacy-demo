@@ -13,6 +13,7 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ReceiptRouteImport } from './routes/receipt'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ConsultationRouteImport } from './routes/consultation'
@@ -45,6 +46,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceiptRoute = ReceiptRouteImport.update({
+  id: '/receipt',
+  path: '/receipt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrescriptionsRoute = PrescriptionsRouteImport.update({
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
+  '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
+  '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/prescriptions': typeof PrescriptionsRoute
+  '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/prescriptions'
+    | '/receipt'
     | '/reset-password'
     | '/services'
     | '/staff'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/prescriptions'
+    | '/receipt'
     | '/reset-password'
     | '/services'
     | '/track'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/prescriptions'
+    | '/receipt'
     | '/reset-password'
     | '/services'
     | '/staff'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   ConsultationRoute: typeof ConsultationRoute
   DemoRoute: typeof DemoRoute
   PrescriptionsRoute: typeof PrescriptionsRoute
+  ReceiptRoute: typeof ReceiptRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ServicesRoute: typeof ServicesRoute
   StaffRoute: typeof StaffRouteWithChildren
@@ -274,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/receipt': {
+      id: '/receipt'
+      path: '/receipt'
+      fullPath: '/receipt'
+      preLoaderRoute: typeof ReceiptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prescriptions': {
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsultationRoute: ConsultationRoute,
   DemoRoute: DemoRoute,
   PrescriptionsRoute: PrescriptionsRoute,
+  ReceiptRoute: ReceiptRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ServicesRoute: ServicesRoute,
   StaffRoute: StaffRouteWithChildren,
@@ -403,13 +424,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

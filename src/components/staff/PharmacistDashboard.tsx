@@ -43,7 +43,7 @@ export function PharmacistDashboard(_props: { view?: string } = {}) {
           ? ("Approved" as const)
           : ("Pending" as const),
       customerPhone: p.customerPhone,
-      customerEmail: p.customerEmail,
+      customerEmail: p.customerEmail ?? "",
       isRepeat: p.isRepeat,
       repeatsLeft: p.repeatsLeft,
       isCustomerRx: true,

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
 import { getProduct } from "@/data/products";
@@ -12,6 +12,9 @@ import { useAuth } from "@/store/auth";
 import { useBranch } from "@/store/branch";
 import { CouponInput, type AppliedCoupon } from "@/components/checkout/CouponInput";
 import { useOrderExtras } from "@/store/orderExtras";
+import { getBranch } from "@/data/branches";
+import { makeOrderId } from "@/lib/orderId";
+import { validateOrderBeforeSubmit } from "@/lib/orderValidation";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Kings Pharmacy" }] }),
@@ -20,13 +23,22 @@ export const Route = createFileRoute("/checkout")({
 
 const STEPS = ["Delivery", "Payment", "Review", "Done"] as const;
 
+const DELIVERY_SLOTS = [
+  { id: "asap", label: "ASAP (30–45 mins)" },
+  { id: "morning", label: "This morning · 8am – 12pm" },
+  { id: "afternoon", label: "This afternoon · 12pm – 5pm" },
+  { id: "evening", label: "This evening · 5pm – 7pm" },
+] as const;
+
 function Checkout() {
   const cart = useShop((s) => s.cart);
   const clearCart = useShop((s) => s.clearCart);
   const navigate = useNavigate();
   const addSharedOrder = useSharedOrders((s) => s.addOrder);
   const user = useAuth((s) => s.user);
+  const saveAddress = useAuth((s) => s.saveAddress);
   const branchId = useBranch((s) => s.selectedBranchId);
+  const branch = getBranch(branchId);
 
   const items = cart
     .map((c) => ({ ...c, product: getProduct(c.id)! }))
@@ -37,37 +49,47 @@ function Checkout() {
     0
   );
   const deliveryFee = subtotal >= 50 ? 0 : 5;
-  const vat = parseFloat((subtotal * 0.15).toFixed(2));
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const discountAmount = coupon
     ? +(subtotal * coupon.discount).toFixed(2)
     : 0;
+  // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
   const total = parseFloat(
-    (subtotal + deliveryFee + vat - discountAmount).toFixed(2)
+    (subtotal + deliveryFee - discountAmount).toFixed(2)
   );
   const addPoints = useOrderExtras((s) => s.addPoints);
 
   const [step, setStep] = useState(0);
-  const [delivery_, setDelivery] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
-    street: "",
-    suburb: "",
-    city: "Bulawayo",
-    province: "Bulawayo",
-    postal: "",
-    method: "standard",
-  });
+  // Pre-fill from the signed-in user's profile + last saved address.
+  const initialDelivery = useMemo(
+    () => ({
+      firstName: user?.firstName ?? user?.lastAddress?.firstName ?? "",
+      lastName: user?.lastName ?? user?.lastAddress?.lastName ?? "",
+      phone: user?.phone ?? user?.lastAddress?.phone ?? "",
+      email: user?.email ?? user?.lastAddress?.email ?? "",
+      street: user?.lastAddress?.street ?? "",
+      suburb: user?.lastAddress?.suburb ?? "",
+      city: user?.lastAddress?.city ?? "Bulawayo",
+      province: user?.lastAddress?.province ?? "Bulawayo",
+      postal: user?.lastAddress?.postal ?? "",
+      method: "standard",
+      slot: "asap",
+    }),
+    [user],
+  );
+  const [delivery_, setDelivery] = useState(initialDelivery);
 
-  const orderNumber =
-    "KP-" + Math.floor(100000 + Math.random() * 900000);
+  // Generate ONE stable order ID at checkout entry — same ID used on receipt,
+  // tracking, dispatcher, notifications and My Orders.
+  const orderIdRef = useRef<string | null>(null);
+  if (orderIdRef.current === null) orderIdRef.current = makeOrderId();
+  const orderNumber = orderIdRef.current;
 
   const [showPayment, setShowPayment] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [paidRef, setPaidRef] = useState<string | null>(null);
   const [paidMethod, setPaidMethod] = useState<string | null>(null);
+  const [askSaveAddress, setAskSaveAddress] = useState(false);
 
   if (items.length === 0 && step < 3) {
     return (
@@ -101,7 +123,7 @@ function Checkout() {
 
     const addr =
       delivery_.method === "collect"
-        ? "Pick up: Hillside Branch, Bulawayo"
+        ? "Pick up: " + branch.name + ", " + branch.address
         : `${delivery_.firstName} ${delivery_.lastName}, ` +
           `${delivery_.street}, ${delivery_.suburb}, ` +
           `${delivery_.city}, Zimbabwe`;
@@ -117,21 +139,34 @@ function Checkout() {
         lineTotal: +(i.product.price * i.qty).toFixed(2),
       })),
       customer: {
-        name:
-          `${delivery_.firstName || "Demo"} ` +
-          `${delivery_.lastName || "Customer"}`.trim(),
-        email:
-          delivery_.email || "customer@kingspharmacy.co.zw",
-        phone: delivery_.phone || "+263 78 200 0100",
+        name: (delivery_.firstName + " " + delivery_.lastName).trim(),
+        email: delivery_.email,
+        phone: delivery_.phone,
         address: addr,
       },
       paymentMethod: labelFor(method),
       deliveryMethod: deliveryLabel,
       deliveryFee,
+      discount: discountAmount,
+      discountCode: coupon?.code,
     });
   };
 
   const handlePlaceOrder = () => {
+    if (delivery_.method !== "collect") {
+      const errs = [
+        !delivery_.firstName.trim() && "First name",
+        !delivery_.lastName.trim() && "Last name",
+        !delivery_.phone.trim() && "Phone",
+        !delivery_.street.trim() && "Street address",
+        !delivery_.suburb.trim() && "Suburb",
+      ].filter(Boolean);
+      if (errs.length) {
+        toast.error(errs[0] + " is required");
+        setStep(0);
+        return;
+      }
+    }
     setShowPayment(true);
   };
 
@@ -141,18 +176,13 @@ function Checkout() {
   ) => {
     setPaidRef(ref);
     setPaidMethod(method);
-    const r = makeReceipt(ref, method);
-    setReceipt(r);
     setShowPayment(false);
 
     // Persist into shared dispatch store so staff can see it.
-    const customerName =
-      ((delivery_.firstName || user?.firstName || "Demo") +
-        " " +
-        (delivery_.lastName || user?.lastName || "Customer")).trim();
+    const customerName = (delivery_.firstName + " " + delivery_.lastName).trim();
     const address =
       delivery_.method === "collect"
-        ? "Pick up at branch"
+        ? "Pick up at " + branch.name + ", " + branch.address
         : [
             delivery_.street,
             delivery_.suburb,
@@ -160,13 +190,15 @@ function Checkout() {
           ]
             .filter(Boolean)
             .join(", ");
-    addSharedOrder({
+    const slotLabel = DELIVERY_SLOTS.find((s) => s.id === delivery_.slot)?.label ?? "ASAP";
+    const draft = {
       id: orderNumber,
       customerId: user?.id,
       customerEmail: user?.email ?? delivery_.email,
       customer: customerName,
-      phone: delivery_.phone || user?.phone || "",
+      phone: delivery_.phone,
       branchId,
+      branchName: branch.name,
       items: items.map((i) => ({
         id: i.product.id,
         name: i.product.name,
@@ -175,17 +207,69 @@ function Checkout() {
       })),
       itemCount: items.reduce((a, i) => a + i.qty, 0),
       address,
+      deliveryAddress:
+        delivery_.method === "collect"
+          ? undefined
+          : {
+              firstName: delivery_.firstName,
+              lastName: delivery_.lastName,
+              street: delivery_.street,
+              suburb: delivery_.suburb,
+              city: delivery_.city,
+              province: delivery_.province,
+              postal: delivery_.postal,
+              phone: delivery_.phone,
+              email: delivery_.email,
+            },
       deliveryMethod: delivery_.method,
+      deliverySlot: slotLabel,
       paymentMethod: labelFor(method),
       paymentRef: ref,
+      subtotal,
+      deliveryFee,
+      discountAmount,
+      discountCode: coupon?.code,
       total,
-    });
+    } as const;
+
+    // Spec: validate BEFORE we write to Supabase.
+    const errors = validateOrderBeforeSubmit(draft);
+    if (errors.length) {
+      toast.error("Cannot place order: " + errors[0]);
+      console.error("Order validation failed:", errors);
+      return;
+    }
+    addSharedOrder(draft);
+
+    const r = makeReceipt(ref, method);
+    setReceipt(r);
 
     clearCart();
     setStep(3);
     // Award OTC loyalty points
     addPoints(10);
-    toast.success("Payment confirmed — order placed");
+    toast.success("Payment confirmed — order " + orderNumber + " placed");
+
+    // Offer to save the delivery address for next time.
+    if (
+      user?.isReal &&
+      delivery_.method !== "collect" &&
+      delivery_.street.trim() &&
+      JSON.stringify(user.lastAddress ?? {}) !==
+        JSON.stringify({
+          firstName: delivery_.firstName,
+          lastName: delivery_.lastName,
+          phone: delivery_.phone,
+          email: delivery_.email,
+          street: delivery_.street,
+          suburb: delivery_.suburb,
+          city: delivery_.city,
+          province: delivery_.province,
+          postal: delivery_.postal,
+        })
+    ) {
+      setAskSaveAddress(true);
+    }
   };
 
   const itemSummary =
@@ -370,6 +454,34 @@ function Checkout() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="mb-2 text-sm font-bold">Delivery Time</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {DELIVERY_SLOTS.map((s) => (
+                    <label
+                      key={s.id}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm transition ${
+                        delivery_.slot === s.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="slot"
+                        checked={delivery_.slot === s.id}
+                        onChange={() => setDelivery({ ...delivery_, slot: s.id })}
+                        className="accent-[var(--color-primary)]"
+                      />
+                      <span className="font-semibold">{s.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Branch: <span className="font-semibold text-foreground">{branch.shortName}</span> · change in the header.
+                </p>
               </div>
             </div>
           )}
@@ -589,13 +701,9 @@ function Checkout() {
                       : formatUSD(deliveryFee)}
                   </span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-gray-500">
-                    VAT (15%)
-                  </span>
-                  <span className="font-semibold">
-                    {formatUSD(vat)}
-                  </span>
+                <div className="flex justify-between py-1 text-xs text-gray-400">
+                  <span>Includes VAT (15%)</span>
+                  <span></span>
                 </div>
                 {coupon && (
                   <div className="flex justify-between py-1 text-emerald-700">
@@ -689,8 +797,8 @@ function Checkout() {
                   }
                 />
                 <Row
-                  label="VAT (15%)"
-                  value={formatUSD(vat)}
+                  label={<span className="text-xs">incl. VAT (15%)</span>}
+                  value={<span className="text-xs text-muted-foreground">in total</span>}
                 />
                 {coupon && (
                   <Row
@@ -762,6 +870,52 @@ function Checkout() {
           orderType="OTC"
           itemSummary={itemSummary}
         />
+      )}
+
+      {askSaveAddress && (
+        <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-2xl">
+            <h3 className="text-lg font-extrabold">Save this delivery address?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We can pre-fill it on your next order — you can still edit it any time at checkout.
+            </p>
+            <div className="mt-4 rounded-md bg-muted p-3 text-sm">
+              <div className="font-semibold">{delivery_.firstName} {delivery_.lastName}</div>
+              <div className="text-muted-foreground">
+                {delivery_.street}, {delivery_.suburb}, {delivery_.city}
+              </div>
+              <div className="text-muted-foreground">{delivery_.phone}</div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setAskSaveAddress(false)}
+                className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-bold hover:bg-muted"
+              >
+                Not now
+              </button>
+              <button
+                onClick={async () => {
+                  await saveAddress({
+                    firstName: delivery_.firstName,
+                    lastName: delivery_.lastName,
+                    phone: delivery_.phone,
+                    email: delivery_.email,
+                    street: delivery_.street,
+                    suburb: delivery_.suburb,
+                    city: delivery_.city,
+                    province: delivery_.province,
+                    postal: delivery_.postal,
+                  });
+                  setAskSaveAddress(false);
+                  toast.success("Address saved to your profile");
+                }}
+                className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-dark"
+              >
+                Save address
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

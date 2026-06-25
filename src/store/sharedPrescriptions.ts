@@ -7,8 +7,8 @@
 // ============================================================
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { pushNotification } from "./notifications";
+import { supabase } from "@/integrations/supabase/client";
 
 export type SharedPrescriptionStatus =
   | "Pending"
@@ -47,9 +47,9 @@ export type SharedDeliveryAddress = {
 
 export type SharedPrescription = {
   id: string;
-  customerId: string;
+  customerId?: string;
   customerName: string;
-  customerEmail: string;
+  customerEmail?: string;
   customerPhone: string;
   fileName: string;
   patientName: string;
@@ -71,6 +71,8 @@ export type SharedPrescription = {
   delivery?: "delivery" | "collect";
   deliveryAddress?: SharedDeliveryAddress;
   collectionBranchId?: string;
+  branchId?: string;
+  branchName?: string;
   quotation?: SharedQuotation;
   paymentRef?: string;
   paymentMethod?: string;
@@ -115,8 +117,7 @@ type SharedState = {
 };
 
 export const useSharedPrescriptions = create<SharedState>()(
-  persist(
-    (set) => ({
+    ((set) => ({
       prescriptions: [],
 
       addPrescription: (p) => {
@@ -127,12 +128,13 @@ export const useSharedPrescriptions = create<SharedState>()(
           hour: "2-digit",
           minute: "2-digit",
         });
+        const record: SharedPrescription = { ...p, status: "Pending", uploadedAt };
         set((state) => ({
-          prescriptions: [
-            { ...p, status: "Pending", uploadedAt },
-            ...state.prescriptions,
-          ],
+          prescriptions: [record, ...state.prescriptions.filter((x) => x.id !== record.id)],
         }));
+        void supabase.from("prescriptions").insert(rxToRow(record) as never).then(({ error }) => {
+          if (error) console.error("[sharedPrescriptions] insert failed", error);
+        });
         pushNotification({
           audience: "customer",
           userId: p.customerId ?? p.customerEmail,
@@ -171,6 +173,12 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        void supabase.from("prescriptions").update({
+          status: "Approved — Awaiting Payment",
+          quotation: quotation as unknown as never,
+          pharmacist_notes: pharmacistNotes ?? null,
+          approved_at: new Date().toISOString(),
+        }).eq("id", id);
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -197,6 +205,10 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        void supabase.from("prescriptions").update({
+          status: "Rejected",
+          rejection_reason: reason,
+        }).eq("id", id);
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -221,6 +233,7 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        void supabase.from("prescriptions").update({ status: "Dispensing" }).eq("id", id);
       },
 
       markPaid: (id, paymentRef, paymentMethod) => {
@@ -244,6 +257,12 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        void supabase.from("prescriptions").update({
+          status: "Paid",
+          payment_ref: paymentRef,
+          payment_method: paymentMethod,
+          paid_at: new Date().toISOString(),
+        }).eq("id", id);
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         pushNotification({
           audience: "staff",
@@ -298,6 +317,13 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
+        void supabase.from("prescriptions").update({
+          status: "Out for Delivery",
+          driver_name: driverName,
+          driver_phone: driverPhone,
+          driver_vehicle: driverVehicle,
+          dispatched_at: new Date().toISOString(),
+        }).eq("id", id);
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -318,6 +344,7 @@ export const useSharedPrescriptions = create<SharedState>()(
             p.id === id ? { ...p, status, ...extra } : p
           ),
         }));
+        void supabase.from("prescriptions").update({ status }).eq("id", id);
         if (status === "Delivered") {
           const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
           if (rx) {
@@ -332,7 +359,120 @@ export const useSharedPrescriptions = create<SharedState>()(
           }
         }
       },
-    }),
-    { name: "kings-shared-prescriptions" }
-  )
+    }))
 );
+
+// ---- Row mapping ----
+type RxRow = Record<string, unknown>;
+const rxToRow = (p: SharedPrescription): Record<string, unknown> => ({
+  id: p.id,
+  customer_id: isUuid(p.customerId) ? p.customerId : null,
+  customer_name: p.customerName,
+  customer_email: p.customerEmail ?? null,
+  customer_phone: p.customerPhone ?? null,
+  file_name: p.fileName,
+  patient_name: p.patientName,
+  doctor_name: p.doctorName ?? null,
+  notes: p.notes ?? null,
+  status: p.status,
+  files: (p.files ?? null) as unknown,
+  for_self: p.forSelf ?? null,
+  relationship: p.relationship ?? null,
+  script_date: p.scriptDate ?? null,
+  is_repeat: p.isRepeat ?? null,
+  repeats_left: p.repeatsLeft ?? null,
+  delivery: p.delivery ?? null,
+  delivery_address: (p.deliveryAddress ?? null) as unknown,
+  collection_branch_id: p.collectionBranchId ?? null,
+  branch_id: p.branchId ?? null,
+  branch_name: p.branchName ?? null,
+  quotation: (p.quotation ?? null) as unknown,
+  pharmacist_notes: p.pharmacistNotes ?? null,
+});
+
+const rowToRx = (r: RxRow): SharedPrescription => ({
+  id: String(r.id),
+  customerId: (r.customer_id as string | null) ?? undefined,
+  customerName: String(r.customer_name ?? ""),
+  customerEmail: (r.customer_email as string | null) ?? undefined,
+  customerPhone: String(r.customer_phone ?? ""),
+  fileName: String(r.file_name ?? ""),
+  patientName: String(r.patient_name ?? ""),
+  doctorName: String(r.doctor_name ?? ""),
+  notes: (r.notes as string | null) ?? undefined,
+  status: (r.status as SharedPrescriptionStatus) ?? "Pending",
+  uploadedAt: r.uploaded_at ? new Date(String(r.uploaded_at)).toLocaleString("en-ZW", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }) : "",
+  files: (r.files as SharedPrescription["files"]) ?? undefined,
+  forSelf: (r.for_self as boolean | null) ?? undefined,
+  relationship: (r.relationship as string | null) ?? undefined,
+  scriptDate: (r.script_date as string | null) ?? undefined,
+  isRepeat: (r.is_repeat as boolean | null) ?? undefined,
+  repeatsLeft: (r.repeats_left as number | null) ?? undefined,
+  delivery: (r.delivery as "delivery" | "collect" | null) ?? undefined,
+  deliveryAddress: (r.delivery_address as SharedDeliveryAddress | null) ?? undefined,
+  collectionBranchId: (r.collection_branch_id as string | null) ?? undefined,
+  branchId: (r.branch_id as string | null) ?? undefined,
+  branchName: (r.branch_name as string | null) ?? undefined,
+  quotation: (r.quotation as SharedQuotation | null) ?? undefined,
+  paymentRef: (r.payment_ref as string | null) ?? undefined,
+  paymentMethod: (r.payment_method as string | null) ?? undefined,
+  paidAt: r.paid_at ? new Date(String(r.paid_at)).toLocaleString("en-ZW") : undefined,
+  pharmacistNotes: (r.pharmacist_notes as string | null) ?? undefined,
+  approvedAt: r.approved_at ? new Date(String(r.approved_at)).toLocaleString("en-ZW") : undefined,
+  rejectionReason: (r.rejection_reason as string | null) ?? undefined,
+  driverName: (r.driver_name as string | null) ?? undefined,
+  driverPhone: (r.driver_phone as string | null) ?? undefined,
+  driverVehicle: (r.driver_vehicle as string | null) ?? undefined,
+  dispatchedAt: r.dispatched_at ? new Date(String(r.dispatched_at)).toLocaleString("en-ZW") : undefined,
+});
+
+function isUuid(v: string | undefined | null): v is string {
+  return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+if (typeof window !== "undefined") {
+  (async () => {
+    const { data, error } = await supabase
+      .from("prescriptions")
+      .select("*")
+      .order("uploaded_at", { ascending: false });
+    if (error) {
+      console.error("[sharedPrescriptions] bootstrap failed", error);
+      return;
+    }
+    useSharedPrescriptions.setState({
+      prescriptions: ((data ?? []) as RxRow[]).map(rowToRx),
+    });
+  })();
+
+  supabase
+    .channel("prescriptions_changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "prescriptions" },
+      (payload) => {
+        const evt = payload.eventType;
+        if (evt === "INSERT" || evt === "UPDATE") {
+          const rx = rowToRx(payload.new as RxRow);
+          useSharedPrescriptions.setState((s) => {
+            const exists = s.prescriptions.some((p) => p.id === rx.id);
+            return {
+              prescriptions: exists
+                ? s.prescriptions.map((p) => (p.id === rx.id ? rx : p))
+                : [rx, ...s.prescriptions],
+            };
+          });
+        } else if (evt === "DELETE") {
+          const id = (payload.old as { id: string }).id;
+          useSharedPrescriptions.setState((s) => ({
+            prescriptions: s.prescriptions.filter((p) => p.id !== id),
+          }));
+        }
+      },
+    )
+    .subscribe();
+
+  try { localStorage.removeItem("kings-shared-prescriptions"); } catch { /* noop */ }
+}

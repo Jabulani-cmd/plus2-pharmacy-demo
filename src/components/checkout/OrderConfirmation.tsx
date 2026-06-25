@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Receipt as ReceiptIcon, Download, Mail, MessageSquare, Check, MapPin, Phone, Bell, Clock, Loader2 } from "lucide-react";
 import { ReceiptModal } from "@/components/receipt/ReceiptModal";
@@ -44,6 +44,7 @@ const stagesFromStatus = (status: string | undefined, isCollect: boolean): Step[
 
 export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }: Props) {
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const navigate = useNavigate();
   // Live order from shared store — drives the timeline as staff/driver advance it.
   const liveOrder = useSharedOrders((s) =>
     s.orders.find((o) => o.id === receipt.orderNumber)
@@ -69,7 +70,7 @@ export function OrderConfirmation({ receipt, isCollect = false, hasRx = false }:
       <div className="border-b border-border bg-card px-6 py-5">
         <h3 className="mb-3 text-sm font-bold">Your Receipt</h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <ActionBtn icon={<ReceiptIcon className="h-6 w-6" />} label="View" onClick={() => setReceiptOpen(true)} />
+          <ActionBtn icon={<ReceiptIcon className="h-6 w-6" />} label="View" onClick={() => navigate({ to: "/receipt", search: { id: receipt.orderNumber } })} />
           <ActionBtn icon={<Download className="h-6 w-6" />} label="Download" onClick={() => setReceiptOpen(true)} />
           <ActionBtn icon={<Mail className="h-6 w-6" />} label="Email" onClick={() => setReceiptOpen(true)} />
           <ActionBtn icon={<MessageSquare className="h-6 w-6" />} label="SMS" onClick={() => setReceiptOpen(true)} />
