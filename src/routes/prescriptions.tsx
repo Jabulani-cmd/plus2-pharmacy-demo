@@ -86,6 +86,7 @@ type LocalFile = {
   file: File;
   preview?: string;
   error?: string;
+  progress?: number; // 0-100, undefined once finished
 };
 
 type DeliveryMode = "delivery" | "collect";
