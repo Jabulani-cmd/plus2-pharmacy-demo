@@ -1,7 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search, Heart, ShoppingCart, User, Menu, MapPin, Phone, HelpCircle, Truck, FileText, LogIn, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { Logo } from "./Logo";
 import { useShop } from "@/store/shop";
 import { useAuth } from "@/store/auth";
@@ -16,16 +17,33 @@ import { LiveStatusBadge } from "@/components/LiveStatusBadge";
 
 export function Navbar() {
   const cart = useShop((s) => s.cart);
+  const clearCart = useShop((s) => s.clearCart);
   const wishlist = useShop((s) => s.wishlist);
   const user = useAuth((s) => s.user);
   const branchId = useBranch((s) => s.selectedBranchId);
   const branch = getBranch(branchId);
-  const cartCount = cart.reduce((a, c) => a + c.qty, 0);
+  // Guests never see a cart count — cart is per-user.
+  const cartCount = user ? cart.reduce((a, c) => a + c.qty, 0) : 0;
   const [q, setQ] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Wipe any persisted cart whenever there's no logged-in user so a guest
+  // (or a freshly logged-out session) never sees the previous user's items.
+  useEffect(() => {
+    if (!user && cart.length > 0) clearCart();
+  }, [user, cart.length, clearCart]);
+
+  const handleCartClick = () => {
+    if (!user) {
+      toast.error("Please sign in to view your cart");
+      navigate({ to: "/auth", search: { redirect: "/cart" } });
+      return;
+    }
+    setCartOpen(true);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
