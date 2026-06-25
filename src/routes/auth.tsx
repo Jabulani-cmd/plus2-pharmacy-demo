@@ -58,12 +58,10 @@ function BrandLockup({ compact = false }: { compact?: boolean }) {
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in or Register — Kings Pharmacy" }] }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-    mode: search.mode === "register" || search.mode === "forgot" || search.mode === "login" ? search.mode : undefined,
-  }),
+  validateSearch: authSearchSchema.parse,
   component: AuthPage,
 });
+
 
 function AuthPage() {
   const { redirect, mode: searchMode } = Route.useSearch();
