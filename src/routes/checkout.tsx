@@ -107,6 +107,10 @@ function Checkout() {
   );
   const [delivery_, setDelivery] = useState(initialDelivery);
 
+  // Derive the selected delivery method + fee from a single source of truth.
+  const selectedMethod = methodById(delivery_.method);
+  const deliveryFee = priceFor(selectedMethod, subtotal);
+
   // Generate ONE stable order ID at checkout entry — same ID used on receipt,
   // tracking, dispatcher, notifications and My Orders.
   const orderIdRef = useRef<string | null>(null);
