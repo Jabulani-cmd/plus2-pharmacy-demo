@@ -706,17 +706,27 @@ function AccountPage() {
                         </td>
                         <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
                         <td className="px-4 py-3 text-right">
-                          <Link
-                            to="/track"
-                            search={{ id: o.id }}
-                            className="text-sm font-bold text-primary hover:underline"
-                          >
-                            Track &rarr;
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to="/receipt"
+                              search={{ id: o.id }}
+                              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:border-primary hover:text-primary"
+                            >
+                              <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
+                            </Link>
+                            <Link
+                              to="/track"
+                              search={{ id: o.id }}
+                              className="text-sm font-bold text-primary hover:underline"
+                            >
+                              Track &rarr;
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
+                  {/* Demo orders only — real users have an empty `orders` array */}
                   {orders.map((o) => (
                     <tr key={o.id}>
                       <td className="px-4 py-3 font-bold">{o.id}</td>
