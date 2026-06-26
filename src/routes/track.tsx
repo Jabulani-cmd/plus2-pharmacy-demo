@@ -19,6 +19,11 @@ import {
   type SharedOrder,
   type SharedOrderStatus,
 } from "@/store/sharedOrders";
+import {
+  useSharedPrescriptions,
+  type SharedPrescription,
+  type SharedPrescriptionStatus,
+} from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -123,6 +128,64 @@ const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, OTCStatus> = {
   "Out for delivery": "Out for Delivery",
   Delivered: "Delivered",
 };
+
+// Map prescription status → OTC display step so the existing timeline UI
+// can render prescription tracking without a separate component.
+const RX_STATUS_TO_FLOW: Record<SharedPrescriptionStatus, OTCStatus> = {
+  Pending: "Order Confirmed",
+  "Under Review": "Order Confirmed",
+  "Approved — Awaiting Payment": "Order Confirmed",
+  Paid: "Preparing Order",
+  Dispensing: "Preparing Order",
+  Dispensed: "Driver Assigned",
+  "Out for Delivery": "Out for Delivery",
+  Delivered: "Delivered",
+  Rejected: "Order Confirmed",
+};
+
+function rxToSharedOrder(rx: SharedPrescription): SharedOrder {
+  const placedTs = Date.now();
+  const mappedStatus = RX_STATUS_TO_FLOW[rx.status] ?? "Order Confirmed";
+  // Map OTC display back to a SharedOrderStatus for the rest of the page
+  const sharedStatus: SharedOrderStatus =
+    mappedStatus === "Delivered" ? "Delivered"
+    : mappedStatus === "Out for Delivery" ? "Out for delivery"
+    : mappedStatus === "Driver Assigned" ? "Assigned"
+    : mappedStatus === "Preparing Order" ? "Packed"
+    : "Confirmed";
+  const total = rx.quotation?.total ?? 0;
+  return {
+    id: rx.id,
+    customerId: rx.customerId,
+    customerEmail: rx.customerEmail,
+    customer: rx.customerName,
+    phone: rx.customerPhone,
+    branchId: rx.branchId,
+    branchName: rx.branchName,
+    items: rx.quotation
+      ? [{ id: rx.id + "-med", name: rx.quotation.medicationName || "Prescription medication", qty: 1, price: rx.quotation.medicationCost }]
+      : [{ id: rx.id + "-rx", name: rx.fileName || "Prescription", qty: 1, price: 0 }],
+    itemCount: 1,
+    address: rx.deliveryAddress
+      ? [rx.deliveryAddress.streetAddress, rx.deliveryAddress.suburb, rx.deliveryAddress.city].filter(Boolean).join(", ")
+      : "",
+    deliveryAddress: rx.deliveryAddress as SharedOrder["deliveryAddress"],
+    deliveryMethod: rx.delivery === "collect" ? "Collection" : "Delivery",
+    paymentMethod: rx.paymentMethod ?? "",
+    paymentRef: rx.paymentRef ?? "",
+    subtotal: rx.quotation?.medicationCost ?? 0,
+    deliveryFee: rx.quotation?.deliveryFee ?? 0,
+    discountAmount: 0,
+    total,
+    status: sharedStatus,
+    placedAt: rx.uploadedAt,
+    placedTs,
+    driverName: rx.driverName,
+    driverPhone: rx.driverPhone,
+    driverVehicle: rx.driverVehicle,
+    dispatchedAt: rx.dispatchedAt,
+  };
+}
 
 // ─── Bulawayo map data (SVG viewport 520×340) ────────────────────────────────
 const MAP_W = 520;
@@ -733,6 +796,7 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
 function Track() {
   const { id, order: orderParam } = Route.useSearch();
   const trackId = id ?? orderParam;
+  const isRx = !!trackId && trackId.toUpperCase().startsWith("RX-");
 
   // Local seeded orders (legacy demo fallback)
   const localOrders = useOrders((s) => s.orders);
@@ -747,6 +811,10 @@ function Track() {
   const startDelivery = useSharedOrders((s) => s.startDelivery);
   const updateSharedStatus = useSharedOrders((s) => s.updateStatus);
 
+  // Prescriptions (resolved into the SharedOrder shape for display)
+  const sharedRx = useSharedPrescriptions((s) => s.prescriptions);
+  const matchedRx = isRx && trackId ? sharedRx.find((p) => p.id === trackId) : undefined;
+
   // Per-order realtime channel (used for connection indicator + toast)
   const [shared, setShared] = useState<SharedOrder | null>(null);
   const [connected, setConnected] = useState(false);
@@ -757,18 +825,20 @@ function Track() {
 
   // Resolve which order we're tracking
   const fromShared = trackId
-    ? sharedOrders.find((o) => o.id === trackId)
+    ? sharedOrders.find((o) => o.id === trackId) ??
+      (matchedRx ? rxToSharedOrder(matchedRx) : undefined)
     : sharedOrders[0];
   const liveShared = shared ?? fromShared ?? null;
   const localOrder = trackId
     ? localOrders.find((o) => o.id === trackId)
-    : !fromShared && !shared
+    : !fromShared && !shared && !matchedRx
       ? localOrders[0]
       : undefined;
 
   // Initial fetch + per-order Supabase Realtime subscription
   useEffect(() => {
     if (!trackId) return;
+    if (isRx) return; // prescription rows live in a different table/store
     let cancelled = false;
 
     void supabase
