@@ -796,6 +796,7 @@ function CallScreen({ driverName, onEnd }: { driverName: string; onEnd: () => vo
 function Track() {
   const { id, order: orderParam } = Route.useSearch();
   const trackId = id ?? orderParam;
+  const isRx = !!trackId && trackId.toUpperCase().startsWith("RX-");
 
   // Local seeded orders (legacy demo fallback)
   const localOrders = useOrders((s) => s.orders);
@@ -810,6 +811,10 @@ function Track() {
   const startDelivery = useSharedOrders((s) => s.startDelivery);
   const updateSharedStatus = useSharedOrders((s) => s.updateStatus);
 
+  // Prescriptions (resolved into the SharedOrder shape for display)
+  const sharedRx = useSharedPrescriptions((s) => s.prescriptions);
+  const matchedRx = isRx && trackId ? sharedRx.find((p) => p.id === trackId) : undefined;
+
   // Per-order realtime channel (used for connection indicator + toast)
   const [shared, setShared] = useState<SharedOrder | null>(null);
   const [connected, setConnected] = useState(false);
@@ -820,18 +825,20 @@ function Track() {
 
   // Resolve which order we're tracking
   const fromShared = trackId
-    ? sharedOrders.find((o) => o.id === trackId)
+    ? sharedOrders.find((o) => o.id === trackId) ??
+      (matchedRx ? rxToSharedOrder(matchedRx) : undefined)
     : sharedOrders[0];
   const liveShared = shared ?? fromShared ?? null;
   const localOrder = trackId
     ? localOrders.find((o) => o.id === trackId)
-    : !fromShared && !shared
+    : !fromShared && !shared && !matchedRx
       ? localOrders[0]
       : undefined;
 
   // Initial fetch + per-order Supabase Realtime subscription
   useEffect(() => {
     if (!trackId) return;
+    if (isRx) return; // prescription rows live in a different table/store
     let cancelled = false;
 
     void supabase
