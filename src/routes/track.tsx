@@ -19,6 +19,11 @@ import {
   type SharedOrder,
   type SharedOrderStatus,
 } from "@/store/sharedOrders";
+import {
+  useSharedPrescriptions,
+  type SharedPrescription,
+  type SharedPrescriptionStatus,
+} from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -123,6 +128,64 @@ const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, OTCStatus> = {
   "Out for delivery": "Out for Delivery",
   Delivered: "Delivered",
 };
+
+// Map prescription status → OTC display step so the existing timeline UI
+// can render prescription tracking without a separate component.
+const RX_STATUS_TO_FLOW: Record<SharedPrescriptionStatus, OTCStatus> = {
+  Pending: "Order Confirmed",
+  "Under Review": "Order Confirmed",
+  "Approved — Awaiting Payment": "Order Confirmed",
+  Paid: "Preparing Order",
+  Dispensing: "Preparing Order",
+  Dispensed: "Driver Assigned",
+  "Out for Delivery": "Out for Delivery",
+  Delivered: "Delivered",
+  Rejected: "Order Confirmed",
+};
+
+function rxToSharedOrder(rx: SharedPrescription): SharedOrder {
+  const placedTs = Date.now();
+  const mappedStatus = RX_STATUS_TO_FLOW[rx.status] ?? "Order Confirmed";
+  // Map OTC display back to a SharedOrderStatus for the rest of the page
+  const sharedStatus: SharedOrderStatus =
+    mappedStatus === "Delivered" ? "Delivered"
+    : mappedStatus === "Out for Delivery" ? "Out for delivery"
+    : mappedStatus === "Driver Assigned" ? "Assigned"
+    : mappedStatus === "Preparing Order" ? "Packed"
+    : "Confirmed";
+  const total = rx.quotation?.total ?? 0;
+  return {
+    id: rx.id,
+    customerId: rx.customerId,
+    customerEmail: rx.customerEmail,
+    customer: rx.customerName,
+    phone: rx.customerPhone,
+    branchId: rx.branchId,
+    branchName: rx.branchName,
+    items: rx.quotation
+      ? [{ name: rx.quotation.medicationName || "Prescription medication", qty: 1, price: rx.quotation.medicationCost }]
+      : [{ name: rx.fileName || "Prescription", qty: 1, price: 0 }],
+    itemCount: 1,
+    address: rx.deliveryAddress
+      ? [rx.deliveryAddress.streetAddress, rx.deliveryAddress.suburb, rx.deliveryAddress.city].filter(Boolean).join(", ")
+      : "",
+    deliveryAddress: rx.deliveryAddress as SharedOrder["deliveryAddress"],
+    deliveryMethod: rx.delivery === "collect" ? "Collection" : "Delivery",
+    paymentMethod: rx.paymentMethod ?? "",
+    paymentRef: rx.paymentRef ?? "",
+    subtotal: rx.quotation?.medicationCost ?? 0,
+    deliveryFee: rx.quotation?.deliveryFee ?? 0,
+    discountAmount: 0,
+    total,
+    status: sharedStatus,
+    placedAt: rx.uploadedAt,
+    placedTs,
+    driverName: rx.driverName,
+    driverPhone: rx.driverPhone,
+    driverVehicle: rx.driverVehicle,
+    dispatchedAt: rx.dispatchedAt,
+  };
+}
 
 // ─── Bulawayo map data (SVG viewport 520×340) ────────────────────────────────
 const MAP_W = 520;
