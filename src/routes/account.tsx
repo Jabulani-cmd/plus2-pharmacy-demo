@@ -859,7 +859,7 @@ function AccountPage() {
                 )}
 
                 <ul className="mt-4 divide-y divide-border">
-                  {(mySharedPrescriptions.length > 0 ? mySharedPrescriptions : prescriptions).map((p) => (
+                  {(mergedPrescriptions.length > 0 ? mergedPrescriptions : prescriptions).map((p) => (
                     <li key={p.id} className="flex items-center gap-3 py-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
                         <FileText className="h-5 w-5" />
