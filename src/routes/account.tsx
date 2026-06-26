@@ -320,6 +320,37 @@ function AccountPage() {
     (p) => p.customerId === user.id || p.customerEmail === user.email
   );
 
+  // Merge local (auth store) prescriptions with shared-store status as source of truth.
+  // The shared store is updated by the pharmacist/dispatcher flow; the local auth list
+  // can lag with a stale "Pending" status after upload. Always prefer the live shared
+  // status when an entry exists in both, and surface any shared-only entries too.
+  const mergedPrescriptions = (() => {
+    const sharedById = new Map(mySharedPrescriptions.map((s) => [s.id, s] as const));
+    const merged = prescriptions.map((p) => {
+      const s = sharedById.get(p.id);
+      if (!s) return p;
+      sharedById.delete(p.id);
+      return {
+        ...p,
+        status: s.status as unknown as typeof p.status,
+        quotation: (s.quotation as unknown as typeof p.quotation) ?? p.quotation,
+        uploadedAt: s.uploadedAt || p.uploadedAt,
+      };
+    });
+    // Prepend shared-only entries (uploads not yet in local auth store).
+    const extras = Array.from(sharedById.values()).map((s) => ({
+      id: s.id,
+      fileName: s.fileName,
+      doctorName: s.doctorName,
+      uploadedAt: s.uploadedAt,
+      status: s.status as unknown as Prescription["status"],
+      patientName: s.patientName,
+      notes: s.notes,
+      quotation: s.quotation as unknown as Prescription["quotation"],
+    } as unknown as Prescription));
+    return [...extras, ...merged];
+  })();
+
   const pendingPayment = mySharedPrescriptions.filter(
     (p) =>
       p.status === "Approved — Awaiting Payment" &&
