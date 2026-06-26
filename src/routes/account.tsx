@@ -326,7 +326,8 @@ function AccountPage() {
   // status when an entry exists in both, and surface any shared-only entries too.
   const mergedPrescriptions = (() => {
     const sharedById = new Map(mySharedPrescriptions.map((s) => [s.id, s] as const));
-    const merged = prescriptions.map((p) => {
+    type LocalRx = (typeof prescriptions)[number];
+    const merged: LocalRx[] = prescriptions.map((p) => {
       const s = sharedById.get(p.id);
       if (!s) return p;
       sharedById.delete(p.id);
@@ -338,16 +339,16 @@ function AccountPage() {
       };
     });
     // Prepend shared-only entries (uploads not yet in local auth store).
-    const extras = Array.from(sharedById.values()).map((s) => ({
+    const extras: LocalRx[] = Array.from(sharedById.values()).map((s) => ({
       id: s.id,
       fileName: s.fileName,
       doctorName: s.doctorName,
       uploadedAt: s.uploadedAt,
-      status: s.status as unknown as Prescription["status"],
+      status: s.status as unknown as LocalRx["status"],
       patientName: s.patientName,
       notes: s.notes,
-      quotation: s.quotation as unknown as Prescription["quotation"],
-    } as unknown as Prescription));
+      quotation: s.quotation as unknown as LocalRx["quotation"],
+    } as unknown as LocalRx));
     return [...extras, ...merged];
   })();
 
