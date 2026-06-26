@@ -163,8 +163,8 @@ function rxToSharedOrder(rx: SharedPrescription): SharedOrder {
     branchId: rx.branchId,
     branchName: rx.branchName,
     items: rx.quotation
-      ? [{ name: rx.quotation.medicationName || "Prescription medication", qty: 1, price: rx.quotation.medicationCost }]
-      : [{ name: rx.fileName || "Prescription", qty: 1, price: 0 }],
+      ? [{ id: rx.id + "-med", name: rx.quotation.medicationName || "Prescription medication", qty: 1, price: rx.quotation.medicationCost }]
+      : [{ id: rx.id + "-rx", name: rx.fileName || "Prescription", qty: 1, price: 0 }],
     itemCount: 1,
     address: rx.deliveryAddress
       ? [rx.deliveryAddress.streetAddress, rx.deliveryAddress.suburb, rx.deliveryAddress.city].filter(Boolean).join(", ")
