@@ -33,7 +33,13 @@ function isAndroidChrome(): boolean {
 }
 
 function canInstall(): boolean {
-  return typeof window !== "undefined" && ("BeforeInstallPromptEvent" in window || isIosSafari());
+  return typeof window !== "undefined";
+}
+
+function isChromeFamily(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /chrome/i.test(ua) && !/edge|edg/i.test(ua);
 }
 
 /**
