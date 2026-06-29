@@ -173,6 +173,27 @@ function RootComponent() {
   const isDriver = pathname.startsWith("/driver");
   const isChromeless = isStaff || isDriver;
 
+  // Dynamically swap PWA manifest + theme color so the driver portal
+  // installs as its own standalone app icon ("KP Driver") instead of
+  // sharing the customer-facing Kings Pharmacy install.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const manifestLink = document.querySelector(
+      'link[rel="manifest"]'
+    ) as HTMLLinkElement | null;
+    const themeMeta = document.querySelector(
+      'meta[name="theme-color"]'
+    ) as HTMLMetaElement | null;
+    if (manifestLink) {
+      manifestLink.href = isDriver
+        ? "/driver-manifest.json"
+        : "/manifest.webmanifest";
+    }
+    if (themeMeta) {
+      themeMeta.content = isDriver ? "#1B3A6B" : "#0EA5E9";
+    }
+  }, [isDriver]);
+
   useEffect(() => {
     runMigrationWipe();
     // Orders are now backed by Supabase directly (see src/store/sharedOrders.ts).
