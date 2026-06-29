@@ -45,9 +45,9 @@ export function KPI({
   );
 }
 
-export function Card({ title, action, children, className = "" }: { title?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({ title, action, children, className = "", onClick }: { title?: string; action?: ReactNode; children: ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <section className={`rounded-xl border border-border bg-white shadow-sm ${className}`}>
+    <section onClick={onClick} className={`rounded-xl border border-border bg-white shadow-sm ${className}`}>
       {(title || action) && (
         <header className="flex items-center justify-between border-b border-border px-5 py-3">
           {title && <h3 className="text-sm font-bold text-foreground">{title}</h3>}
