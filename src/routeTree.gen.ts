@@ -26,6 +26,7 @@ import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as StaffDashboardRouteImport } from './routes/staff.dashboard'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as DriverLoginRouteImport } from './routes/driver.login'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 
 const TrackRoute = TrackRouteImport.update({
@@ -113,6 +114,11 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DriverLoginRoute = DriverLoginRouteImport.update({
+  id: '/driver/login',
+  path: '/driver/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
   path: '/category/$slug',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/driver/login': typeof DriverLoginRoute
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/driver/login': typeof DriverLoginRoute
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/driver/login': typeof DriverLoginRoute
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/track'
     | '/category/$slug'
+    | '/driver/login'
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/track'
     | '/category/$slug'
+    | '/driver/login'
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/track'
     | '/category/$slug'
+    | '/driver/login'
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
   CategorySlugRoute: typeof CategorySlugRoute
+  DriverLoginRoute: typeof DriverLoginRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
@@ -380,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/driver/login': {
+      id: '/driver/login'
+      path: '/driver/login'
+      fullPath: '/driver/login'
+      preLoaderRoute: typeof DriverLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/category/$slug': {
       id: '/category/$slug'
       path: '/category/$slug'
@@ -419,6 +439,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
   CategorySlugRoute: CategorySlugRoute,
+  DriverLoginRoute: DriverLoginRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
