@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DriverPortal, type DriverRow } from "@/components/driver/DriverPortal";
 
-export const Route = createFileRoute("/driver")({
+export const Route = createFileRoute("/driver/")({
   head: () => ({ meta: [{ title: "Driver Portal — Kings Pharmacy" }] }),
   component: DriverRoute,
 });
