@@ -190,7 +190,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   };
 
   if (view === "drivers")
-    return <DriversView drivers={drivers} deliveries={deliveries} />;
+    return <DriversView drivers={drivers} />;
   if (view === "driver-portal") return <DriverPortalView />;
   if (view === "history")
     return (
