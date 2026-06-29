@@ -370,7 +370,23 @@ function ActiveDeliveryCard({
   const [confirm, setConfirm] = useState(false);
 
   const outForDelivery = order.status === "Out for delivery";
-  const isCOD = /cash/i.test(order.paymentMethod);
+
+  // Payment method classification — drivers MUST be told accurately
+  // whether the customer has already paid online vs owes cash on arrival.
+  const PREPAID_METHODS = [
+    "ecocash", "onemoney", "telecash",
+    "zimswitch", "zipit",
+    "card", "visa", "mastercard", "international",
+    "online",
+  ];
+  const COD_METHODS = ["cash on delivery", "cod", "cash"];
+  const paymentLc = (order.paymentMethod ?? "").toLowerCase();
+  const isCOD = COD_METHODS.some((m) => paymentLc.includes(m));
+  const isAlreadyPaid = !isCOD && PREPAID_METHODS.some((m) => paymentLc.includes(m));
+  const isZigCOD = /zig/i.test(order.paymentMethod ?? "");
+  const codAmount = isZigCOD
+    ? `ZiG ${(Number(order.total) * 26.5).toFixed(2)}`
+    : `US$${Number(order.total).toFixed(2)}`;
 
   const onStart = async () => {
     setStarting(true);
@@ -469,10 +485,30 @@ function ActiveDeliveryCard({
           </div>
         </div>
 
+        {isAlreadyPaid && (
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">
+            <span className="text-base leading-none">✅</span>
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-wider">
+                Payment already received
+              </span>
+              <span className="block font-semibold normal-case">
+                Paid via {order.paymentMethod} — do NOT collect payment
+              </span>
+            </span>
+          </div>
+        )}
         {isCOD && (
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
-            <Wallet className="h-3.5 w-3.5" />
-            Collect US${Number(order.total).toFixed(2)} cash on delivery
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">
+            <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-wider">
+                Collect cash on delivery
+              </span>
+              <span className="block font-semibold normal-case">
+                Collect {codAmount} from customer on arrival
+              </span>
+            </span>
           </div>
         )}
 
