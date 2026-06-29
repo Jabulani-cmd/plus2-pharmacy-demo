@@ -36,8 +36,6 @@ const SKY_DARK = "#0369A1";
 export function DriverPortal({ driver }: { driver: DriverRow }) {
   const [tab, setTab] = useState<Tab>("deliveries");
   const [driverState, setDriverState] = useState<DriverRow>(driver);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => setDriverState(driver), [driver]);
 
@@ -62,33 +60,6 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
       void supabase.removeChannel(ch);
     };
   }, [driver.id]);
-
-  // PWA install prompt — auto-show when driver opens /driver on a phone
-  // where the install event fires (Chrome Android, Edge).
-  useEffect(() => {
-    // Pre-captured by the bootstrap script in __root.tsx
-    const pre = (window as any).__kingsPwaDeferredPrompt;
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    const dismissed = sessionStorage.getItem("driver-install-dismissed");
-
-    const arm = (e: any) => {
-      if (isStandalone || dismissed) return;
-      setInstallPrompt(e);
-      setTimeout(() => setShowInstallBanner(true), 2000);
-    };
-
-    if (pre && !isStandalone && !dismissed) {
-      arm(pre);
-    }
-    const handler = (e: Event) => {
-      e.preventDefault();
-      arm(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
 
   // Browser push notifications — ask once per session
   useEffect(() => {
