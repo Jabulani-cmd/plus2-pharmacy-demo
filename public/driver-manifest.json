@@ -1,6 +1,7 @@
 {
   "name": "Kings Pharmacy — Driver App",
   "short_name": "KP Driver",
+  "id": "/driver?source=pwa",
   "description": "Kings Pharmacy delivery driver portal",
   "start_url": "/driver",
   "scope": "/driver",
