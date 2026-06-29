@@ -158,6 +158,10 @@ function DriverLogin() {
             </div>
           </div>
         </div>
+
+        <div className="mt-4">
+          <InstallDriverApp variant="card" />
+        </div>
       </div>
     </div>
   );
