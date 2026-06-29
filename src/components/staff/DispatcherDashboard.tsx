@@ -190,7 +190,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   };
 
   if (view === "drivers")
-    return <DriversView drivers={drivers} deliveries={deliveries} />;
+    return <DriversView drivers={drivers} />;
   if (view === "driver-portal") return <DriverPortalView />;
   if (view === "history")
     return (
@@ -740,27 +740,125 @@ function AssignDriverModal({
 
 function DriversView({
   drivers,
-  deliveries,
 }: {
   drivers: StaffDriver[];
-  deliveries: StaffDelivery[];
 }) {
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const extractZone = (address?: string) => {
+    if (!address) return "—";
+    const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) return parts[parts.length - 2];
+    return parts[0] ?? "—";
+  };
+
+  const startOfToday = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
+  const statsByDriver = useMemo(() => {
+    const map = new Map<
+      string,
+      { active: typeof sharedOrders; deliveredToday: number }
+    >();
+    for (const d of drivers) {
+      map.set(d.name, { active: [], deliveredToday: 0 });
+    }
+    for (const o of sharedOrders) {
+      if (!o.driverName) continue;
+      const entry = map.get(o.driverName);
+      if (!entry) continue;
+      if (o.status === "Assigned" || o.status === "Out for delivery") {
+        entry.active.push(o);
+      } else if (
+        o.status === "Delivered" &&
+        Number(o.placedTs ?? 0) >= startOfToday
+      ) {
+        entry.deliveredToday += 1;
+      }
+    }
+    return map;
+  }, [drivers, sharedOrders, startOfToday]);
+
+  const getStats = (name: string) =>
+    statsByDriver.get(name) ?? { active: [], deliveredToday: 0 };
+
+  const totals = useMemo(() => {
+    let onDelivery = 0;
+    let available = 0;
+    let offDuty = 0;
+    for (const d of drivers) {
+      if (d.status === "Off duty") {
+        offDuty += 1;
+        continue;
+      }
+      const s = getStats(d.name);
+      if (s.active.length > 0) onDelivery += 1;
+      else available += 1;
+    }
+    return { total: drivers.length, onDelivery, available, offDuty };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drivers, statsByDriver]);
+
   return (
     <div>
       <PageHeader
         title="Drivers"
         subtitle="Fleet status, performance, and current loads."
       />
+      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          { label: "Total Drivers", value: totals.total, color: "#1B3A6B" },
+          { label: "On Delivery", value: totals.onDelivery, color: "#1E5BC6" },
+          { label: "Available", value: totals.available, color: "#16a34a" },
+          { label: "Off Duty", value: totals.offDuty, color: "#94a3b8" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-border bg-card p-4 text-center"
+          >
+            <div
+              className="text-2xl font-black"
+              style={{ color: s.color }}
+            >
+              {s.value}
+            </div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         {drivers.map((d) => {
-          const active = deliveries.filter(
-            (x) =>
-              x.driverId === d.id &&
-              (x.status === "Assigned" ||
-                x.status === "Out for delivery")
-          );
+          const s = getStats(d.name);
+          const current = s.active[0];
+          const isOffDuty = d.status === "Off duty";
+          const liveStatus: "On delivery" | "Available" | "Off duty" =
+            isOffDuty
+              ? "Off duty"
+              : s.active.length > 0
+                ? "On delivery"
+                : "Available";
+          const zone = current ? extractZone(current.address) : "—";
+          const expanded = expandedId === d.id;
           return (
-            <Card key={d.id}>
+            <Card
+              key={d.id}
+              className={
+                current
+                  ? "cursor-pointer transition hover:shadow-md"
+                  : undefined
+              }
+              onClick={
+                current
+                  ? () => setExpandedId(expanded ? null : d.id)
+                  : undefined
+              }
+            >
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                   {d.name
@@ -772,7 +870,7 @@ function DriversView({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-bold">{d.name}</h4>
-                    <StatusPill status={d.status} />
+                    <StatusPill status={liveStatus} />
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {d.vehicle}
@@ -780,6 +878,7 @@ function DriversView({
                 </div>
                 <a
                   href={"tel:" + d.phone}
+                  onClick={(e) => e.stopPropagation()}
                   className="rounded-md border border-border p-2 hover:bg-muted"
                 >
                   <Phone className="h-4 w-4" />
@@ -788,35 +887,42 @@ function DriversView({
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="rounded bg-muted/50 p-2">
                   <div className="font-bold text-foreground">
-                    {d.completedToday}
+                    {s.deliveredToday}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Today
+                    Delivered Today
                   </div>
                 </div>
                 <div className="rounded bg-muted/50 p-2">
-                  <div className="font-bold text-foreground">
-                    {active.length}
+                  <div
+                    className={
+                      "font-bold " +
+                      (s.active.length > 0
+                        ? "text-primary"
+                        : "text-muted-foreground")
+                    }
+                  >
+                    {s.active.length}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Active
+                    Active Now
                   </div>
                 </div>
                 <div className="rounded bg-muted/50 p-2">
                   <div
                     className="truncate font-bold text-foreground"
-                    title={d.zone}
+                    title={zone}
                   >
-                    {d.zone.split(" / ")[0]}
+                    {zone}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Zone
+                    Current Zone
                   </div>
                 </div>
               </div>
-              {active.length > 0 && (
+              {s.active.length > 0 && !expanded && (
                 <div className="mt-3 space-y-1">
-                  {active.map((a) => (
+                  {s.active.map((a) => (
                     <div
                       key={a.id}
                       className="flex items-center justify-between rounded bg-amber-50 px-2 py-1.5 text-[11px]"
@@ -830,12 +936,84 @@ function DriversView({
                       </span>
                     </div>
                   ))}
+                  <div className="text-center text-[10px] font-semibold text-primary">
+                    Tap card to see delivery details ▾
+                  </div>
+                </div>
+              )}
+              {expanded && current && (
+                <div className="mt-3 space-y-1.5 border-t border-border pt-3 text-[11px]">
+                  <div className="mb-1 text-[10px] font-black uppercase tracking-wider text-primary">
+                    Current Delivery
+                  </div>
+                  <Row label="Order" value={"#" + current.id} />
+                  <Row label="Customer" value={current.customer} />
+                  <Row
+                    label="Phone"
+                    value={
+                      <a
+                        href={"tel:" + current.phone}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {current.phone}
+                      </a>
+                    }
+                  />
+                  <Row label="Address" value={current.address} />
+                  <Row
+                    label="Items"
+                    value={
+                      Array.isArray(current.items)
+                        ? current.items
+                            .map((i) => i.name + " ×" + i.qty)
+                            .join(", ")
+                        : "—"
+                    }
+                  />
+                  <Row label="Total" value={fmtUSD(Number(current.total))} />
+                  <Row label="Payment" value={current.paymentMethod} />
+                  <Row label="Status" value={current.status} />
+                  <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                    <a
+                      href={"tel:" + current.phone}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex h-9 flex-1 items-center justify-center gap-1 rounded-full bg-primary/10 text-xs font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Phone className="h-3 w-3" /> Call Customer
+                    </a>
+                    <a
+                      href={"tel:" + d.phone}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex h-9 flex-1 items-center justify-center gap-1 rounded-full bg-[#1B3A6B] text-xs font-bold text-white transition hover:bg-primary"
+                    >
+                      <Phone className="h-3 w-3" /> Call Driver
+                    </a>
+                  </div>
+                  <div className="pt-1 text-center text-[10px] font-semibold text-muted-foreground">
+                    Tap card to collapse ▴
+                  </div>
                 </div>
               )}
             </Card>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 font-bold text-muted-foreground">{label}</span>
+      <span className="text-right text-foreground">{value}</span>
     </div>
   );
 }
