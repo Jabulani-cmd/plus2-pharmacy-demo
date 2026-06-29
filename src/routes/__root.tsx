@@ -178,17 +178,35 @@ function RootComponent() {
   // sharing the customer-facing Kings Pharmacy install.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const manifestLink = document.querySelector(
-      'link[rel="manifest"]'
-    ) as HTMLLinkElement | null;
+    const targetHref = isDriver ? "/driver-manifest.json" : "/manifest.webmanifest";
+    // Remove ALL existing manifest links, then add a fresh one. Chrome only
+    // re-evaluates installability (and re-fires beforeinstallprompt for the
+    // distinct manifest `id`) when the <link rel="manifest"> element is
+    // replaced, not when its href attribute is mutated in place.
+    const existing = document.querySelectorAll('link[rel="manifest"]');
+    let needsReplace = true;
+    existing.forEach((el) => {
+      const link = el as HTMLLinkElement;
+      if (link.getAttribute("href") === targetHref && needsReplace) {
+        needsReplace = false;
+      } else {
+        link.parentNode?.removeChild(link);
+      }
+    });
+    if (needsReplace) {
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = targetHref;
+      document.head.appendChild(link);
+      // Clear any previously captured customer/driver install prompt so the
+      // new manifest can be installed as its own app.
+      try {
+        (window as any).__kingsPwaDeferredPrompt = undefined;
+      } catch {}
+    }
     const themeMeta = document.querySelector(
       'meta[name="theme-color"]'
     ) as HTMLMetaElement | null;
-    if (manifestLink) {
-      manifestLink.href = isDriver
-        ? "/driver-manifest.json"
-        : "/manifest.webmanifest";
-    }
     if (themeMeta) {
       themeMeta.content = isDriver ? "#1B3A6B" : "#0EA5E9";
     }
@@ -236,8 +254,8 @@ function RootComponent() {
         {!isChromeless && <MobileBottomNav />}
         {!isChromeless && <DemoBadge />}
         {!isChromeless && <FloatingWhatsApp />}
-        {!isStaff && <ChatBot />}
-        {!isStaff && <InstallPWA />}
+        {!isStaff && !isDriver && <ChatBot />}
+        {!isStaff && !isDriver && <InstallPWA />}
         <Toaster position="top-center" richColors />
       </div>
     </QueryClientProvider>
