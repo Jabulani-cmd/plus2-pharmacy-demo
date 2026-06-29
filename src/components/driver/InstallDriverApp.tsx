@@ -118,9 +118,14 @@ export function InstallDriverApp({
     }
     const prompt = deferredPrompt || (window as any).__kingsPwaDeferredPrompt;
     if (!prompt) {
-      toast.info("Install not ready yet. Wait a moment, then tap Install again.", {
-        duration: 4000,
-      });
+      // No native prompt yet (or browser doesn't support it). Show a helpful message instead of failing silently.
+      if (isIosSafari()) {
+        setShowIosHint(true);
+      } else if (isChromeFamily()) {
+        toast.info("Chrome will show the install prompt when this page meets app requirements. Tap Install again in a moment.", { duration: 5000 });
+      } else {
+        toast.info("Use your browser menu and choose 'Add to Home screen' to install the driver app.", { duration: 5000 });
+      }
       return;
     }
     try {
