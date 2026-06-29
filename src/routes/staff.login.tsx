@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
 import { DEMO_STAFF, ROLE_BADGE_BG } from "@/data/demoAccounts";
-import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound, Truck } from "lucide-react";
 import kingsLogo from "@/assets/kings-logo.png";
 
 export const Route = createFileRoute("/staff/login")({
