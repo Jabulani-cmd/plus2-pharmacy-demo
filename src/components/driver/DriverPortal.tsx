@@ -11,11 +11,10 @@ import {
   User as UserIcon,
   Loader2,
   Wallet,
-  Download,
-  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
+import { InstallDriverApp } from "./InstallDriverApp";
 import kingsLogo from "@/assets/kings-logo.png";
 
 export type DriverRow = {
