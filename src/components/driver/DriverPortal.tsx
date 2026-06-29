@@ -11,11 +11,10 @@ import {
   User as UserIcon,
   Loader2,
   Wallet,
-  Download,
-  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
+import { InstallDriverApp } from "./InstallDriverApp";
 import kingsLogo from "@/assets/kings-logo.png";
 
 export type DriverRow = {
@@ -37,8 +36,6 @@ const SKY_DARK = "#0369A1";
 export function DriverPortal({ driver }: { driver: DriverRow }) {
   const [tab, setTab] = useState<Tab>("deliveries");
   const [driverState, setDriverState] = useState<DriverRow>(driver);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => setDriverState(driver), [driver]);
 
@@ -63,33 +60,6 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
       void supabase.removeChannel(ch);
     };
   }, [driver.id]);
-
-  // PWA install prompt — auto-show when driver opens /driver on a phone
-  // where the install event fires (Chrome Android, Edge).
-  useEffect(() => {
-    // Pre-captured by the bootstrap script in __root.tsx
-    const pre = (window as any).__kingsPwaDeferredPrompt;
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    const dismissed = sessionStorage.getItem("driver-install-dismissed");
-
-    const arm = (e: any) => {
-      if (isStandalone || dismissed) return;
-      setInstallPrompt(e);
-      setTimeout(() => setShowInstallBanner(true), 2000);
-    };
-
-    if (pre && !isStandalone && !dismissed) {
-      arm(pre);
-    }
-    const handler = (e: Event) => {
-      e.preventDefault();
-      arm(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
 
   // Browser push notifications — ask once per session
   useEffect(() => {
@@ -154,65 +124,9 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
     return () => { void supabase.removeChannel(ch); };
   }, [driver.id, driverState.name]);
 
-  const installApp = async () => {
-    if (!installPrompt) {
-      setShowInstallBanner(false);
-      return;
-    }
-    try {
-      installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      if (choice?.outcome === "accepted") {
-        toast.success("Driver app installed!");
-      }
-    } catch {}
-    setShowInstallBanner(false);
-    setInstallPrompt(null);
-  };
-
-  const dismissInstall = () => {
-    sessionStorage.setItem("driver-install-dismissed", "1");
-    setShowInstallBanner(false);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {showInstallBanner && (
-        <div
-          className="sticky top-0 z-50 flex items-center gap-3 px-4 py-3 shadow-md"
-          style={{ background: "linear-gradient(135deg,#1B3A6B,#1E5BC6)" }}
-        >
-          <div className="text-2xl">📱</div>
-          <div className="min-w-0 flex-1 text-white">
-            <div className="text-sm font-black leading-tight">Install Driver App</div>
-            <div className="truncate text-[11px] text-white/80">
-              Add to your home screen for quick access &amp; offline use
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={dismissInstall}
-            className="text-xs font-bold text-white/70 hover:text-white"
-          >
-            Later
-          </button>
-          <button
-            type="button"
-            onClick={installApp}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1B3A6B] shadow"
-          >
-            <Download className="h-3.5 w-3.5" /> Install
-          </button>
-          <button
-            type="button"
-            onClick={dismissInstall}
-            aria-label="Dismiss"
-            className="text-white/60 hover:text-white"
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <InstallDriverApp variant="banner" />
       <DriverHeader driver={driverState} />
       <main className="mx-auto w-full max-w-2xl px-4 py-5">
         {tab === "deliveries" && <ActiveDeliveries driver={driverState} />}
@@ -722,6 +636,8 @@ function DriverProfile({ driver }: { driver: DriverRow }) {
 
   return (
     <div className="space-y-4">
+      <InstallDriverApp variant="card" />
+
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-600 text-2xl font-black text-white">
           {initials}
