@@ -14,8 +14,11 @@ import { getBranch } from "@/data/branches";
 import { useBranch } from "@/store/branch";
 import { NotificationsBell } from "./NotificationsBell";
 import { LiveStatusBadge } from "@/components/LiveStatusBadge";
+import { useCurrencyStore } from "@/lib/currency";
 
 export function Navbar() {
+  const currency = useCurrencyStore((s) => s.currency);
+  const setCurrency = useCurrencyStore((s) => s.setCurrency);
   const cart = useShop((s) => s.cart);
   const clearCart = useShop((s) => s.clearCart);
   const wishlist = useShop((s) => s.wishlist);
@@ -65,6 +68,20 @@ export function Navbar() {
             <Link to="/prescriptions" className="flex items-center gap-1 hover:text-primary"><FileText className="h-3.5 w-3.5" /> Upload Script</Link>
             <a href="#" className="flex items-center gap-1 hover:text-primary"><HelpCircle className="h-3.5 w-3.5" /> Help</a>
             <Link to="/track" className="hover:text-primary">Track Order</Link>
+            <div className="flex items-center gap-0 overflow-hidden rounded-full border border-[#D1D5DB] bg-white text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setCurrency("USD")}
+                className={`px-2 py-0.5 transition ${currency === "USD" ? "bg-primary text-white" : "text-[#6B7280] hover:text-primary"}`}
+                aria-pressed={currency === "USD"}
+              >US$</button>
+              <button
+                type="button"
+                onClick={() => setCurrency("ZIG")}
+                className={`px-2 py-0.5 transition ${currency === "ZIG" ? "bg-primary text-white" : "text-[#6B7280] hover:text-primary"}`}
+                aria-pressed={currency === "ZIG"}
+              >ZiG</button>
+            </div>
             <Link to={user ? "/account" : "/auth"} className="font-semibold hover:text-primary">{user ? `Hi, ${user.firstName}` : "Sign In / Register"}</Link>
           </div>
         </div>
@@ -136,6 +153,20 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center overflow-hidden rounded-full border border-[#E5E7EB] bg-white text-[11px] font-bold md:hidden">
+            <button
+              type="button"
+              onClick={() => setCurrency("USD")}
+              className={`px-2 py-1 transition ${currency === "USD" ? "bg-primary text-white" : "text-[#6B7280]"}`}
+              aria-label="Show prices in US Dollars"
+            >US$</button>
+            <button
+              type="button"
+              onClick={() => setCurrency("ZIG")}
+              className={`px-2 py-1 transition ${currency === "ZIG" ? "bg-primary text-white" : "text-[#6B7280]"}`}
+              aria-label="Show prices in Zimbabwe Gold"
+            >ZiG</button>
+          </div>
           {user && <LiveStatusBadge className="hidden sm:inline-flex" />}
           {user && (
             <NotificationsBell audience="customer" userId={user.id ?? user.email} />
