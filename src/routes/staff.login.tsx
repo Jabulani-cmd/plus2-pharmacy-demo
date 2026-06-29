@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
@@ -123,12 +123,13 @@ function StaffLogin() {
         {/* Driver portal link */}
         <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Are you a delivery driver?</p>
-          <Link
-            to="/driver/login"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-primary bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/driver/login" })}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
           >
             <Truck className="h-4 w-4" /> Driver Portal
-          </Link>
+          </button>
         </div>
 
         {/* Demo accounts */}
