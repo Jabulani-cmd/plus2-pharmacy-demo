@@ -123,13 +123,16 @@ function StaffLogin() {
         {/* Driver portal link */}
         <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Are you a delivery driver?</p>
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/driver/login" })}
+          <a
+            href="/driver/login"
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.assign("/driver/login");
+            }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
           >
             <Truck className="h-4 w-4" /> Driver Portal
-          </button>
+          </a>
         </div>
 
         {/* Demo accounts */}
