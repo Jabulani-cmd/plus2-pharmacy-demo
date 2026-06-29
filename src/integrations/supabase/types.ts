@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      drivers: {
+        Row: {
+          auth_user_id: string | null
+          branch: string
+          created_at: string
+          id: string
+          name: string
+          off_duty: boolean
+          phone: string
+          plate: string
+          updated_at: string
+          vehicle: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          branch?: string
+          created_at?: string
+          id?: string
+          name: string
+          off_duty?: boolean
+          phone: string
+          plate: string
+          updated_at?: string
+          vehicle: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          branch?: string
+          created_at?: string
+          id?: string
+          name?: string
+          off_duty?: boolean
+          phone?: string
+          plate?: string
+          updated_at?: string
+          vehicle?: string
+        }
+        Relationships: []
+      }
       loyalty_points: {
         Row: {
           customer_id: string
