@@ -636,6 +636,8 @@ function DriverProfile({ driver }: { driver: DriverRow }) {
 
   return (
     <div className="space-y-4">
+      <InstallDriverApp variant="card" />
+
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-600 text-2xl font-black text-white">
           {initials}
