@@ -1,6 +1,7 @@
 {
   "name": "Kings Pharmacy",
   "short_name": "Kings Rx",
+  "id": "/?source=pwa",
   "description": "Order medicines, manage prescriptions, and chat with your local Kings Pharmacy branch.",
   "start_url": "/",
   "scope": "/",
