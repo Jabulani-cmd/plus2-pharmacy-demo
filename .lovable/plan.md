@@ -1,82 +1,75 @@
-## Goal
+# Driver Portal — Build Plan
 
-Move orders, prescriptions, and notifications from local Zustand/localStorage stores to **Lovable Cloud (Supabase)** with **realtime subscriptions** so any device sees changes within ~2 seconds. Add a Live/Reconnecting indicator on staff dashboards, optimistic updates, and seed demo data so a fresh login still shows a populated demo.
+A self-contained driver app at `/driver`, mobile-first, that lets a driver sign in, see orders assigned to them, start a delivery, and mark it delivered — with every change syncing to the dispatcher and customer in real time.
 
-This is a substantial migration — every screen that currently reads `useSharedOrders`, `useSharedPrescriptions`, `useNotifications`, `useOrderExtras` will switch to Supabase-backed data.
+## Decisions that need your sign-off before I build
+
+These four points are where my plan diverges from the spec in your message. Please confirm or correct.
+
+1. **Driver accounts and login route.** This app uses `/auth` for customer sign-in and `/staff` for staff. I'll add a third entry, `/driver/login`, that signs in via Supabase email/password and redirects to `/driver`. I will **not** change the existing `/auth` page to multi-role-route on login — keeping the surfaces separate avoids breaking customer flows. Drivers will be real Supabase auth users with `profiles.role = 'driver'`.
+
+2. **Creating the four driver auth users.** Lovable Cloud doesn't expose the Supabase dashboard, so I can't create auth users by hand. I'll create them programmatically in the migration via a one-time server-side seed (admin API) so `siphamandla@kingspharmacy.co.zw`, `tatenda@…`, `bongani@…`, `rudo@…` all exist with password `Driver123!`, are email-confirmed, and are linked to a row in `public.drivers`. Confirm the four emails + shared starter password.
+
+3. **Order status strings.** The existing `shared_orders` table uses `"Assigned"` and `"Out for delivery"` (not `"Driver Assigned"` / `"Out for Delivery"` as in your spec). The dispatcher kanban, tracking page, notifications, and RLS update policy all depend on these exact strings. I will keep the existing strings and adapt the driver portal to them. Changing them app-wide is a separate, risky migration.
+
+4. **Existing in-dashboard "Driver portal" tab.** The dispatcher dashboard has a `DriverPortalView` tab today. I'll leave it as-is (useful for demos where a dispatcher wants to peek), and the new `/driver` route will be the real driver experience. Tell me if you'd rather I remove the in-dashboard one.
+
+## What gets built
+
+### 1. Database (one migration)
+
+- `public.drivers` table — `id` (uuid pk), `auth_user_id` (uuid, fk `auth.users`, unique), `name`, `phone`, `vehicle`, `plate`, `branch`, `off_duty` (bool, default false), `created_at`. Indexed by `name` and `auth_user_id`.
+- GRANTs: `SELECT` to `anon` + `authenticated` (so the dispatcher's anonymous-readable kanban still works, matching the existing project pattern), full CRUD to `authenticated`, ALL to `service_role`.
+- RLS:
+  - Anyone authenticated can read drivers (needed by dispatcher).
+  - A driver can update only their own row (`auth.uid() = auth_user_id`) — used for the online/offline toggle.
+- `profiles.role` column already exists (`customer` default). The seed will set `role = 'driver'` for the four driver profiles.
+- `shared_orders` RLS: add a policy allowing a driver to UPDATE rows where `driver_name` matches their `drivers.name` and the status transition is one of `Assigned → Out for delivery` or `Out for delivery → Delivered`. Today only staff (via `is_staff`) can update; without this, the driver's writes will silently fail.
+- Realtime is already enabled on `shared_orders`. Add `drivers` to the publication so the dispatcher's online/offline indicator updates live.
+- Seed: create the four Supabase auth users via `auth.admin.createUser` (inside the migration using a SECURITY DEFINER helper), insert matching `drivers` rows, set their `profiles.role = 'driver'`.
+
+### 2. Routes
+
+- `src/routes/driver.tsx` — pathless wrapper that:
+  - Reads the current Supabase session.
+  - If no session → redirect to `/driver/login`.
+  - If session exists but `profiles.role !== 'driver'` → toast "Drivers only" and redirect to `/`.
+  - Otherwise loads the matching `drivers` row by `auth_user_id` and renders `<DriverPortal driver={…} />`.
+- `src/routes/driver.login.tsx` — branded sign-in (Kings logo, sky-blue), email + password, calls `supabase.auth.signInWithPassword`, then navigates to `/driver`. Independent of `/auth`.
+
+Both routes are public (not under `_authenticated`) so we own the redirect logic and avoid the gate flashing the customer auth page.
+
+### 3. Components (`src/components/driver/`)
+
+- `DriverPortal.tsx` — shell with header + bottom tab nav, holds active tab state.
+- `DriverHeader.tsx` — logo, avatar initials, name, vehicle · plate, Online/Offline toggle (writes `drivers.off_duty`), sign-out (`supabase.auth.signOut()` then navigate to `/driver/login`).
+- `ActiveDeliveries.tsx` — fetches `shared_orders` where `driver_name = driver.name` AND `status IN ('Assigned','Out for delivery')`, subscribes to postgres_changes filtered by `driver_name`, renders a list of `ActiveDeliveryCard`.
+- `ActiveDeliveryCard.tsx` — full order details (customer, address, items, total, payment), "Call customer", "Open in Maps" (Google Maps deep link with `encodeURIComponent(address)`), and the primary action:
+  - When `status = 'Assigned'`: "Start delivery" → updates row to `status='Out for delivery'`, sets `out_for_delivery_ts`. Reuses `useSharedOrders.startDelivery` so notifications/stamps stay consistent.
+  - When `status = 'Out for delivery'`: "Mark as Delivered" with inline confirmation → calls `useSharedOrders.updateStatus(id, 'Delivered')`. That already writes `delivered_at`, emits the customer notification, and triggers all downstream realtime subscribers.
+- `CompletedDeliveries.tsx` — same query with `status='Delivered'`, Today/All-Time filter, totals (count + summed `total`), per-card delivered-at time and minutes elapsed from `placed_ts`.
+- `DriverProfile.tsx` — read-only profile card + sign out.
+- `DriverBottomNav.tsx` — three-tab bottom nav (Deliveries / Completed / Profile), mobile-first, fixed to bottom with safe-area padding.
+
+### 4. Wiring to existing realtime
+
+Because the driver writes through `useSharedOrders` (which is the same store the dispatcher and tracking page already subscribe to), no extra realtime code is needed for the dispatcher's kanban, drivers panel, customer's `/track` page, customer notifications, or My Orders list. Those already react to `shared_orders` changes. The only new subscription is the driver's own active-orders list, scoped by `driver_name`.
+
+### 5. Dispatcher drivers panel
+
+The drivers panel I built last turn reads `STAFF_DRIVERS` (hardcoded). I'll switch it to read from the new `drivers` Supabase table (with realtime), so the dispatcher sees the driver's live online/offline state and the seeded four real driver records — keeping name strings identical so the existing assignment flow keeps matching.
+
+## What I will NOT touch
+
+- `/auth` (customer) and `/staff` (staff) sign-in pages.
+- The order status string set (`Assigned`, `Out for delivery`, `Delivered`) — see decision #3.
+- Existing tracking page, dispatcher kanban, notifications store, RLS for staff. The driver's writes flow through code paths these already trust.
+
+## Out of scope
+
+- GPS live location of the driver on the customer's map (the existing tracking map uses a simulated path; tying it to real coordinates would be a separate piece of work).
+- Push notifications to the driver's phone (would need PWA push setup — separate task).
 
 ---
 
-## Step 1 — Enable Lovable Cloud
-
-Enable Cloud (creates Supabase project, sets env vars, generates `src/integrations/supabase/client.ts`).
-
-## Step 2 — Schema (one migration)
-
-Tables (all in `public`, all with explicit GRANTs + RLS):
-
-- `profiles` — id (uuid, FK auth.users), full_name, phone, email, role
-- `orders` — id (text PK, e.g. KP-...), customer_id (uuid), customer_name, phone, branch_id, address, delivery_method, payment_method, payment_ref, total, item_count, status, driver_id, driver_name, driver_phone, driver_vehicle, packed_at, dispatched_at, delivered_at, out_for_delivery_ts, eta, placed_at (timestamptz)
-- `order_items` — id, order_id (FK), name, qty, price
-- `prescriptions` — id (text PK), customer_id, customer_name, customer_email, customer_phone, file_name, patient_name, doctor_name, notes, status, files (jsonb), delivery (text), delivery_address (jsonb), collection_branch_id, quotation (jsonb), payment_ref, payment_method, paid_at, pharmacist_notes, approved_at, rejection_reason, driver_id, driver_name, driver_phone, driver_vehicle, dispatched_at, uploaded_at
-- `notifications` — id, audience ('customer'|'staff'|'driver'), user_id (nullable), title, body, link, link_search (jsonb), tone, read (bool), created_at
-- `order_messages` — id, order_id, sender ('customer'|'driver'|'staff'), body, created_at  *(chat)*
-- `order_ratings` — order_id PK, customer_id, stars, comment, created_at
-- `loyalty_points` — customer_id PK, points
-
-**RLS:**
-- Customers: read/write only rows where `customer_id = auth.uid()`.
-- Staff: read all orders/prescriptions/notifications-with-audience-staff; write status fields (via `has_role(auth.uid(),'staff')`).
-- Drivers: read/write orders where `driver_id = auth.uid()`.
-- `user_roles` table + `has_role()` security-definer function (per project memory rules).
-
-**Realtime:** `alter publication supabase_realtime add table orders, order_items, prescriptions, notifications, order_messages, order_ratings, loyalty_points;`
-
-## Step 3 — Data layer rewrite
-
-Replace store internals (keep the same hook names + APIs so consumers don't change):
-
-- `src/store/sharedOrders.ts` — fetch via supabase; subscribe to `orders` channel; mutators write to supabase with optimistic local state + rollback on error
-- `src/store/sharedPrescriptions.ts` — same pattern
-- `src/store/notifications.ts` — same pattern, scoped by audience + userId
-- `src/store/orderExtras.ts` — messages → `order_messages` channel, ratings → `order_ratings`, points → `loyalty_points`
-
-A single `src/lib/realtime.ts` provides `useRealtimeStatus()` returning `'live' | 'reconnecting'` by listening to channel subscription state.
-
-## Step 4 — Auth wiring
-
-- Customer auth already exists (`src/store/auth.ts`). Migrate to `supabase.auth` (email/password). On signup, insert into `profiles`.
-- Staff login (`src/routes/staff.login.tsx`) — keep current role-based mock OR sign in real Supabase users seeded via migration with assigned roles. **Recommendation: real Supabase staff accounts** so RLS works. Seed 6 demo staff (`pharmacist@kings.demo`, `dispatcher@kings.demo`, `cashier@kings.demo`, `inventory@kings.demo`, `manager@kings.demo`, `admin@kings.demo`, all password `Kings2026!`).
-
-## Step 5 — UI additions
-
-- `src/components/staff/LiveStatusBadge.tsx` — 🟢 Live / 🔴 Reconnecting, placed in `DispatcherDashboard`, `PharmacistDashboard`, driver view.
-- Toast on optimistic rollback (sonner `toast.error`).
-
-## Step 6 — Seed demo data
-
-Migration inserts:
-- 3 sample OTC orders at different stages
-- 2 sample prescriptions (one pending, one approved)
-- A handful of notifications
-
-So a fresh login shows a populated demo immediately.
-
-## Step 7 — Verification
-
-Playwright with two browser contexts on `localhost:8080`:
-1. Context A places an OTC order as customer → Context B (signed in as dispatcher) sees it appear within 2 s.
-2. Context B marks packed → Context A's `/track` page updates within 2 s.
-3. Context A uploads prescription → Context B (pharmacist) sees it within 2 s.
-
-Screenshots saved to `/tmp/browser/realtime/`.
-
----
-
-## Open questions (please confirm)
-
-1. **Staff accounts** — switch to real Supabase accounts so RLS works, or keep the current mock staff login and rely on a single shared "service" role for staff writes? Real accounts are the right answer for a presentation; confirming because it changes the staff login screen.
-2. **Driver portal** — currently doesn't exist as a separate route. Build a minimal `/driver` route with login + assigned-orders list, or keep driver actions inside the dispatcher dashboard for now?
-3. **Existing localStorage data** — wipe on first load after migration, or attempt a one-time import into Supabase? Wiping is simpler and safer for a demo.
-4. **Demo seed scope** — seed just orders/prescriptions, or also seed a demo customer account (`demo@kings.test` / `Demo2026!`) pre-populated with order history?
-
-Once you confirm these four, I'll implement end-to-end in one pass.
+**Please confirm the four points at the top, especially #2 (emails + password) and #3 (keep existing status strings), and I'll build it end-to-end in one pass.**

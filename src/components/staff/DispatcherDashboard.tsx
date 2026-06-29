@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   STAFF_DRIVERS,
@@ -7,6 +7,7 @@ import {
 } from "@/data/staffDemo";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
 import {
@@ -66,7 +67,45 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     updater: (prev: StaffDelivery[]) => StaffDelivery[]
   ) => void = () => {};
 
-  const [drivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
+  const [drivers, setDrivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
+
+  // Live drivers from Supabase — replaces the hardcoded list when available.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("*")
+        .order("name");
+      if (cancelled || error || !data || data.length === 0) return;
+      setDrivers(
+        data.map((d) => ({
+          id: d.id,
+          name: d.name,
+          phone: d.phone,
+          vehicle: d.vehicle + " · " + d.plate,
+          status: d.off_duty ? "Off duty" : "Available",
+          zone: d.branch ?? "—",
+          activeOrders: 0,
+          completedToday: 0,
+        }))
+      );
+    };
+    load();
+    const ch = supabase
+      .channel("dispatch_drivers")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "drivers" },
+        () => load()
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(ch);
+    };
+  }, []);
+
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
 
