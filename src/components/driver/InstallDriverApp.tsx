@@ -33,7 +33,13 @@ function isAndroidChrome(): boolean {
 }
 
 function canInstall(): boolean {
-  return typeof window !== "undefined" && ("BeforeInstallPromptEvent" in window || isIosSafari());
+  return typeof window !== "undefined";
+}
+
+function isChromeFamily(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /chrome/i.test(ua) && !/edge|edg/i.test(ua);
 }
 
 /**
@@ -66,15 +72,16 @@ export function InstallDriverApp({
     const pre = (window as any).__kingsPwaDeferredPrompt;
     if (pre) {
       setDeferredPrompt(pre);
-      setVisible(true);
     }
+
+    // Always show the install card/banner on driver pages so drivers can see the download option.
+    setVisible(true);
 
     const handler = (e: Event) => {
       e.preventDefault();
       const prompt = e as BeforeInstallPromptEvent;
       (window as any).__kingsPwaDeferredPrompt = prompt;
       setDeferredPrompt(prompt);
-      setVisible(true);
     };
 
     const installedHandler = () => {
@@ -86,11 +93,6 @@ export function InstallDriverApp({
 
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", installedHandler);
-
-    // For iOS Safari, we never get a native prompt, so show instructions immediately.
-    if (isIosSafari()) {
-      setVisible(true);
-    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
@@ -112,9 +114,14 @@ export function InstallDriverApp({
     }
     const prompt = deferredPrompt || (window as any).__kingsPwaDeferredPrompt;
     if (!prompt) {
-      toast.info("Install not ready yet. Wait a moment, then tap Install again.", {
-        duration: 4000,
-      });
+      // No native prompt yet (or browser doesn't support it). Show a helpful message instead of failing silently.
+      if (isIosSafari()) {
+        setShowIosHint(true);
+      } else if (isChromeFamily()) {
+        toast.info("Chrome will show the install prompt when this page meets app requirements. Tap Install again in a moment.", { duration: 5000 });
+      } else {
+        toast.info("Use your browser menu and choose 'Add to Home screen' to install the driver app.", { duration: 5000 });
+      }
       return;
     }
     try {
