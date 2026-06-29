@@ -121,7 +121,7 @@ export function NotificationsBell({
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute right-0 top-11 z-50 w-[min(92vw,360px)] overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl">
+          <div className="fixed right-4 top-16 z-50 w-[calc(100vw-32px)] max-w-sm overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl sm:absolute sm:right-0 sm:top-11 sm:w-[360px]">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
               <span className="text-sm font-extrabold text-[#111827]">
                 Notifications
@@ -139,7 +139,7 @@ export function NotificationsBell({
                 You're all caught up.
               </div>
             ) : (
-              <ul className="max-h-[60vh] divide-y divide-[#F3F4F6] overflow-y-auto">
+              <ul className="max-h-[70vh] divide-y divide-[#F3F4F6] overflow-y-auto overscroll-contain">
                 {filtered.map((n) => (
                   <li key={n.id}>{renderItem(n)}</li>
                 ))}
