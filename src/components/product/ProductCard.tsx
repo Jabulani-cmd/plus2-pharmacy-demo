@@ -2,7 +2,8 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Heart, ShoppingCart, Pill } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "@/data/products";
-import { useShop, formatUSD } from "@/store/shop";
+import { useShop } from "@/store/shop";
+import { useMoney } from "@/lib/currency";
 import { useAuth } from "@/store/auth";
 import { ProductImage } from "./ProductImage";
 import { RatingStars } from "./RatingStars";
@@ -12,6 +13,7 @@ export function ProductCard({ product }: { product: Product }) {
   const toggleWishlist = useShop((s) => s.toggleWishlist);
   const wished = useShop((s) => s.wishlist.includes(product.id));
   const user = useAuth((s) => s.user);
+  const money = useMoney();
   const navigate = useNavigate();
   const location = useRouterState({ select: (s) => s.location });
 
@@ -44,8 +46,8 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
         <RatingStars rating={product.rating} reviews={product.reviewCount} />
         <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-base font-bold text-[#111827]">{formatUSD(product.price)}</span>
-          {product.originalPrice && <span className="text-[13px] text-[#9CA3AF] line-through">{formatUSD(product.originalPrice)}</span>}
+          <span className="text-base font-bold text-[#111827]">{money(product.price)}</span>
+          {product.originalPrice && <span className="text-[13px] text-[#9CA3AF] line-through">{money(product.originalPrice)}</span>}
         </div>
         <button
           onClick={() => {

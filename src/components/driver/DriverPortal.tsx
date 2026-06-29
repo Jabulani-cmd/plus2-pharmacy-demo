@@ -11,6 +11,8 @@ import {
   User as UserIcon,
   Loader2,
   Wallet,
+  Download,
+  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
@@ -35,6 +37,8 @@ const SKY_DARK = "#0369A1";
 export function DriverPortal({ driver }: { driver: DriverRow }) {
   const [tab, setTab] = useState<Tab>("deliveries");
   const [driverState, setDriverState] = useState<DriverRow>(driver);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => setDriverState(driver), [driver]);
 
@@ -60,8 +64,155 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
     };
   }, [driver.id]);
 
+  // PWA install prompt — auto-show when driver opens /driver on a phone
+  // where the install event fires (Chrome Android, Edge).
+  useEffect(() => {
+    // Pre-captured by the bootstrap script in __root.tsx
+    const pre = (window as any).__kingsPwaDeferredPrompt;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    const dismissed = sessionStorage.getItem("driver-install-dismissed");
+
+    const arm = (e: any) => {
+      if (isStandalone || dismissed) return;
+      setInstallPrompt(e);
+      setTimeout(() => setShowInstallBanner(true), 2000);
+    };
+
+    if (pre && !isStandalone && !dismissed) {
+      arm(pre);
+    }
+    const handler = (e: Event) => {
+      e.preventDefault();
+      arm(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // Browser push notifications — ask once per session
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") return;
+    const askedKey = "driver-notif-asked";
+    if (sessionStorage.getItem(askedKey)) return;
+    sessionStorage.setItem(askedKey, "1");
+    // Slight delay so it doesn't compete with the install banner
+    const t = setTimeout(() => {
+      Notification.requestPermission().then((p) => {
+        if (p === "granted") {
+          toast.success(
+            "Notifications enabled — you'll be alerted when new orders are assigned"
+          );
+        }
+      });
+    }, 3500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Push notification on new assignment
+  useEffect(() => {
+    const ch = supabase
+      .channel("driver_assign_" + driver.id)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shared_orders" },
+        (p: any) => {
+          const row = p.new;
+          if (!row) return;
+          const assignedToMe = row.driver_name === driverState.name;
+          const justAssigned =
+            row.status === "Assigned" || row.status === "Driver Assigned";
+          if (!assignedToMe || !justAssigned) return;
+          if (p.eventType === "UPDATE") {
+            const prevAssigned =
+              p.old?.driver_name === driverState.name &&
+              (p.old?.status === "Assigned" || p.old?.status === "Driver Assigned");
+            if (prevAssigned) return; // already counted
+          }
+          try {
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              new Notification("New Delivery Assigned", {
+                body: `Deliver to ${row.customer ?? "customer"} at ${row.address ?? ""}`,
+                icon: "/icons/driver-icon-192.png",
+                badge: "/icons/driver-icon-192.png",
+                tag: row.id,
+              });
+            }
+          } catch {}
+          if ("vibrate" in navigator) {
+            try { (navigator as any).vibrate([200, 100, 200]); } catch {}
+          }
+          toast("🛵 New delivery assigned!", {
+            description: `${row.customer ?? "Customer"} — ${row.address ?? ""}`,
+            duration: 8000,
+          });
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [driver.id, driverState.name]);
+
+  const installApp = async () => {
+    if (!installPrompt) {
+      setShowInstallBanner(false);
+      return;
+    }
+    try {
+      installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice?.outcome === "accepted") {
+        toast.success("Driver app installed!");
+      }
+    } catch {}
+    setShowInstallBanner(false);
+    setInstallPrompt(null);
+  };
+
+  const dismissInstall = () => {
+    sessionStorage.setItem("driver-install-dismissed", "1");
+    setShowInstallBanner(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
+      {showInstallBanner && (
+        <div
+          className="sticky top-0 z-50 flex items-center gap-3 px-4 py-3 shadow-md"
+          style={{ background: "linear-gradient(135deg,#1B3A6B,#1E5BC6)" }}
+        >
+          <div className="text-2xl">📱</div>
+          <div className="min-w-0 flex-1 text-white">
+            <div className="text-sm font-black leading-tight">Install Driver App</div>
+            <div className="truncate text-[11px] text-white/80">
+              Add to your home screen for quick access &amp; offline use
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={dismissInstall}
+            className="text-xs font-bold text-white/70 hover:text-white"
+          >
+            Later
+          </button>
+          <button
+            type="button"
+            onClick={installApp}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1B3A6B] shadow"
+          >
+            <Download className="h-3.5 w-3.5" /> Install
+          </button>
+          <button
+            type="button"
+            onClick={dismissInstall}
+            aria-label="Dismiss"
+            className="text-white/60 hover:text-white"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <DriverHeader driver={driverState} />
       <main className="mx-auto w-full max-w-2xl px-4 py-5">
         {tab === "deliveries" && <ActiveDeliveries driver={driverState} />}
@@ -219,7 +370,23 @@ function ActiveDeliveryCard({
   const [confirm, setConfirm] = useState(false);
 
   const outForDelivery = order.status === "Out for delivery";
-  const isCOD = /cash/i.test(order.paymentMethod);
+
+  // Payment method classification — drivers MUST be told accurately
+  // whether the customer has already paid online vs owes cash on arrival.
+  const PREPAID_METHODS = [
+    "ecocash", "onemoney", "telecash",
+    "zimswitch", "zipit",
+    "card", "visa", "mastercard", "international",
+    "online",
+  ];
+  const COD_METHODS = ["cash on delivery", "cod", "cash"];
+  const paymentLc = (order.paymentMethod ?? "").toLowerCase();
+  const isCOD = COD_METHODS.some((m) => paymentLc.includes(m));
+  const isAlreadyPaid = !isCOD && PREPAID_METHODS.some((m) => paymentLc.includes(m));
+  const isZigCOD = /zig/i.test(order.paymentMethod ?? "");
+  const codAmount = isZigCOD
+    ? `ZiG ${(Number(order.total) * 26.5).toFixed(2)}`
+    : `US$${Number(order.total).toFixed(2)}`;
 
   const onStart = async () => {
     setStarting(true);
@@ -318,10 +485,30 @@ function ActiveDeliveryCard({
           </div>
         </div>
 
+        {isAlreadyPaid && (
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">
+            <span className="text-base leading-none">✅</span>
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-wider">
+                Payment already received
+              </span>
+              <span className="block font-semibold normal-case">
+                Paid via {order.paymentMethod} — do NOT collect payment
+              </span>
+            </span>
+          </div>
+        )}
         {isCOD && (
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
-            <Wallet className="h-3.5 w-3.5" />
-            Collect US${Number(order.total).toFixed(2)} cash on delivery
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">
+            <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-wider">
+                Collect cash on delivery
+              </span>
+              <span className="block font-semibold normal-case">
+                Collect {codAmount} from customer on arrival
+              </span>
+            </span>
           </div>
         )}
 
