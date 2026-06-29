@@ -94,11 +94,6 @@ export function InstallDriverApp({
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", installedHandler);
 
-    // For iOS Safari, we never get a native prompt, so show instructions immediately.
-    if (isIosSafari()) {
-      setVisible(true);
-    }
-
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", installedHandler);
