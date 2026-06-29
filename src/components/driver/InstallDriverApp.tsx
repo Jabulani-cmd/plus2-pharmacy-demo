@@ -72,15 +72,16 @@ export function InstallDriverApp({
     const pre = (window as any).__kingsPwaDeferredPrompt;
     if (pre) {
       setDeferredPrompt(pre);
-      setVisible(true);
     }
+
+    // Always show the install card/banner on driver pages so drivers can see the download option.
+    setVisible(true);
 
     const handler = (e: Event) => {
       e.preventDefault();
       const prompt = e as BeforeInstallPromptEvent;
       (window as any).__kingsPwaDeferredPrompt = prompt;
       setDeferredPrompt(prompt);
-      setVisible(true);
     };
 
     const installedHandler = () => {
