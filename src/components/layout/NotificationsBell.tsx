@@ -121,10 +121,7 @@ export function NotificationsBell({
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div
-            className="fixed right-4 z-50 w-[calc(100vw-32px)] max-w-sm overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl sm:absolute sm:right-0 sm:top-11 sm:w-[360px]"
-            style={{ top: "64px" }}
-          >
+          <div className="fixed right-4 top-16 z-50 w-[calc(100vw-32px)] max-w-sm overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl sm:absolute sm:right-0 sm:top-11 sm:w-[360px]">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
               <span className="text-sm font-extrabold text-[#111827]">
                 Notifications
