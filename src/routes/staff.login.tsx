@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
 import { DEMO_STAFF, ROLE_BADGE_BG } from "@/data/demoAccounts";
-import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound, Truck } from "lucide-react";
 import kingsLogo from "@/assets/kings-logo.png";
 
 export const Route = createFileRoute("/staff/login")({
@@ -112,7 +112,7 @@ function StaffLogin() {
               />
             </div>
           </label>
-          <button
+        <button
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary-dark disabled:opacity-60"
           >
@@ -120,8 +120,19 @@ function StaffLogin() {
           </button>
         </form>
 
+        {/* Driver portal link */}
+        <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Are you a delivery driver?</p>
+          <Link
+            to="/driver/login"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-primary bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
+          >
+            <Truck className="h-4 w-4" /> Driver Portal
+          </Link>
+        </div>
+
         {/* Demo accounts */}
-        <div className="mt-6 rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-4">
+        <div className="mt-5 rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-4">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#DC2626]">
             <ShieldCheck className="h-3.5 w-3.5" /> Demo Staff Accounts — Click to Sign In
           </div>
