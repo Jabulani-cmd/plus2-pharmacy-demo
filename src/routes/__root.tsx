@@ -170,6 +170,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isStaff = pathname.startsWith("/staff");
+  const isDriver = pathname.startsWith("/driver");
+  const isChromeless = isStaff || isDriver;
 
   useEffect(() => {
     runMigrationWipe();
@@ -205,14 +207,14 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-background font-sans antialiased" style={{ fontFamily: "'Open Sans', 'Inter', system-ui, sans-serif" }}>
-        {!isStaff && <Navbar />}
-        <main className={isStaff ? "flex-1 w-full overflow-x-hidden" : "flex-1 w-full overflow-x-hidden pb-20 md:pb-0"}>
+        {!isChromeless && <Navbar />}
+        <main className={isChromeless ? "flex-1 w-full overflow-x-hidden" : "flex-1 w-full overflow-x-hidden pb-20 md:pb-0"}>
           <Outlet />
         </main>
-        {!isStaff && <Footer />}
-        {!isStaff && <MobileBottomNav />}
-        {!isStaff && <DemoBadge />}
-        {!isStaff && <FloatingWhatsApp />}
+        {!isChromeless && <Footer />}
+        {!isChromeless && <MobileBottomNav />}
+        {!isChromeless && <DemoBadge />}
+        {!isChromeless && <FloatingWhatsApp />}
         {!isStaff && <ChatBot />}
         {!isStaff && <InstallPWA />}
         <Toaster position="top-center" richColors />
