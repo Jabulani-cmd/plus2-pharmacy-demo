@@ -1,0 +1,632 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import {
+  Phone,
+  MapPin,
+  Package,
+  CheckCircle2,
+  LogOut,
+  Truck,
+  User as UserIcon,
+  Loader2,
+  Wallet,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
+import kingsLogo from "@/assets/kings-logo.png";
+
+export type DriverRow = {
+  id: string;
+  auth_user_id: string;
+  name: string;
+  phone: string;
+  vehicle: string;
+  plate: string;
+  branch: string;
+  off_duty: boolean;
+};
+
+type Tab = "deliveries" | "completed" | "profile";
+
+const SKY = "#0EA5E9";
+const SKY_DARK = "#0369A1";
+
+export function DriverPortal({ driver }: { driver: DriverRow }) {
+  const [tab, setTab] = useState<Tab>("deliveries");
+  const [driverState, setDriverState] = useState<DriverRow>(driver);
+
+  useEffect(() => setDriverState(driver), [driver]);
+
+  // realtime: driver's own row (online/offline updated elsewhere)
+  useEffect(() => {
+    const ch = supabase
+      .channel("driver_self_" + driver.id)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "drivers",
+          filter: "id=eq." + driver.id,
+        },
+        (p) => {
+          if (p.new) setDriverState(p.new as DriverRow);
+        }
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [driver.id]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-24">
+      <DriverHeader driver={driverState} />
+      <main className="mx-auto w-full max-w-2xl px-4 py-5">
+        {tab === "deliveries" && <ActiveDeliveries driver={driverState} />}
+        {tab === "completed" && <CompletedDeliveries driver={driverState} />}
+        {tab === "profile" && <DriverProfile driver={driverState} />}
+      </main>
+      <DriverBottomNav tab={tab} setTab={setTab} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────
+function DriverHeader({ driver }: { driver: DriverRow }) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const online = !driver.off_duty;
+
+  const toggle = async () => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("drivers")
+      .update({ off_duty: online })
+      .eq("id", driver.id);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(online ? "You are now Offline" : "You are now Online");
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/driver/login", replace: true });
+  };
+
+  const initials = driver.name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <header
+      className="bg-gradient-to-r px-4 py-4 text-white shadow-sm"
+      style={{ backgroundImage: `linear-gradient(to right, ${SKY_DARK}, ${SKY})` }}
+    >
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <img
+            src={kingsLogo}
+            alt="Kings"
+            className="h-10 w-10 shrink-0 rounded-lg bg-white/95 p-1"
+          />
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-black">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-black">{driver.name}</div>
+              <div className="truncate text-[11px] text-sky-100">
+                {driver.vehicle} · {driver.plate}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={busy}
+            className={
+              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-black transition disabled:opacity-60 " +
+              (online
+                ? "bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                : "bg-slate-200 text-slate-700 hover:bg-slate-100")
+            }
+          >
+            <span
+              className={
+                "h-1.5 w-1.5 rounded-full " +
+                (online ? "bg-emerald-700" : "bg-slate-500")
+              }
+            />
+            {online ? "ONLINE" : "OFFLINE"}
+          </button>
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Active deliveries
+// ─────────────────────────────────────────────────────────────
+function ActiveDeliveries({ driver }: { driver: DriverRow }) {
+  const orders = useSharedOrders((s) => s.orders);
+  const active = useMemo(
+    () =>
+      orders
+        .filter(
+          (o) =>
+            o.driverName === driver.name &&
+            (o.status === "Assigned" || o.status === "Out for delivery")
+        )
+        .sort((a, b) => a.placedTs - b.placedTs),
+    [orders, driver.name]
+  );
+
+  if (active.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
+        <div className="mb-3 text-5xl">🛵</div>
+        <div className="text-base font-black text-slate-700">
+          No active deliveries
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
+          The dispatcher will assign orders to you shortly.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs font-bold text-slate-500">
+        {active.length} active deliver{active.length === 1 ? "y" : "ies"}
+      </div>
+      {active.map((o) => (
+        <ActiveDeliveryCard key={o.id} order={o} driver={driver} />
+      ))}
+    </div>
+  );
+}
+
+function ActiveDeliveryCard({
+  order,
+  driver,
+}: {
+  order: SharedOrder;
+  driver: DriverRow;
+}) {
+  const startDelivery = useSharedOrders((s) => s.startDelivery);
+  const updateStatus = useSharedOrders((s) => s.updateStatus);
+
+  const [starting, setStarting] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
+  const outForDelivery = order.status === "Out for delivery";
+  const isCOD = /cash/i.test(order.paymentMethod);
+
+  const onStart = async () => {
+    setStarting(true);
+    startDelivery(order.id);
+    setTimeout(() => setStarting(false), 400);
+    toast.success("Delivery started — customer notified");
+  };
+
+  const onDelivered = async () => {
+    setMarking(true);
+    updateStatus(order.id, "Delivered");
+    setTimeout(() => {
+      setMarking(false);
+      setConfirm(false);
+    }, 400);
+    toast.success("Order marked as delivered");
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* status banner */}
+      <div
+        className={
+          "flex items-center justify-between px-4 py-2 text-[11px] font-black uppercase tracking-wider " +
+          (outForDelivery
+            ? "bg-sky-100 text-sky-800"
+            : "bg-amber-100 text-amber-800")
+        }
+      >
+        <span className="flex items-center gap-1.5">
+          {outForDelivery ? (
+            <>
+              <Truck className="h-3.5 w-3.5" /> Out for delivery
+            </>
+          ) : (
+            <>
+              <Package className="h-3.5 w-3.5" /> Collected · ready to deliver
+            </>
+          )}
+        </span>
+        <span className="text-[10px] text-slate-600">#{order.id}</span>
+      </div>
+
+      <div className="space-y-3 p-4">
+        {/* customer */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-black text-slate-800">
+              {order.customer}
+            </div>
+            <div className="text-xs text-slate-500">
+              {order.items?.length ?? 0} item
+              {order.items?.length === 1 ? "" : "s"} · US$
+              {Number(order.total).toFixed(2)} · {order.paymentMethod}
+            </div>
+          </div>
+          <a
+            href={"tel:" + order.phone}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition hover:bg-sky-600 hover:text-white"
+            aria-label="Call customer"
+          >
+            <Phone className="h-4 w-4" />
+          </a>
+        </div>
+
+        {/* address */}
+        <div className="rounded-xl bg-slate-50 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <MapPin className="h-3 w-3" /> Deliver to
+          </div>
+          <div className="text-xs font-semibold text-slate-700">
+            {order.address}
+          </div>
+        </div>
+
+        {/* items */}
+        <div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Items
+          </div>
+          <div className="space-y-1">
+            {(order.items ?? []).map((it, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between text-xs text-slate-700"
+              >
+                <span className="truncate pr-2">
+                  {it.name}{" "}
+                  <span className="text-slate-400">×{it.qty}</span>
+                </span>
+                <span className="shrink-0 font-semibold">
+                  US${(it.price * it.qty).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {isCOD && (
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
+            <Wallet className="h-3.5 w-3.5" />
+            Collect US${Number(order.total).toFixed(2)} cash on delivery
+          </div>
+        )}
+
+        {/* primary action */}
+        {!outForDelivery && !confirm && (
+          <button
+            type="button"
+            onClick={onStart}
+            disabled={starting}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-sky-600 text-sm font-black text-white shadow transition hover:bg-sky-700 disabled:opacity-60"
+          >
+            {starting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Truck className="h-4 w-4" />
+            )}
+            {starting ? "Starting…" : "Start delivery"}
+          </button>
+        )}
+
+        {outForDelivery && !confirm && (
+          <button
+            type="button"
+            onClick={() => setConfirm(true)}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1B3A6B] text-sm font-black text-white transition hover:bg-sky-700"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Mark as delivered
+          </button>
+        )}
+
+        {confirm && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs font-black text-slate-800">
+              Confirm delivery to {order.customer}?
+            </div>
+            <div className="mt-1 text-[11px] text-slate-500">
+              This notifies the customer and dispatcher immediately.
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirm(false)}
+                disabled={marking}
+                className="h-10 flex-1 rounded-full border-2 border-slate-300 text-xs font-bold text-slate-600 transition hover:bg-white disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onDelivered}
+                disabled={marking}
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 text-xs font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {marking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* maps */}
+        <a
+          href={
+            "https://maps.google.com/?q=" + encodeURIComponent(order.address)
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-sky-500 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+        >
+          <MapPin className="h-4 w-4" /> Open in Maps
+        </a>
+
+        <div className="text-center text-[10px] text-slate-400">
+          Driver: {driver.name}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Completed
+// ─────────────────────────────────────────────────────────────
+function CompletedDeliveries({ driver }: { driver: DriverRow }) {
+  const orders = useSharedOrders((s) => s.orders);
+  const [filter, setFilter] = useState<"today" | "all">("today");
+
+  const startOfToday = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
+  const list = useMemo(
+    () =>
+      orders
+        .filter(
+          (o) =>
+            o.driverName === driver.name &&
+            o.status === "Delivered" &&
+            (filter === "all" || o.placedTs >= startOfToday)
+        )
+        .sort((a, b) => b.placedTs - a.placedTs),
+    [orders, driver.name, filter, startOfToday]
+  );
+
+  const total = list.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {(["today", "all"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            className={
+              "rounded-full px-4 py-2 text-[11px] font-black transition " +
+              (filter === f
+                ? "bg-sky-600 text-white shadow"
+                : "border border-slate-200 bg-white text-slate-600")
+            }
+          >
+            {f === "today" ? "Today" : "All time"}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-2xl font-black text-slate-800">
+            {list.length}
+          </div>
+          <div className="text-[10px] text-slate-500">Deliveries</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-2xl font-black text-sky-700">
+            US${total.toFixed(0)}
+          </div>
+          <div className="text-[10px] text-slate-500">Total value</div>
+        </div>
+      </div>
+
+      {list.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center text-xs text-slate-500">
+          No completed deliveries{filter === "today" ? " today" : ""}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {list.map((o) => {
+            const deliveredAt = o.deliveredAt;
+            return (
+              <div
+                key={o.id}
+                className="rounded-xl border border-slate-200 bg-white p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black text-slate-800">
+                      {o.customer}
+                    </div>
+                    <div className="truncate text-[11px] text-slate-500">
+                      #{o.id}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-black text-slate-800">
+                      US${Number(o.total).toFixed(2)}
+                    </div>
+                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                      <CheckCircle2 className="h-3 w-3" /> Delivered
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-1 truncate text-[11px] text-slate-500">
+                  📍 {o.address}
+                </div>
+                {deliveredAt && (
+                  <div className="mt-1 text-[10px] text-slate-400">
+                    Delivered at {deliveredAt}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Profile
+// ─────────────────────────────────────────────────────────────
+function DriverProfile({ driver }: { driver: DriverRow }) {
+  const navigate = useNavigate();
+  const initials = driver.name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("");
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/driver/login", replace: true });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-600 text-2xl font-black text-white">
+          {initials}
+        </div>
+        <div className="mt-3 text-lg font-black text-slate-800">
+          {driver.name}
+        </div>
+        <div className="text-xs text-slate-500">Kings Pharmacy Driver</div>
+        <div className="mt-1 inline-block rounded-full bg-sky-100 px-3 py-0.5 text-[11px] font-bold text-sky-700">
+          {driver.branch}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+          Vehicle & contact
+        </div>
+        <div className="divide-y divide-slate-100">
+          {[
+            { label: "Vehicle", value: driver.vehicle },
+            { label: "Plate", value: driver.plate },
+            { label: "Phone", value: driver.phone },
+            { label: "Branch", value: driver.branch },
+          ].map((r) => (
+            <div
+              key={r.label}
+              className="flex items-center justify-between px-4 py-3 text-xs"
+            >
+              <span className="font-bold text-slate-500">{r.label}</span>
+              <span className="text-slate-800">{r.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={signOut}
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-2 border-red-300 text-sm font-black text-red-600 transition hover:bg-red-50"
+      >
+        <LogOut className="h-4 w-4" /> Sign out
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bottom nav
+// ─────────────────────────────────────────────────────────────
+function DriverBottomNav({
+  tab,
+  setTab,
+}: {
+  tab: Tab;
+  setTab: (t: Tab) => void;
+}) {
+  const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
+    { id: "deliveries", icon: <Truck className="h-5 w-5" />, label: "Deliveries" },
+    {
+      id: "completed",
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      label: "Completed",
+    },
+    { id: "profile", icon: <UserIcon className="h-5 w-5" />, label: "Profile" },
+  ];
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="mx-auto flex w-full max-w-2xl">
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={
+                "relative flex flex-1 flex-col items-center gap-0.5 py-3 transition " +
+                (active ? "text-sky-600" : "text-slate-400 hover:text-slate-600")
+              }
+            >
+              {t.icon}
+              <span className="text-[10px] font-bold">{t.label}</span>
+              {active && (
+                <span className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-sky-600" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

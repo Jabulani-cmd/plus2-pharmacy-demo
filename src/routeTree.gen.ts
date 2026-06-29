@@ -15,6 +15,7 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReceiptRouteImport } from './routes/receipt'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
+import { Route as DriverRouteImport } from './routes/driver'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ConsultationRouteImport } from './routes/consultation'
 import { Route as CheckoutRouteImport } from './routes/checkout'
@@ -57,6 +58,11 @@ const ReceiptRoute = ReceiptRouteImport.update({
 const PrescriptionsRoute = PrescriptionsRouteImport.update({
   id: '/prescriptions',
   path: '/prescriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriverRoute = DriverRouteImport.update({
+  id: '/driver',
+  path: '/driver',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoRoute = DemoRouteImport.update({
@@ -115,9 +121,9 @@ const ProductIdRoute = ProductIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const DriverLoginRoute = DriverLoginRouteImport.update({
-  id: '/driver/login',
-  path: '/driver/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => DriverRoute,
 } as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
+  '/driver': typeof DriverRouteWithChildren
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
+  '/driver': typeof DriverRouteWithChildren
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
+  '/driver': typeof DriverRouteWithChildren
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultation'
     | '/demo'
+    | '/driver'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultation'
     | '/demo'
+    | '/driver'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultation'
     | '/demo'
+    | '/driver'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ConsultationRoute: typeof ConsultationRoute
   DemoRoute: typeof DemoRoute
+  DriverRoute: typeof DriverRouteWithChildren
   PrescriptionsRoute: typeof PrescriptionsRoute
   ReceiptRoute: typeof ReceiptRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -268,7 +281,6 @@ export interface RootRouteChildren {
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
   CategorySlugRoute: typeof CategorySlugRoute
-  DriverLoginRoute: typeof DriverLoginRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
@@ -314,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: '/prescriptions'
       fullPath: '/prescriptions'
       preLoaderRoute: typeof PrescriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/driver': {
+      id: '/driver'
+      path: '/driver'
+      fullPath: '/driver'
+      preLoaderRoute: typeof DriverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo': {
@@ -395,10 +414,10 @@ declare module '@tanstack/react-router' {
     }
     '/driver/login': {
       id: '/driver/login'
-      path: '/driver/login'
+      path: '/login'
       fullPath: '/driver/login'
       preLoaderRoute: typeof DriverLoginRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DriverRoute
     }
     '/category/$slug': {
       id: '/category/$slug'
@@ -409,6 +428,17 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface DriverRouteChildren {
+  DriverLoginRoute: typeof DriverLoginRoute
+}
+
+const DriverRouteChildren: DriverRouteChildren = {
+  DriverLoginRoute: DriverLoginRoute,
+}
+
+const DriverRouteWithChildren =
+  DriverRoute._addFileChildren(DriverRouteChildren)
 
 interface StaffRouteChildren {
   StaffDashboardRoute: typeof StaffDashboardRoute
@@ -432,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ConsultationRoute: ConsultationRoute,
   DemoRoute: DemoRoute,
+  DriverRoute: DriverRouteWithChildren,
   PrescriptionsRoute: PrescriptionsRoute,
   ReceiptRoute: ReceiptRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -439,7 +470,6 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
   CategorySlugRoute: CategorySlugRoute,
-  DriverLoginRoute: DriverLoginRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
