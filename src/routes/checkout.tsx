@@ -888,19 +888,23 @@ function Checkout() {
               </button>
               <button
                 onClick={async () => {
-                  await saveAddress({
-                    firstName: delivery_.firstName,
-                    lastName: delivery_.lastName,
-                    phone: delivery_.phone,
-                    email: delivery_.email,
-                    street: delivery_.street,
-                    suburb: delivery_.suburb,
-                    city: delivery_.city,
-                    province: delivery_.province,
-                    postal: delivery_.postal,
-                  });
                   setAskSaveAddress(false);
                   toast.success("Address saved to your profile");
+                  try {
+                    await saveAddress({
+                      firstName: delivery_.firstName,
+                      lastName: delivery_.lastName,
+                      phone: delivery_.phone,
+                      email: delivery_.email,
+                      street: delivery_.street,
+                      suburb: delivery_.suburb,
+                      city: delivery_.city,
+                      province: delivery_.province,
+                      postal: delivery_.postal,
+                    });
+                  } catch (err) {
+                    console.error("saveAddress failed", err);
+                  }
                 }}
                 className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-dark"
               >
