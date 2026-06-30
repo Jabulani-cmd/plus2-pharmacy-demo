@@ -153,20 +153,6 @@ export function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex items-center overflow-hidden rounded-full border border-[#E5E7EB] bg-white text-[11px] font-bold md:hidden">
-            <button
-              type="button"
-              onClick={() => setCurrency("USD")}
-              className={`px-2 py-1 transition ${currency === "USD" ? "bg-primary text-white" : "text-[#6B7280]"}`}
-              aria-label="Show prices in US Dollars"
-            >US$</button>
-            <button
-              type="button"
-              onClick={() => setCurrency("ZIG")}
-              className={`px-2 py-1 transition ${currency === "ZIG" ? "bg-primary text-white" : "text-[#6B7280]"}`}
-              aria-label="Show prices in Zimbabwe Gold"
-            >ZiG</button>
-          </div>
           {user && <LiveStatusBadge className="hidden sm:inline-flex" />}
           {user && (
             <NotificationsBell audience="customer" userId={user.id ?? user.email} />
@@ -201,6 +187,25 @@ export function Navbar() {
             </AnimatePresence>
           </button>
         </div>
+      </div>
+
+      {/* Mobile secondary row: currency + live status (own row, never collides with logo) */}
+      <div className="flex items-center justify-between gap-2 px-4 pb-2 md:hidden">
+        <div className="flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full border border-[#E5E7EB] bg-white text-[11px] font-bold">
+          <button
+            type="button"
+            onClick={() => setCurrency("USD")}
+            className={`px-2 py-1 transition ${currency === "USD" ? "bg-primary text-white" : "text-[#6B7280]"}`}
+            aria-label="Show prices in US Dollars"
+          >US$</button>
+          <button
+            type="button"
+            onClick={() => setCurrency("ZIG")}
+            className={`px-2 py-1 transition ${currency === "ZIG" ? "bg-primary text-white" : "text-[#6B7280]"}`}
+            aria-label="Show prices in Zimbabwe Gold"
+          >ZiG</button>
+        </div>
+        {user && <LiveStatusBadge className="shrink-0" />}
       </div>
 
       {/* Mobile search */}
