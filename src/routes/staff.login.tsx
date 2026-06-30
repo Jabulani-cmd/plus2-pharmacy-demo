@@ -20,7 +20,13 @@ function StaffLogin() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (staff) navigate({ to: "/staff/dashboard", replace: true });
+    if (staff) {
+      const adminRoles = ["system_admin", "super_admin"];
+      navigate({
+        to: adminRoles.includes(staff.role) ? "/staff/select-portal" : "/staff/dashboard",
+        replace: true,
+      });
+    }
   }, [staff, navigate]);
 
   const submit = async (e: React.FormEvent) => {
@@ -30,7 +36,11 @@ function StaffLogin() {
     setLoading(false);
     if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
     toast.success(`Welcome, ${r.staff?.name.split(" ")[0]}`);
-    navigate({ to: "/staff/dashboard", replace: true });
+    const adminRoles = ["system_admin", "super_admin"];
+    navigate({
+      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
+      replace: true,
+    });
   };
 
   const oneClick = async (em: string, pw: string) => {
@@ -39,7 +49,11 @@ function StaffLogin() {
     setLoading(false);
     if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
     toast.success(`Signed in as ${r.staff?.roleLabel}`);
-    navigate({ to: "/staff/dashboard", replace: true });
+    const adminRoles = ["system_admin", "super_admin"];
+    navigate({
+      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
+      replace: true,
+    });
   };
 
   return (
