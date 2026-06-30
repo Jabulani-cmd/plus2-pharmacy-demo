@@ -197,7 +197,8 @@ export default function PaymentModal({
     >
       <div
         className="bg-white rounded-xl shadow-2xl w-full
-          max-w-md max-h-[92vh] overflow-y-auto"
+          max-w-md max-h-[92vh] overflow-y-auto overflow-x-hidden
+          mx-auto"
       >
         {/* ---- HEADER ---- */}
         <div
