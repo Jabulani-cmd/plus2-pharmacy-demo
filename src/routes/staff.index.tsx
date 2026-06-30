@@ -10,7 +10,15 @@ function StaffIndex() {
   const staff = useStaffAuth((s) => s.staff);
   const navigate = useNavigate();
   useEffect(() => {
-    navigate({ to: staff ? "/staff/dashboard" : "/staff/login", replace: true });
+    if (!staff) {
+      navigate({ to: "/staff/login", replace: true });
+      return;
+    }
+    const adminRoles = ["system_admin", "super_admin"];
+    navigate({
+      to: adminRoles.includes(staff.role) ? "/staff/select-portal" : "/staff/dashboard",
+      replace: true,
+    });
   }, [staff, navigate]);
   return null;
 }
