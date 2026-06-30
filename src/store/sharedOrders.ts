@@ -239,10 +239,10 @@ export const useSharedOrders = create<State>()((set, get) => ({
         };
         // Optimistic local insert
         set((s) => ({ orders: [order, ...s.orders.filter((x) => x.id !== order.id)] }));
-        // Persist to Supabase so every device sees it
-        void supabase.from(TABLE).insert(orderToRow(order)).then(({ error }) => {
-          if (error) console.error("[sharedOrders] insert failed", error);
-        });
+        // Persist to Supabase so every device sees it. Queue + retry on
+        // failure so the order eventually reaches the dispatch board.
+        queuePending(order);
+        void persistOrder(order);
 
         // Customer confirmation
         pushNotification({
