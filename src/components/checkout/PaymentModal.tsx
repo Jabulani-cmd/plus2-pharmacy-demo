@@ -271,7 +271,7 @@ export default function PaymentModal({
         {/* SUCCESS STATE        */}
         {/* ==================== */}
         {status === "success" && (
-          <div className="p-6 text-center">
+          <div className="p-4 sm:p-6 text-center">
             <div
               className="w-16 h-16 rounded-full flex
                 items-center justify-center mx-auto mb-4"
@@ -346,7 +346,7 @@ export default function PaymentModal({
         {(status === "processing" ||
           (status === "prompt_sent" &&
             !isBankTransfer(selectedMethod ?? ""))) && (
-          <div className="p-8 text-center">
+          <div className="p-6 sm:p-8 text-center">
             {status === "processing" ? (
               <Loader2
                 size={48}
@@ -407,7 +407,7 @@ export default function PaymentModal({
         {/* ==================== */}
         {status === "prompt_sent" &&
           isBankTransfer(selectedMethod ?? "") && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Building2
                 size={20}
@@ -517,7 +517,7 @@ export default function PaymentModal({
         {/* FAILED STATE         */}
         {/* ==================== */}
         {status === "failed" && (
-          <div className="p-8 text-center">
+          <div className="p-6 sm:p-8 text-center">
             <AlertCircle
               size={48}
               className="mx-auto mb-4 text-red-500"
@@ -550,7 +550,7 @@ export default function PaymentModal({
         {/* IDLE — METHOD SELECT */}
         {/* ==================== */}
         {status === "idle" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <p
               className="text-xs font-semibold uppercase
                 tracking-wide text-gray-400 mb-3"
