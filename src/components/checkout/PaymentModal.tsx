@@ -3,7 +3,7 @@
 // src/components/checkout/PaymentModal.tsx
 // ============================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   X,
   Smartphone,
@@ -79,6 +79,15 @@ export default function PaymentModal({
   const [statusMessage, setStatusMessage] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
