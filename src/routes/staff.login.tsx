@@ -57,7 +57,7 @@ function StaffLogin() {
   };
 
   return (
-    <div className="mx-auto grid min-h-screen max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1fr_440px] lg:py-12">
+    <div className="mx-auto grid min-h-screen w-full max-w-7xl gap-8 px-4 py-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:py-12">
       {/* Hero */}
       <div className="hidden flex-col justify-between rounded-2xl bg-white/10 p-8 text-white shadow-2xl ring-1 ring-white/20 backdrop-blur lg:flex">
         <div>
@@ -84,7 +84,7 @@ function StaffLogin() {
       </div>
 
       {/* Form */}
-      <div className="rounded-2xl border border-white/20 bg-white p-6 shadow-2xl md:p-8">
+      <div className="min-w-0 w-full overflow-hidden rounded-2xl border border-white/20 bg-white p-5 shadow-2xl sm:p-6 md:p-8">
         <a href="/" className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary lg:hidden">
           <Home className="h-3.5 w-3.5" /> Customer site
         </a>
@@ -178,7 +178,7 @@ function StaffLogin() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[10px] text-muted-foreground">Demo passwords: <span className="font-mono">SysAdmin1234! · Admin1234! · Staff1234!</span></p>
+          <p className="mt-3 break-words text-[10px] text-muted-foreground">Demo passwords: <span className="font-mono break-all">SysAdmin1234! · Admin1234! · Staff1234!</span></p>
         </div>
       </div>
     </div>
