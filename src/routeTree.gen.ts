@@ -25,6 +25,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as DriverIndexRouteImport } from './routes/driver.index'
+import { Route as StaffSelectPortalRouteImport } from './routes/staff.select-portal'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as StaffDashboardRouteImport } from './routes/staff.dashboard'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
@@ -111,6 +112,11 @@ const DriverIndexRoute = DriverIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DriverRoute,
 } as any)
+const StaffSelectPortalRoute = StaffSelectPortalRouteImport.update({
+  id: '/select-portal',
+  path: '/select-portal',
+  getParentRoute: () => StaffRoute,
+} as any)
 const StaffLoginRoute = StaffLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
+  '/staff/select-portal': typeof StaffSelectPortalRoute
   '/driver/': typeof DriverIndexRoute
   '/staff/': typeof StaffIndexRoute
 }
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
+  '/staff/select-portal': typeof StaffSelectPortalRoute
   '/driver': typeof DriverIndexRoute
   '/staff': typeof StaffIndexRoute
 }
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/product/$id': typeof ProductIdRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
+  '/staff/select-portal': typeof StaffSelectPortalRoute
   '/driver/': typeof DriverIndexRoute
   '/staff/': typeof StaffIndexRoute
 }
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
+    | '/staff/select-portal'
     | '/driver/'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
+    | '/staff/select-portal'
     | '/driver'
     | '/staff'
   id:
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/product/$id'
     | '/staff/dashboard'
     | '/staff/login'
+    | '/staff/select-portal'
     | '/driver/'
     | '/staff/'
   fileRoutesById: FileRoutesById
@@ -408,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriverIndexRouteImport
       parentRoute: typeof DriverRoute
     }
+    '/staff/select-portal': {
+      id: '/staff/select-portal'
+      path: '/select-portal'
+      fullPath: '/staff/select-portal'
+      preLoaderRoute: typeof StaffSelectPortalRouteImport
+      parentRoute: typeof StaffRoute
+    }
     '/staff/login': {
       id: '/staff/login'
       path: '/login'
@@ -462,12 +481,14 @@ const DriverRouteWithChildren =
 interface StaffRouteChildren {
   StaffDashboardRoute: typeof StaffDashboardRoute
   StaffLoginRoute: typeof StaffLoginRoute
+  StaffSelectPortalRoute: typeof StaffSelectPortalRoute
   StaffIndexRoute: typeof StaffIndexRoute
 }
 
 const StaffRouteChildren: StaffRouteChildren = {
   StaffDashboardRoute: StaffDashboardRoute,
   StaffLoginRoute: StaffLoginRoute,
+  StaffSelectPortalRoute: StaffSelectPortalRoute,
   StaffIndexRoute: StaffIndexRoute,
 }
 
