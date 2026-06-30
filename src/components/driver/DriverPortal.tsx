@@ -293,10 +293,16 @@ function ActiveDeliveryCard({
     "card", "visa", "mastercard", "international",
     "online",
   ];
-  const COD_METHODS = ["cash on delivery", "cod", "cash"];
-  const paymentLc = (order.paymentMethod ?? "").toLowerCase();
-  const isCOD = COD_METHODS.some((m) => paymentLc.includes(m));
-  const isAlreadyPaid = !isCOD && PREPAID_METHODS.some((m) => paymentLc.includes(m));
+  const paymentLc = (order.paymentMethod ?? "").toLowerCase().trim();
+  // Check prepaid FIRST so "EcoCash" isn't mis-flagged as cash on delivery
+  // (the substring "cash" otherwise matches inside "ecocash").
+  const isAlreadyPaid = PREPAID_METHODS.some((m) => paymentLc.includes(m));
+  const isCOD =
+    !isAlreadyPaid &&
+    (/\bcash\b/.test(paymentLc) ||
+      paymentLc.includes("cash on delivery") ||
+      paymentLc === "cod" ||
+      paymentLc.includes("on delivery"));
   const isZigCOD = /zig/i.test(order.paymentMethod ?? "");
   const codAmount = isZigCOD
     ? `ZiG ${(Number(order.total) * 26.5).toFixed(2)}`
@@ -371,9 +377,33 @@ function ActiveDeliveryCard({
           <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             <MapPin className="h-3 w-3" /> Deliver to
           </div>
-          <div className="text-xs font-semibold text-slate-700">
-            {order.address}
-          </div>
+          {order.deliveryAddress ? (
+            <div className="text-xs font-semibold text-slate-700 space-y-0.5">
+              <div>
+                {order.deliveryAddress.firstName} {order.deliveryAddress.lastName}
+              </div>
+              <div>{order.deliveryAddress.street}</div>
+              <div>
+                {[order.deliveryAddress.suburb, order.deliveryAddress.city]
+                  .filter(Boolean)
+                  .join(", ")}
+              </div>
+              {(order.deliveryAddress.province || order.deliveryAddress.postal) && (
+                <div className="text-slate-500">
+                  {[order.deliveryAddress.province, order.deliveryAddress.postal]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              )}
+              <div className="pt-1 text-slate-500">
+                📞 {order.deliveryAddress.phone || order.phone}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs font-semibold text-slate-700">
+              {order.address}
+            </div>
+          )}
         </div>
 
         {/* items */}
