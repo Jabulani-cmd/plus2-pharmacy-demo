@@ -192,7 +192,7 @@ export default function PaymentModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center
-        justify-center p-4"
+        justify-center p-2 sm:p-4"
       style={{ background: "rgba(0,0,0,0.75)" }}
     >
       <div
@@ -202,16 +202,16 @@ export default function PaymentModal({
         {/* ---- HEADER ---- */}
         <div
           className="flex items-center justify-between
-            px-6 py-4 border-b border-gray-200 sticky top-0
+            gap-3 px-4 sm:px-6 py-4 border-b border-gray-200 sticky top-0
             bg-white z-10"
         >
-          <div>
-            <h2 className="text-base font-bold text-gray-900">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-bold text-gray-900 truncate">
               {status === "success"
                 ? "Payment Successful"
                 : "Complete Payment"}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5 truncate">
               {orderId}
               {rxRef ? ` · ${rxRef}` : ""}
             </p>
@@ -219,7 +219,7 @@ export default function PaymentModal({
           {status !== "processing" && (
             <button
               onClick={handleClose}
-              className="p-2 rounded-lg hover:bg-gray-100
+              className="p-2 shrink-0 rounded-lg hover:bg-gray-100
                 transition-colors"
             >
               <X size={18} className="text-gray-500" />
@@ -229,60 +229,40 @@ export default function PaymentModal({
 
         {/* ---- ORDER SUMMARY ---- */}
         <div
-          className="mx-6 mt-4 p-4 rounded-lg"
+          className="mx-4 sm:mx-6 mt-4 p-4 rounded-lg"
           style={{
             background: "#F0F9F4",
             border: "1px solid #BBF7D0",
           }}
         >
-          <div className="flex justify-between items-start
-            gap-4"
+          <p
+            className="text-xs font-semibold uppercase tracking-wide mb-1"
+            style={{ color: "#0EA5E9" }}
           >
-            <div className="flex-1 min-w-0">
-              <p
-                className="text-xs font-semibold uppercase
-                  tracking-wide mb-1"
-                style={{ color: "#0EA5E9" }}
-              >
-                Order Summary
-              </p>
-              <p className="text-sm text-gray-600 leading-snug">
-                {itemSummary}
-              </p>
-              {orderType === "Prescription" && (
-                <span
-                  className="inline-block mt-1 px-2 py-0.5
-                    rounded-full text-xs font-semibold
-                    bg-purple-100 text-purple-700"
-                >
-                  Prescription Order
-                </span>
-              )}
+            Order Summary
+          </p>
+          <p className="text-sm text-gray-600 leading-snug break-words">
+            {itemSummary}
+          </p>
+          {orderType === "Prescription" && (
+            <span
+              className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700"
+            >
+              Prescription Order
+            </span>
+          )}
+          <div className="mt-3 pt-3 border-t border-[#BBF7D0] space-y-1 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="font-medium text-gray-800 tabular-nums">{formatAmount(subtotal)}</span>
             </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-xs text-gray-400">Subtotal</p>
-              <p className="text-sm text-gray-700">
-                {formatAmount(subtotal)}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                VAT (15%)
-              </p>
-              <p className="text-sm text-gray-700">
-                {formatAmount(vat)}
-              </p>
-              <p
-                className="text-xs font-semibold uppercase
-                  tracking-wide mt-1"
-                style={{ color: "#0EA5E9" }}
-              >
-                Total
-              </p>
-              <p
-                className="text-lg font-bold"
-                style={{ color: "#0EA5E9" }}
-              >
-                {formatAmount(amount)}
-              </p>
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-500">VAT (15%)</span>
+              <span className="font-medium text-gray-800 tabular-nums">{formatAmount(vat)}</span>
+            </div>
+            <div className="flex justify-between gap-3 pt-1 mt-1 border-t border-[#BBF7D0]">
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#0EA5E9" }}>Total</span>
+              <span className="text-lg font-bold tabular-nums" style={{ color: "#0EA5E9" }}>{formatAmount(amount)}</span>
             </div>
           </div>
         </div>
@@ -291,7 +271,7 @@ export default function PaymentModal({
         {/* SUCCESS STATE        */}
         {/* ==================== */}
         {status === "success" && (
-          <div className="p-6 text-center">
+          <div className="p-4 sm:p-6 text-center">
             <div
               className="w-16 h-16 rounded-full flex
                 items-center justify-center mx-auto mb-4"
@@ -366,7 +346,7 @@ export default function PaymentModal({
         {(status === "processing" ||
           (status === "prompt_sent" &&
             !isBankTransfer(selectedMethod ?? ""))) && (
-          <div className="p-8 text-center">
+          <div className="p-6 sm:p-8 text-center">
             {status === "processing" ? (
               <Loader2
                 size={48}
@@ -427,7 +407,7 @@ export default function PaymentModal({
         {/* ==================== */}
         {status === "prompt_sent" &&
           isBankTransfer(selectedMethod ?? "") && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Building2
                 size={20}
@@ -537,7 +517,7 @@ export default function PaymentModal({
         {/* FAILED STATE         */}
         {/* ==================== */}
         {status === "failed" && (
-          <div className="p-8 text-center">
+          <div className="p-6 sm:p-8 text-center">
             <AlertCircle
               size={48}
               className="mx-auto mb-4 text-red-500"
@@ -570,7 +550,7 @@ export default function PaymentModal({
         {/* IDLE — METHOD SELECT */}
         {/* ==================== */}
         {status === "idle" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <p
               className="text-xs font-semibold uppercase
                 tracking-wide text-gray-400 mb-3"
