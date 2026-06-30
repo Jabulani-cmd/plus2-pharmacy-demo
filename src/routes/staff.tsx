@@ -27,6 +27,8 @@ import {
   BarChart3,
   ClipboardList,
   Tag,
+  Repeat,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/staff")({
@@ -234,12 +236,12 @@ function StaffLayout() {
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 lg:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1 ring-1 ring-[#E5E7EB]">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white p-1 ring-1 ring-[#E5E7EB] md:h-10 md:w-10">
               <img src={kingsLogo} alt="Kings Pharmacy" className="h-full w-full object-contain" />
             </div>
-            <div>
-              <div className="text-sm font-extrabold leading-tight text-foreground">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-extrabold leading-tight text-foreground">
                 Kings Pharmacy
               </div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -248,7 +250,8 @@ function StaffLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Desktop controls */}
+          <div className="hidden items-center gap-3 md:flex">
             <LiveStatusBadge />
             <NotificationsBell audience="staff" />
 
@@ -289,8 +292,85 @@ function StaffLayout() {
               </button>
             </div>
           </div>
+
+          {/* Mobile controls */}
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
+            <NotificationsBell audience="staff" />
+            <button
+              onClick={() => setAccountOpen(true)}
+              aria-label="Open account menu"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white shadow"
+              style={{ background: ROLE_BADGE_BG[staff.role] }}
+            >
+              {staff.name
+                .split(" ")
+                .map((n) => n[0])
+                .slice(0, 2)
+                .join("")}
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Mobile account slide-out */}
+      {accountOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 md:hidden"
+          onClick={() => setAccountOpen(false)}
+          role="dialog"
+        >
+          <div
+            className="absolute right-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm font-black text-[#1B3A6B]">Account</span>
+              <button onClick={() => setAccountOpen(false)} aria-label="Close menu" className="rounded-md p-1.5 hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div
+                className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-black text-white"
+                style={{ background: ROLE_BADGE_BG[staff.role] }}
+              >
+                {staff.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-bold text-[#1B3A6B]">{staff.name}</div>
+                <div className="truncate text-xs text-slate-500">{staff.roleLabel}</div>
+              </div>
+            </div>
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+              <span className="text-xs font-bold text-slate-500">Connection</span>
+              <LiveStatusBadge />
+            </div>
+            <Link
+              to="/"
+              onClick={() => setAccountOpen(false)}
+              className="mb-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Home className="h-4 w-4" /> Customer site
+            </Link>
+            <Link
+              to="/staff/select-portal"
+              onClick={() => setAccountOpen(false)}
+              className="mb-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Repeat className="h-4 w-4" /> Switch Portal
+            </Link>
+            <button
+              onClick={() => {
+                setAccountOpen(false);
+                onLogout();
+              }}
+              className="mt-auto flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" /> Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mx-auto flex max-w-[1600px] gap-6 px-4 py-6 lg:px-6">
         {/* Sidebar */}
