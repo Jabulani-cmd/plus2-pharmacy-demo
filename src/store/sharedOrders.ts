@@ -6,6 +6,38 @@
 import { create } from "zustand";
 import { pushNotification } from "./notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// localStorage queue of orders awaiting successful Supabase persistence.
+// Lets us retry on network blips and across page reloads so a checkout
+// success never silently fails to reach the dispatcher.
+const PENDING_KEY = "kings-shared-orders-pending";
+
+function readPending(): SharedOrder[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? (JSON.parse(raw) as SharedOrder[]) : [];
+  } catch {
+    return [];
+  }
+}
+function writePending(list: SharedOrder[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+function queuePending(order: SharedOrder) {
+  const list = readPending().filter((o) => o.id !== order.id);
+  list.push(order);
+  writePending(list);
+}
+function clearPending(id: string) {
+  writePending(readPending().filter((o) => o.id !== id));
+}
 
 export type SharedOrderStatus =
   | "Confirmed"
