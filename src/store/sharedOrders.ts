@@ -6,6 +6,38 @@
 import { create } from "zustand";
 import { pushNotification } from "./notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// localStorage queue of orders awaiting successful Supabase persistence.
+// Lets us retry on network blips and across page reloads so a checkout
+// success never silently fails to reach the dispatcher.
+const PENDING_KEY = "kings-shared-orders-pending";
+
+function readPending(): SharedOrder[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? (JSON.parse(raw) as SharedOrder[]) : [];
+  } catch {
+    return [];
+  }
+}
+function writePending(list: SharedOrder[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+function queuePending(order: SharedOrder) {
+  const list = readPending().filter((o) => o.id !== order.id);
+  list.push(order);
+  writePending(list);
+}
+function clearPending(id: string) {
+  writePending(readPending().filter((o) => o.id !== id));
+}
 
 export type SharedOrderStatus =
   | "Confirmed"
@@ -207,10 +239,10 @@ export const useSharedOrders = create<State>()((set, get) => ({
         };
         // Optimistic local insert
         set((s) => ({ orders: [order, ...s.orders.filter((x) => x.id !== order.id)] }));
-        // Persist to Supabase so every device sees it
-        void supabase.from(TABLE).insert(orderToRow(order)).then(({ error }) => {
-          if (error) console.error("[sharedOrders] insert failed", error);
-        });
+        // Persist to Supabase so every device sees it. Queue + retry on
+        // failure so the order eventually reaches the dispatch board.
+        queuePending(order);
+        void persistOrder(order);
 
         // Customer confirmation
         pushNotification({
@@ -377,6 +409,36 @@ export const useSharedOrders = create<State>()((set, get) => ({
 }));
 
 // --- Initial fetch + realtime subscription (browser only) ---
+// Persist a single order to Supabase with one immediate retry. On final
+// failure surface an error toast so checkout/customer flows aren't silent.
+async function persistOrder(order: SharedOrder, attempt = 0): Promise<void> {
+  const { error } = await supabase.from(TABLE).upsert(orderToRow(order));
+  if (!error) {
+    clearPending(order.id);
+    return;
+  }
+  console.error("[sharedOrders] insert failed (attempt " + (attempt + 1) + ")", error);
+  if (attempt < 2) {
+    await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    return persistOrder(order, attempt + 1);
+  }
+  try {
+    toast.error(
+      "Order " + order.id + " was placed locally but couldn't sync to the dispatcher. We'll retry automatically."
+    );
+  } catch {
+    /* toast may not be available in this context */
+  }
+}
+
+async function flushPending() {
+  const list = readPending();
+  for (const order of list) {
+    // eslint-disable-next-line no-await-in-loop
+    await persistOrder(order);
+  }
+}
+
 if (typeof window !== "undefined") {
   const bootstrap = async () => {
     try {
@@ -389,11 +451,17 @@ if (typeof window !== "undefined") {
         return;
       }
           useSharedOrders.setState({ orders: (data ?? []).map((r) => rowToOrder(r as unknown as Row)) });
+      // Once we have the baseline, retry any orders that never landed.
+      await flushPending();
     } catch (e) {
       console.error("[sharedOrders] bootstrap error", e);
     }
   };
   void bootstrap();
+
+  // Retry pending orders whenever the tab regains focus or connectivity.
+  window.addEventListener("online", () => { void flushPending(); });
+  window.addEventListener("focus", () => { void flushPending(); });
 
   supabase
     .channel("shared_orders_changes")
