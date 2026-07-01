@@ -55,6 +55,8 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           placedAt: o.placedAt,
           driverId: o.driverName ? "live-" + o.id : undefined,
           eta: o.eta,
+          phone: o.phone,
+          deliveryAddress: o.deliveryAddress,
         };
       }),
     [sharedOrders]
