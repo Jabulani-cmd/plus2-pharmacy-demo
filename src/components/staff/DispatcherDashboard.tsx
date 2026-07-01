@@ -1029,7 +1029,23 @@ function DriversView({
                       </a>
                     }
                   />
-                  <Row label="Address" value={current.address} />
+                  <Row
+                    label="Address"
+                    value={(() => {
+                      const da = current.deliveryAddress;
+                      if (!da) return current.address;
+                      const recipient = [da.firstName, da.lastName].filter(Boolean).join(" ").trim();
+                      const parts = [
+                        recipient,
+                        da.street,
+                        [da.suburb, da.city].filter(Boolean).join(", "),
+                        [da.province, da.postal].filter(Boolean).join(" "),
+                      ].filter(Boolean);
+                      return (
+                        <span className="whitespace-pre-line">{parts.join("\n")}</span>
+                      );
+                    })()}
+                  />
                   <Row
                     label="Items"
                     value={
