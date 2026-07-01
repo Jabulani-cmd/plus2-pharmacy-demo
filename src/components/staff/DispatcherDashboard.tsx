@@ -55,6 +55,8 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           placedAt: o.placedAt,
           driverId: o.driverName ? "live-" + o.id : undefined,
           eta: o.eta,
+          phone: o.phone,
+          deliveryAddress: o.deliveryAddress,
         };
       }),
     [sharedOrders]
@@ -537,12 +539,40 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         <div className="mt-1 text-xs font-semibold text-foreground">
                           {d.customer}
                         </div>
-                        <div className="mt-1 flex items-start gap-1 text-[11px] text-muted-foreground">
-                          <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                          <span className="line-clamp-2">
-                            {d.address}
-                          </span>
-                        </div>
+                        {(() => {
+                          const da = d.deliveryAddress;
+                          const recipient = da
+                            ? [da.firstName, da.lastName].filter(Boolean).join(" ").trim()
+                            : "";
+                          const line1 = da?.street || d.address;
+                          const line2 = da
+                            ? [da.suburb, da.city, da.province].filter(Boolean).join(", ")
+                            : "";
+                          return (
+                            <div className="mt-1 flex items-start gap-1 text-[11px] text-muted-foreground">
+                              <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                              <div className="min-w-0 break-words">
+                                {recipient && recipient !== d.customer && (
+                                  <div className="font-semibold text-foreground">{recipient}</div>
+                                )}
+                                <div>{line1}</div>
+                                {line2 && <div>{line2}</div>}
+                                {da?.postal && <div>{da.postal}</div>}
+                                {(da?.phone || d.phone) && (
+                                  <div className="flex items-center gap-1 pt-0.5">
+                                    <Phone className="h-3 w-3" />
+                                    <a
+                                      href={"tel:" + (da?.phone || d.phone)}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {da?.phone || d.phone}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
                           <span>
                             {d.items} item{d.items > 1 ? "s" : ""}{" "}
@@ -999,7 +1029,23 @@ function DriversView({
                       </a>
                     }
                   />
-                  <Row label="Address" value={current.address} />
+                  <Row
+                    label="Address"
+                    value={(() => {
+                      const da = current.deliveryAddress;
+                      if (!da) return current.address;
+                      const recipient = [da.firstName, da.lastName].filter(Boolean).join(" ").trim();
+                      const parts = [
+                        recipient,
+                        da.street,
+                        [da.suburb, da.city].filter(Boolean).join(", "),
+                        [da.province, da.postal].filter(Boolean).join(" "),
+                      ].filter(Boolean);
+                      return (
+                        <span className="whitespace-pre-line">{parts.join("\n")}</span>
+                      );
+                    })()}
+                  />
                   <Row
                     label="Items"
                     value={

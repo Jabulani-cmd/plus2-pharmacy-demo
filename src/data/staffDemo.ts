@@ -46,6 +46,18 @@ export type StaffDelivery = {
   eta?: string;
   paymentMethod: string;
   placedAt: string;
+  phone?: string;
+  deliveryAddress?: {
+    firstName?: string;
+    lastName?: string;
+    street?: string;
+    suburb?: string;
+    city?: string;
+    province?: string;
+    postal?: string;
+    phone?: string;
+    email?: string;
+  };
 };
 
 export type StaffInventoryItem = {
