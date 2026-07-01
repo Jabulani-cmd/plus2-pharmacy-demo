@@ -1,14 +1,17 @@
 {
-  "name": "Kings Pharmacy — Driver App",
+  "name": "KP Driver — Kings Pharmacy",
   "short_name": "KP Driver",
-  "id": "/driver?source=pwa",
+  "id": "kp-driver-app",
   "description": "Kings Pharmacy delivery driver portal",
-  "start_url": "/driver",
+  "start_url": "/driver?source=pwa",
   "scope": "/driver",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
   "background_color": "#1B3A6B",
-  "theme_color": "#1E5BC6",
+  "theme_color": "#1B3A6B",
+  "lang": "en-ZW",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/driver-icon-192.png",
@@ -27,8 +30,18 @@
   "shortcuts": [
     {
       "name": "My Deliveries",
-      "url": "/driver",
-      "description": "View active deliveries"
+      "short_name": "Deliveries",
+      "url": "/driver?tab=active&source=shortcut",
+      "description": "View active deliveries",
+      "icons": [{ "src": "/icons/driver-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Completed Today",
+      "short_name": "Completed",
+      "url": "/driver?tab=completed&source=shortcut",
+      "icons": [{ "src": "/icons/driver-icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
