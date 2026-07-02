@@ -134,9 +134,34 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `
           (function() {
             if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
-            }
+            try {
+              var isDriver = window.location.pathname.indexOf('/driver') === 0;
+              // Swap manifest link BEFORE React hydration so Chrome picks the
+              // right manifest on first paint and can fire beforeinstallprompt
+              // for the driver PWA as a distinct installable app.
+              var targetHref = isDriver ? '/driver-manifest.json' : '/manifest.webmanifest';
+              var links = document.querySelectorAll('link[rel="manifest"]');
+              var found = false;
+              for (var i = 0; i < links.length; i++) {
+                if (links[i].getAttribute('href') === targetHref && !found) { found = true; }
+                else { links[i].parentNode && links[i].parentNode.removeChild(links[i]); }
+              }
+              if (!found) {
+                var l = document.createElement('link');
+                l.rel = 'manifest';
+                l.href = targetHref;
+                document.head.appendChild(l);
+              }
+              var themeMeta = document.querySelector('meta[name="theme-color"]');
+              if (themeMeta) themeMeta.setAttribute('content', isDriver ? '#1B3A6B' : '#0EA5E9');
+              if ('serviceWorker' in navigator) {
+                if (isDriver) {
+                  navigator.serviceWorker.register('/driver-sw.js', { scope: '/driver/' }).catch(function(){});
+                } else {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                }
+              }
+            } catch (e) {}
             window.addEventListener('beforeinstallprompt', function(e) {
               e.preventDefault();
               window.__kingsPwaDeferredPrompt = e;
