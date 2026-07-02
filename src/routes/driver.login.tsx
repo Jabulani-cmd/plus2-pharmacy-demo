@@ -34,8 +34,7 @@ function DriverLogin() {
       const standalone =
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as any).standalone === true;
-      const alreadyInstalled = localStorage.getItem("kp-driver-installed") === "1";
-      if (!fromInstall && !standalone && !alreadyInstalled) {
+      if (!fromInstall && !standalone) {
         navigate({ to: "/driver/install", replace: true });
         return;
       }

@@ -29,11 +29,10 @@ function DriverInstallPage() {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    const previouslyInstalled = localStorage.getItem("kp-driver-installed") === "1";
     if (standalone) {
       localStorage.setItem("kp-driver-installed", "1");
     }
-    if (standalone || fromPWA || previouslyInstalled) {
+    if (standalone || fromPWA) {
       navigate({ to: "/driver", replace: true });
     }
   }, [navigate]);

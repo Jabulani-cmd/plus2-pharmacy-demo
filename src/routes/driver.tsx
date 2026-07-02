@@ -12,23 +12,6 @@ function DriverLayout() {
   );
   const [showSplash, setShowSplash] = useState(false);
 
-  // Register the driver-specific service worker (scope: /driver).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-    // Skip in Lovable preview/dev to avoid caching editor iframes.
-    const host = window.location.hostname;
-    const isPreview =
-      host.startsWith("id-preview--") ||
-      host.startsWith("preview--") ||
-      host.endsWith(".lovableproject.com") ||
-      host.endsWith(".lovableproject-dev.com");
-    if (isPreview) return;
-    navigator.serviceWorker
-      .register("/driver-sw.js", { scope: "/driver" })
-      .catch((err) => console.warn("[KP Driver] SW registration failed", err));
-  }, []);
-
   // Standalone-install splash screen (installed PWA only).
   useEffect(() => {
     if (typeof window === "undefined") return;
