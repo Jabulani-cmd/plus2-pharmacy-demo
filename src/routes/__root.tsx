@@ -142,7 +142,7 @@ function RootShell({ children }: { children: ReactNode }) {
               (function() {
                 try {
                   var isDriver = window.location.pathname.indexOf('/driver') === 0;
-                  var manifestHref = isDriver ? '/driver-manifest.json' : '/manifest.webmanifest';
+                  var manifestHref = isDriver ? '/driver-manifest.json?v=20260702-driver-install' : '/manifest.webmanifest';
                   var appleIconHref = isDriver ? '/icons/driver-icon-192.png' : '/icon-192.png';
                   var theme = isDriver ? '#1B3A6B' : '#0EA5E9';
 
@@ -210,7 +210,7 @@ function RootComponent() {
   // sharing the customer-facing Kings Pharmacy install.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const targetHref = isDriver ? "/driver-manifest.json" : "/manifest.webmanifest";
+    const targetHref = isDriver ? "/driver-manifest.json?v=20260702-driver-install" : "/manifest.webmanifest";
     const appleIconHref = isDriver ? "/icons/driver-icon-192.png" : "/icon-192.png";
     // Remove ALL existing manifest links, then add a fresh one. Chrome only
     // re-evaluates installability (and re-fires beforeinstallprompt for the
