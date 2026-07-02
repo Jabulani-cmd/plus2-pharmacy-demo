@@ -50,9 +50,11 @@ function isChromeFamily(): boolean {
  */
 export function InstallDriverApp({
   variant = "card",
+  persistent = false,
   onDismiss,
 }: {
   variant?: "banner" | "card";
+  persistent?: boolean;
   onDismiss?: () => void;
 }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -67,7 +69,7 @@ export function InstallDriverApp({
       return;
     }
     if (!canInstall()) return;
-    if (sessionStorage.getItem(DISMISS_KEY) === "1") return;
+    if (!persistent && sessionStorage.getItem(DISMISS_KEY) === "1") return;
 
     const pre = (window as any).__kingsPwaDeferredPrompt;
     if (pre) {
@@ -84,6 +86,14 @@ export function InstallDriverApp({
       setDeferredPrompt(prompt);
     };
 
+    const storedPromptHandler = () => {
+      const prompt = (window as any).__kingsPwaDeferredPrompt as BeforeInstallPromptEvent | undefined;
+      if (prompt) {
+        setDeferredPrompt(prompt);
+        setVisible(true);
+      }
+    };
+
     const installedHandler = () => {
       setInstalled(true);
       setVisible(false);
@@ -93,20 +103,22 @@ export function InstallDriverApp({
     };
 
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("kings-pwa-prompt-ready", storedPromptHandler as EventListener);
     window.addEventListener("appinstalled", installedHandler);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("kings-pwa-prompt-ready", storedPromptHandler as EventListener);
       window.removeEventListener("appinstalled", installedHandler);
     };
-  }, []);
+  }, [persistent]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
     setShowIosHint(false);
-    sessionStorage.setItem(DISMISS_KEY, "1");
+    if (!persistent) sessionStorage.setItem(DISMISS_KEY, "1");
     onDismiss?.();
-  }, [onDismiss]);
+  }, [onDismiss, persistent]);
 
   const handleInstall = useCallback(async () => {
     if (isIosSafari()) {
@@ -232,10 +244,12 @@ export function InstallDriverApp({
             <div className="text-sm font-black leading-tight">Download Driver App</div>
             <div className="mt-1 text-[11px] text-sky-100">
               {isIosSafari()
-                ? "Add this page to your Home Screen for one-tap access."
+                  ? "Add this page to your Home Screen for a separate KP Driver icon."
                 : isAndroidChrome()
-                ? "Install on your Android phone for quick access and notifications."
-                : "Install this app on your phone for quick access and notifications."}
+                ? deferredPrompt
+                  ? "Chrome is ready to install the separate driver app icon."
+                  : "If the prompt is not ready yet, use Chrome menu → Add to Home screen."
+                : "Install this app from your browser menu for quick access and notifications."}
             </div>
             <div className="mt-3 flex items-center gap-2">
               <button
@@ -244,15 +258,17 @@ export function InstallDriverApp({
                 className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-black text-[#1B3A6B] shadow transition active:scale-95"
               >
                 <Download className="h-3.5 w-3.5" />
-                {isIosSafari() ? "How to install" : "Install app"}
+                {isIosSafari() ? "How to install" : deferredPrompt ? "Install now" : "Install app"}
               </button>
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="rounded-full px-3 py-2 text-xs font-bold text-white/80 transition hover:bg-white/10"
-              >
-                Dismiss
-              </button>
+              {!persistent && (
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="rounded-full px-3 py-2 text-xs font-bold text-white/80 transition hover:bg-white/10"
+                >
+                  Dismiss
+                </button>
+              )}
             </div>
           </div>
         </div>
