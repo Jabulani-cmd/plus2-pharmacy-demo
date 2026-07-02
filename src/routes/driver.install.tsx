@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/driver/install")({
@@ -18,6 +19,24 @@ export const Route = createFileRoute("/driver/install")({
 
 function DriverInstallPage() {
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const fromPWA = params.get("source") === "pwa";
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    const previouslyInstalled = localStorage.getItem("kp-driver-installed") === "1";
+    if (standalone) {
+      localStorage.setItem("kp-driver-installed", "1");
+    }
+    if (standalone || fromPWA || previouslyInstalled) {
+      navigate({ to: "/driver", replace: true });
+    }
+  }, [navigate]);
+
   const driverUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/driver`
