@@ -3,31 +3,25 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/driver")({
+  head: () => ({
+    meta: [
+      { name: "theme-color", content: "#1B3A6B" },
+      { name: "apple-mobile-web-app-title", content: "KP Driver" },
+    ],
+    links: [
+      {
+        rel: "manifest",
+        href: "/driver-manifest.json?v=20260702-driver-install",
+      },
+      { rel: "apple-touch-icon", href: "/icons/driver-icon-192.png" },
+    ],
+  }),
   component: DriverLayout,
 });
 
 function DriverLayout() {
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== "undefined" ? !navigator.onLine : false,
-  );
+  const [isOffline, setIsOffline] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
-
-  // Register the driver-specific service worker (scope: /driver).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-    // Skip in Lovable preview/dev to avoid caching editor iframes.
-    const host = window.location.hostname;
-    const isPreview =
-      host.startsWith("id-preview--") ||
-      host.startsWith("preview--") ||
-      host.endsWith(".lovableproject.com") ||
-      host.endsWith(".lovableproject-dev.com");
-    if (isPreview) return;
-    navigator.serviceWorker
-      .register("/driver-sw.js", { scope: "/driver" })
-      .catch((err) => console.warn("[KP Driver] SW registration failed", err));
-  }, []);
 
   // Standalone-install splash screen (installed PWA only).
   useEffect(() => {
@@ -45,6 +39,7 @@ function DriverLayout() {
 
   // Online / offline detection.
   useEffect(() => {
+    setIsOffline(!navigator.onLine);
     const goOffline = () => {
       setIsOffline(true);
       toast.error("No internet connection", {
