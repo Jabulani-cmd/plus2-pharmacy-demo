@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { InstallDriverApp } from "@/components/driver/InstallDriverApp";
 
 export const Route = createFileRoute("/driver/install")({
   head: () => ({
@@ -39,8 +40,8 @@ function DriverInstallPage() {
 
   const driverUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/driver`
-      : "https://kingspharmacy-mavingtech.online/driver";
+      ? `${window.location.origin}/driver/install`
+      : "https://kingspharmacy-mavingtech.online/driver/install";
 
   const waMessage = encodeURIComponent(
     "Hi! Here is your Kings Pharmacy Driver App link:\n\n" +
@@ -93,6 +94,10 @@ function DriverInstallPage() {
           <div className="mt-1 text-sm opacity-70">Kings Pharmacy Driver App</div>
         </div>
 
+        <div className="mb-8">
+          <InstallDriverApp variant="card" persistent />
+        </div>
+
         <Section title="Install on Android" steps={androidSteps} />
         <Section title="Install on iPhone" steps={iosSteps} />
 
@@ -123,10 +128,10 @@ function DriverInstallPage() {
         </div>
 
         <a
-          href="/driver"
+          href="/driver/login"
           className="mt-6 flex h-14 w-full items-center justify-center rounded-full bg-white text-base font-black text-[#1B3A6B]"
         >
-          Open Driver App →
+          Continue to Driver Sign In →
         </a>
 
         <div className="mt-4 text-center text-[11px] opacity-50">
