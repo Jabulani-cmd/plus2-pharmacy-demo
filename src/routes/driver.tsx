@@ -7,9 +7,7 @@ export const Route = createFileRoute("/driver")({
 });
 
 function DriverLayout() {
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== "undefined" ? !navigator.onLine : false,
-  );
+  const [isOffline, setIsOffline] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
 
   // Standalone-install splash screen (installed PWA only).
@@ -28,6 +26,7 @@ function DriverLayout() {
 
   // Online / offline detection.
   useEffect(() => {
+    setIsOffline(!navigator.onLine);
     const goOffline = () => {
       setIsOffline(true);
       toast.error("No internet connection", {
