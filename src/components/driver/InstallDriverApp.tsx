@@ -88,6 +88,7 @@ export function InstallDriverApp({
       setInstalled(true);
       setVisible(false);
       setDeferredPrompt(null);
+      try { localStorage.setItem("kp-driver-installed", "1"); } catch {}
       toast.success("Driver app installed successfully");
     };
 
