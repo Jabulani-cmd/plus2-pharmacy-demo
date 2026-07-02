@@ -107,7 +107,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Order medicines, manage prescriptions, and chat with your local Kings Pharmacy branch in Bulawayo." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/809ef271-d8fb-46e8-953b-aa64cf8e51f8/id-preview-9aabf23a--545041ce-6fc5-480c-91af-bcf96c2183a2.lovable.app-1780825527608.png" },
-      { name: "theme-color", content: "#0EA5E9" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "Kings Rx" },
@@ -117,57 +116,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
-      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap",
-      },
-    ],
-    scripts: [
-      {
-        type: "text/javascript",
-        children: `
-          (function() {
-            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
-            try {
-              var isDriver = window.location.pathname.indexOf('/driver') === 0;
-              // Swap manifest link BEFORE React hydration so Chrome picks the
-              // right manifest on first paint and can fire beforeinstallprompt
-              // for the driver PWA as a distinct installable app.
-              var targetHref = isDriver ? '/driver-manifest.json' : '/manifest.webmanifest';
-              var links = document.querySelectorAll('link[rel="manifest"]');
-              var found = false;
-              for (var i = 0; i < links.length; i++) {
-                if (links[i].getAttribute('href') === targetHref && !found) { found = true; }
-                else { links[i].parentNode && links[i].parentNode.removeChild(links[i]); }
-              }
-              if (!found) {
-                var l = document.createElement('link');
-                l.rel = 'manifest';
-                l.href = targetHref;
-                document.head.appendChild(l);
-              }
-              var themeMeta = document.querySelector('meta[name="theme-color"]');
-              if (themeMeta) themeMeta.setAttribute('content', isDriver ? '#1B3A6B' : '#0EA5E9');
-              if ('serviceWorker' in navigator) {
-                if (isDriver) {
-                  navigator.serviceWorker.register('/driver-sw.js', { scope: '/driver' }).catch(function(){});
-                } else {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
-                }
-              }
-            } catch (e) {}
-            window.addEventListener('beforeinstallprompt', function(e) {
-              e.preventDefault();
-              window.__kingsPwaDeferredPrompt = e;
-            });
-          })();
-        `,
       },
     ],
   }),
@@ -181,6 +136,58 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var isDriver = window.location.pathname.indexOf('/driver') === 0;
+                  var manifestHref = isDriver ? '/driver-manifest.json' : '/manifest.webmanifest';
+                  var appleIconHref = isDriver ? '/icons/driver-icon-192.png' : '/icon-192.png';
+                  var theme = isDriver ? '#1B3A6B' : '#0EA5E9';
+
+                  document.write('<link rel="manifest" href="' + manifestHref + '">');
+                  document.write('<link rel="apple-touch-icon" href="' + appleIconHref + '">');
+                  document.write('<meta name="theme-color" content="' + theme + '">');
+
+                  window.addEventListener('beforeinstallprompt', function(e) {
+                    e.preventDefault();
+                    window.__kingsPwaDeferredPrompt = e;
+                    window.dispatchEvent(new CustomEvent('kings-pwa-prompt-ready', { detail: { driver: isDriver } }));
+                  });
+
+                  window.addEventListener('appinstalled', function() {
+                    if (isDriver) {
+                      try { window.localStorage.setItem('kp-driver-installed', '1'); } catch (e) {}
+                    }
+                  });
+
+                  var blockedHost =
+                    window.location.hostname.indexOf('id-preview--') === 0 ||
+                    window.location.hostname.indexOf('preview--') === 0 ||
+                    window.location.hostname === 'lovableproject.com' ||
+                    window.location.hostname.slice(-20) === '.lovableproject.com' ||
+                    window.location.hostname === 'lovableproject-dev.com' ||
+                    window.location.hostname.slice(-24) === '.lovableproject-dev.com' ||
+                    window.location.hostname === 'beta.lovable.dev' ||
+                    window.location.hostname.slice(-17) === '.beta.lovable.dev';
+                  var blockedContext =
+                    !('serviceWorker' in navigator) ||
+                    window.self !== window.top ||
+                    window.location.search.indexOf('sw=off') !== -1 ||
+                    blockedHost ||
+                    window.location.protocol !== 'https:';
+
+                  if (!blockedContext) {
+                    navigator.serviceWorker.register(isDriver ? '/driver-sw.js' : '/sw.js', {
+                      scope: isDriver ? '/driver/' : '/',
+                    }).catch(function(){});
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -204,6 +211,7 @@ function RootComponent() {
   useEffect(() => {
     if (typeof document === "undefined") return;
     const targetHref = isDriver ? "/driver-manifest.json" : "/manifest.webmanifest";
+    const appleIconHref = isDriver ? "/icons/driver-icon-192.png" : "/icon-192.png";
     // Remove ALL existing manifest links, then add a fresh one. Chrome only
     // re-evaluates installability (and re-fires beforeinstallprompt for the
     // distinct manifest `id`) when the <link rel="manifest"> element is
@@ -223,17 +231,21 @@ function RootComponent() {
       link.rel = "manifest";
       link.href = targetHref;
       document.head.appendChild(link);
-      // Clear any previously captured customer/driver install prompt so the
-      // new manifest can be installed as its own app.
-      try {
-        (window as any).__kingsPwaDeferredPrompt = undefined;
-      } catch {}
     }
     const themeMeta = document.querySelector(
       'meta[name="theme-color"]'
     ) as HTMLMetaElement | null;
     if (themeMeta) {
       themeMeta.content = isDriver ? "#1B3A6B" : "#0EA5E9";
+    }
+    const appleIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    if (appleIcon) {
+      appleIcon.href = appleIconHref;
+    } else {
+      const link = document.createElement("link");
+      link.rel = "apple-touch-icon";
+      link.href = appleIconHref;
+      document.head.appendChild(link);
     }
   }, [isDriver]);
 
