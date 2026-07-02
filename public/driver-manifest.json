@@ -4,7 +4,7 @@
   "id": "/driver",
   "description": "Kings Pharmacy delivery driver portal",
   "start_url": "/driver?source=pwa",
-  "scope": "/driver/",
+  "scope": "/driver",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",

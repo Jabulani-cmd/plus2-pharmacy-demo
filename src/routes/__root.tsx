@@ -156,7 +156,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               if (themeMeta) themeMeta.setAttribute('content', isDriver ? '#1B3A6B' : '#0EA5E9');
               if ('serviceWorker' in navigator) {
                 if (isDriver) {
-                  navigator.serviceWorker.register('/driver-sw.js', { scope: '/driver/' }).catch(function(){});
+                  navigator.serviceWorker.register('/driver-sw.js', { scope: '/driver' }).catch(function(){});
                 } else {
                   navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
                 }
