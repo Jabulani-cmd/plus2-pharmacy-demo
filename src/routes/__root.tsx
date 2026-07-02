@@ -180,7 +180,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
                   if (!blockedContext) {
                     navigator.serviceWorker.register(isDriver ? '/driver-sw.js' : '/sw.js', {
-                      scope: isDriver ? '/driver/' : '/',
+                      scope: isDriver ? '/driver' : '/',
                     }).catch(function(){});
                   }
                 } catch (e) {}
