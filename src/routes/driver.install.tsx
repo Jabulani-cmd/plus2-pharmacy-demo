@@ -128,7 +128,7 @@ function DriverInstallPage() {
         </div>
 
         <a
-          href="/driver/login"
+          href="/driver/login?fromInstall=1"
           className="mt-6 flex h-14 w-full items-center justify-center rounded-full bg-white text-base font-black text-[#1B3A6B]"
         >
           Continue to Driver Sign In →

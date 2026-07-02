@@ -29,6 +29,16 @@ function DriverLogin() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const fromInstall = params.get("fromInstall") === "1";
+      const standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true;
+      const alreadyInstalled = localStorage.getItem("kp-driver-installed") === "1";
+      if (!fromInstall && !standalone && !alreadyInstalled) {
+        navigate({ to: "/driver/install", replace: true });
+        return;
+      }
       const { data } = await supabase.auth.getSession();
       if (cancelled || !data.session) return;
       navigate({ to: "/driver", replace: true });
