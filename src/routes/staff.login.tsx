@@ -15,8 +15,8 @@ function StaffLogin() {
   const staff = useStaffAuth((s) => s.staff);
   const login = useStaffAuth((s) => s.login);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@kingspharmacy.co.zw");
-  const [password, setPassword] = useState("Admin1234!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -43,17 +43,10 @@ function StaffLogin() {
     });
   };
 
-  const oneClick = async (em: string, pw: string) => {
-    setEmail(em); setPassword(pw); setLoading(true);
-    const r = await login(em, pw);
-    setLoading(false);
-    if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
-    toast.success(`Signed in as ${r.staff?.roleLabel}`);
-    const adminRoles = ["system_admin", "super_admin"];
-    navigate({
-      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
-      replace: true,
-    });
+  const prefill = (em: string) => {
+    setEmail(em);
+    setPassword("");
+    toast.info("Enter the staff password to sign in.");
   };
 
   return (
