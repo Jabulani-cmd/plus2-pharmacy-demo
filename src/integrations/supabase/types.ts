@@ -463,6 +463,7 @@ export type Database = {
           packed_at: string | null
           payment_method: string
           payment_ref: string
+          payment_verified: boolean
           phone: string
           placed_at: string
           placed_ts: number
@@ -499,6 +500,7 @@ export type Database = {
           packed_at?: string | null
           payment_method?: string
           payment_ref?: string
+          payment_verified?: boolean
           phone?: string
           placed_at?: string
           placed_ts?: number
@@ -535,6 +537,7 @@ export type Database = {
           packed_at?: string | null
           payment_method?: string
           payment_ref?: string
+          payment_verified?: boolean
           phone?: string
           placed_at?: string
           placed_ts?: number
