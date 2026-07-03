@@ -166,7 +166,7 @@ function StaffLogin() {
                     <div className="truncate text-xs font-bold text-foreground">{s.roleLabel}</div>
                     <div className="truncate text-[11px] text-muted-foreground">{s.email}</div>
                   </div>
-                  <span className="shrink-0 rounded border border-primary px-2 py-1 text-[10px] font-bold text-primary">Login</span>
+                  <span className="shrink-0 rounded border border-primary px-2 py-1 text-[10px] font-bold text-primary">Prefill</span>
                 </button>
               </li>
             ))}
