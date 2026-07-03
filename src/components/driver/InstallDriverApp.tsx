@@ -8,6 +8,23 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 const DISMISS_KEY = "driver-install-dismissed";
+const SEPARATE_DRIVER_INSTALL_ORIGIN = "https://plus2-pharmacy.lovable.app";
+
+function shouldUseSeparateDriverInstallOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return (
+    host !== "localhost" &&
+    host !== "127.0.0.1" &&
+    host !== "plus2-pharmacy.lovable.app" &&
+    !host.endsWith(".lovable.app")
+  );
+}
+
+function openSeparateDriverInstaller() {
+  if (typeof window === "undefined") return;
+  window.location.href = `${SEPARATE_DRIVER_INSTALL_ORIGIN}/driver/install?separate=1`;
+}
 
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
@@ -127,11 +144,13 @@ export function InstallDriverApp({
     }
     const prompt = deferredPrompt || (window as any).__kingsPwaDeferredPrompt;
     if (!prompt) {
-      // No native prompt yet (or browser doesn't support it). Show a helpful message instead of failing silently.
       if (isIosSafari()) {
         setShowIosHint(true);
+      } else if (isChromeFamily() && shouldUseSeparateDriverInstallOrigin()) {
+        toast.info("Opening the separate KP Driver installer…", { duration: 2500 });
+        openSeparateDriverInstaller();
       } else if (isChromeFamily()) {
-        toast.info("Chrome will show the install prompt when this page meets app requirements. Tap Install again in a moment.", { duration: 5000 });
+        toast.info("Use Chrome menu → Install app or Add to Home screen. If Chrome shows Open in app, remove the existing Kings Pharmacy icon first.", { duration: 7000 });
       } else {
         toast.info("Use your browser menu and choose 'Add to Home screen' to install the driver app.", { duration: 5000 });
       }
@@ -248,7 +267,9 @@ export function InstallDriverApp({
                 : isAndroidChrome()
                 ? deferredPrompt
                   ? "Chrome is ready to install the separate driver app icon."
-                  : "If the prompt is not ready yet, use Chrome menu → Add to Home screen."
+                  : shouldUseSeparateDriverInstallOrigin()
+                  ? "Tap Install app to open the separate KP Driver installer and create a second home-screen icon."
+                  : "Use Chrome menu → Install app or Add to Home screen."
                 : "Install this app from your browser menu for quick access and notifications."}
             </div>
             <div className="mt-3 flex items-center gap-2">
