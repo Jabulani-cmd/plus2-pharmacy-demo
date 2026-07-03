@@ -153,7 +153,7 @@ function StaffLogin() {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => oneClick(s.email, s.password)}
+                  onClick={() => prefill(s.email)}
                   className="flex w-full items-center gap-3 rounded-md border border-border bg-white px-3 py-2 text-left transition hover:border-primary hover:shadow disabled:opacity-60"
                 >
                   <div
@@ -171,7 +171,7 @@ function StaffLogin() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 break-words text-[10px] text-muted-foreground">Demo passwords: <span className="font-mono break-all">SysAdmin1234! · Admin1234! · Staff1234!</span></p>
+          <p className="mt-3 break-words text-[10px] text-muted-foreground">Click an account to prefill its email, then enter the password shared with your team.</p>
         </div>
       </div>
     </div>
