@@ -15,8 +15,8 @@ function StaffLogin() {
   const staff = useStaffAuth((s) => s.staff);
   const login = useStaffAuth((s) => s.login);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@kingspharmacy.co.zw");
-  const [password, setPassword] = useState("Admin1234!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -43,17 +43,10 @@ function StaffLogin() {
     });
   };
 
-  const oneClick = async (em: string, pw: string) => {
-    setEmail(em); setPassword(pw); setLoading(true);
-    const r = await login(em, pw);
-    setLoading(false);
-    if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
-    toast.success(`Signed in as ${r.staff?.roleLabel}`);
-    const adminRoles = ["system_admin", "super_admin"];
-    navigate({
-      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
-      replace: true,
-    });
+  const prefill = (em: string) => {
+    setEmail(em);
+    setPassword("");
+    toast.info("Enter the staff password to sign in.");
   };
 
   return (
@@ -160,7 +153,7 @@ function StaffLogin() {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => oneClick(s.email, s.password)}
+                  onClick={() => prefill(s.email)}
                   className="flex w-full items-center gap-3 rounded-md border border-border bg-white px-3 py-2 text-left transition hover:border-primary hover:shadow disabled:opacity-60"
                 >
                   <div
@@ -173,12 +166,12 @@ function StaffLogin() {
                     <div className="truncate text-xs font-bold text-foreground">{s.roleLabel}</div>
                     <div className="truncate text-[11px] text-muted-foreground">{s.email}</div>
                   </div>
-                  <span className="shrink-0 rounded border border-primary px-2 py-1 text-[10px] font-bold text-primary">Login</span>
+                  <span className="shrink-0 rounded border border-primary px-2 py-1 text-[10px] font-bold text-primary">Prefill</span>
                 </button>
               </li>
             ))}
           </ul>
-          <p className="mt-3 break-words text-[10px] text-muted-foreground">Demo passwords: <span className="font-mono break-all">SysAdmin1234! · Admin1234! · Staff1234!</span></p>
+          <p className="mt-3 break-words text-[10px] text-muted-foreground">Click an account to prefill its email, then enter the password shared with your team.</p>
         </div>
       </div>
     </div>

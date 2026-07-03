@@ -23,7 +23,6 @@ export type StaffRole =
 
 export type DemoStaff = {
   email: string;
-  password: string;
   staffId: string;
   name: string;
   role: StaffRole;
@@ -128,13 +127,13 @@ export const DEMO_CUSTOMERS: DemoCustomer[] = [
 ];
 
 export const DEMO_STAFF: DemoStaff[] = [
-  { email: "sysadmin@kingspharmacy.co.zw", password: "SysAdmin1234!", staffId: "STF-0000", name: "Tendai Moyo", role: "system_admin", roleLabel: "Systems Administrator", branch: "Head Office — Bulawayo", access: ["User management", "Password resets", "Audit logs", "System settings", "All modules"] },
-  { email: "admin@kingspharmacy.co.zw", password: "Admin1234!", staffId: "STF-0001", name: "Rumbidzai Chigumba", role: "super_admin", roleLabel: "Super Admin", branch: "Head Office — Bulawayo", access: ["All modules"] },
-  { email: "pharmacist@kingspharmacy.co.zw", password: "Staff1234!", staffId: "STF-0042", name: "Dr. Aisha Moosa (B.Pharm)", role: "pharmacist", roleLabel: "Pharmacist", branch: "Bulawayo CBD Branch", access: ["Prescriptions", "Orders (Rx approval)"] },
-  { email: "manager@kingspharmacy.co.zw", password: "Staff1234!", staffId: "STF-0018", name: "Michael Pretorius", role: "store_manager", roleLabel: "Store Manager", branch: "Bulawayo CBD Branch", access: ["Products", "Inventory", "Sales", "Expenses", "Reports"] },
-  { email: "dispatcher@kingspharmacy.co.zw", password: "Staff1234!", staffId: "STF-0073", name: "Lungelo Zulu", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "Bulawayo CBD Branch", access: ["Delivery management"] },
-  { email: "cashier@kingspharmacy.co.zw", password: "Staff1234!", staffId: "STF-0091", name: "Kefilwe Sithole", role: "cashier", roleLabel: "Cashier", branch: "Bulawayo CBD Branch", access: ["Sales", "Orders (view)"] },
-  { email: "inventory@kingspharmacy.co.zw", password: "Staff1234!", staffId: "STF-0056", name: "Sipho Mahlangu", role: "inventory_clerk", roleLabel: "Inventory Clerk", branch: "Bulawayo CBD Branch", access: ["Inventory", "Stock take", "POs"] },
+  { email: "sysadmin@kingspharmacy.co.zw", staffId: "STF-0000", name: "Tendai Moyo", role: "system_admin", roleLabel: "Systems Administrator", branch: "Head Office — Bulawayo", access: ["User management", "Password resets", "Audit logs", "System settings", "All modules"] },
+  { email: "admin@kingspharmacy.co.zw", staffId: "STF-0001", name: "Rumbidzai Chigumba", role: "super_admin", roleLabel: "Super Admin", branch: "Head Office — Bulawayo", access: ["All modules"] },
+  { email: "pharmacist@kingspharmacy.co.zw", staffId: "STF-0042", name: "Dr. Aisha Moosa (B.Pharm)", role: "pharmacist", roleLabel: "Pharmacist", branch: "Bulawayo CBD Branch", access: ["Prescriptions", "Orders (Rx approval)"] },
+  { email: "manager@kingspharmacy.co.zw", staffId: "STF-0018", name: "Michael Pretorius", role: "store_manager", roleLabel: "Store Manager", branch: "Bulawayo CBD Branch", access: ["Products", "Inventory", "Sales", "Expenses", "Reports"] },
+  { email: "dispatcher@kingspharmacy.co.zw", staffId: "STF-0073", name: "Lungelo Zulu", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "Bulawayo CBD Branch", access: ["Delivery management"] },
+  { email: "cashier@kingspharmacy.co.zw", staffId: "STF-0091", name: "Kefilwe Sithole", role: "cashier", roleLabel: "Cashier", branch: "Bulawayo CBD Branch", access: ["Sales", "Orders (view)"] },
+  { email: "inventory@kingspharmacy.co.zw", staffId: "STF-0056", name: "Sipho Mahlangu", role: "inventory_clerk", roleLabel: "Inventory Clerk", branch: "Bulawayo CBD Branch", access: ["Inventory", "Stock take", "POs"] },
 ];
 
 export const ROLE_BADGE_BG: Record<StaffRole, string> = {
