@@ -145,7 +145,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
       icon: Users,
     },
     {
-      to: "/staff/dashboard?view=driver-portal",
+      to: "/driver/install",
       label: "Driver Portal",
       icon: Truck,
     },
