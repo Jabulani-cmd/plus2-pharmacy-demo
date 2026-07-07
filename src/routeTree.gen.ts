@@ -15,7 +15,7 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReceiptRouteImport } from './routes/receipt'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
-import { Route as DriverInstallRouteImport } from './routes/driver-install'
+import { Route as GetDriverAppRouteImport } from './routes/get-driver-app'
 import { Route as DriverRouteImport } from './routes/driver'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ConsultationRouteImport } from './routes/consultation'
@@ -63,9 +63,9 @@ const PrescriptionsRoute = PrescriptionsRouteImport.update({
   path: '/prescriptions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DriverInstallRoute = DriverInstallRouteImport.update({
-  id: '/driver-install',
-  path: '/driver-install',
+const GetDriverAppRoute = GetDriverAppRouteImport.update({
+  id: '/get-driver-app',
+  path: '/get-driver-app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DriverRoute = DriverRouteImport.update({
@@ -158,7 +158,7 @@ export interface FileRoutesByFullPath {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/driver': typeof DriverRouteWithChildren
-  '/driver-install': typeof DriverInstallRoute
+  '/get-driver-app': typeof GetDriverAppRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -182,7 +182,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
-  '/driver-install': typeof DriverInstallRoute
+  '/get-driver-app': typeof GetDriverAppRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -207,7 +207,7 @@ export interface FileRoutesById {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/driver': typeof DriverRouteWithChildren
-  '/driver-install': typeof DriverInstallRoute
+  '/get-driver-app': typeof GetDriverAppRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -234,7 +234,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/driver'
-    | '/driver-install'
+    | '/get-driver-app'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -258,7 +258,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultation'
     | '/demo'
-    | '/driver-install'
+    | '/get-driver-app'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -282,7 +282,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/driver'
-    | '/driver-install'
+    | '/get-driver-app'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -308,7 +308,7 @@ export interface RootRouteChildren {
   ConsultationRoute: typeof ConsultationRoute
   DemoRoute: typeof DemoRoute
   DriverRoute: typeof DriverRouteWithChildren
-  DriverInstallRoute: typeof DriverInstallRoute
+  GetDriverAppRoute: typeof GetDriverAppRoute
   PrescriptionsRoute: typeof PrescriptionsRoute
   ReceiptRoute: typeof ReceiptRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -363,11 +363,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrescriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/driver-install': {
-      id: '/driver-install'
-      path: '/driver-install'
-      fullPath: '/driver-install'
-      preLoaderRoute: typeof DriverInstallRouteImport
+    '/get-driver-app': {
+      id: '/get-driver-app'
+      path: '/get-driver-app'
+      fullPath: '/get-driver-app'
+      preLoaderRoute: typeof GetDriverAppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/driver': {
@@ -523,7 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsultationRoute: ConsultationRoute,
   DemoRoute: DemoRoute,
   DriverRoute: DriverRouteWithChildren,
-  DriverInstallRoute: DriverInstallRoute,
+  GetDriverAppRoute: GetDriverAppRoute,
   PrescriptionsRoute: PrescriptionsRoute,
   ReceiptRoute: ReceiptRoute,
   ResetPasswordRoute: ResetPasswordRoute,

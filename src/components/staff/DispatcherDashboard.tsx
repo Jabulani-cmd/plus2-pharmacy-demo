@@ -19,8 +19,8 @@ function ShareDriverInstallCard() {
   const [copied, setCopied] = useState(false);
   const installUrl =
     typeof window !== "undefined"
-      ? window.location.origin + "/driver-install"
-      : "/driver-install";
+      ? window.location.origin + "/get-driver-app"
+      : "/get-driver-app";
   const whatsappText = encodeURIComponent(
     "Hi! Please install the Kings Pharmacy Driver app:\n\n" +
       "📲 " + installUrl + "\n\n" +

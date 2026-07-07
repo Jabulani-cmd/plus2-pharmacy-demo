@@ -35,7 +35,7 @@ function DriverLogin() {
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as any).standalone === true;
       if (!fromInstall && !standalone) {
-        navigate({ to: "/driver/install", replace: true });
+        navigate({ to: "/get-driver-app", replace: true });
         return;
       }
       const { data } = await supabase.auth.getSession();
