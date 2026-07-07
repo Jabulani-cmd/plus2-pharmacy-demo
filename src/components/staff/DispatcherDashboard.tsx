@@ -878,6 +878,7 @@ function DriversView({
         title="Drivers"
         subtitle="Fleet status, performance, and current loads."
       />
+      <ShareDriverInstallCard />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "Total Drivers", value: totals.total, color: "#1B3A6B" },
