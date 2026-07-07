@@ -15,6 +15,59 @@ import {
   X, Clock, UserCheck, FileText, User, Search, CalendarDays,
 } from "lucide-react";
 
+function ShareDriverInstallCard() {
+  const [copied, setCopied] = useState(false);
+  const installUrl =
+    typeof window !== "undefined"
+      ? window.location.origin + "/driver-install"
+      : "/driver-install";
+  const whatsappText = encodeURIComponent(
+    "Hi! Please install the Kings Pharmacy Driver app:\n\n" +
+      "📲 " + installUrl + "\n\n" +
+      "Open this link on your phone and follow the install instructions.\n\n" +
+      "After installing, use your driver email and password to sign in.\n\n" +
+      "— Kings Pharmacy Dispatch"
+  );
+  const onCopy = () => {
+    navigator.clipboard.writeText(installUrl).then(() => {
+      setCopied(true);
+      toast.success("Install link copied");
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+  return (
+    <div className="mb-5 rounded-xl border border-[#1E5BC6]/25 bg-[#EAF3FF] p-4">
+      <div className="text-sm font-black text-[#1B3A6B]">
+        Share Driver App Install Link
+      </div>
+      <div className="mt-0.5 text-xs text-slate-600">
+        Send this to drivers so they can install the KP Driver app on their
+        phones.
+      </div>
+      <div className="mt-3 break-all rounded-md bg-white p-2.5 font-mono text-[11px] text-[#1B3A6B]">
+        {installUrl}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onCopy}
+          className="h-10 flex-1 rounded-full border-2 border-[#1E5BC6] bg-white text-xs font-bold text-[#1E5BC6] transition hover:bg-[#1E5BC6]/5"
+        >
+          {copied ? "✅ Copied" : "📋 Copy Link"}
+        </button>
+        <a
+          href={"https://wa.me/?text=" + whatsappText}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-500 text-xs font-bold text-white transition hover:bg-emerald-600"
+        >
+          📲 WhatsApp
+        </a>
+      </div>
+    </div>
+  );
+}
+
 const COLUMNS: {
   key: StaffDelivery["status"];
   label: string;
@@ -878,6 +931,7 @@ function DriversView({
         title="Drivers"
         subtitle="Fleet status, performance, and current loads."
       />
+      <ShareDriverInstallCard />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: "Total Drivers", value: totals.total, color: "#1B3A6B" },
