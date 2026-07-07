@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { findDemoStaff, type DemoStaff } from "@/data/demoAccounts";
-import { verifyStaffLogin } from "@/lib/staffAuth.functions";
+import { DEMO_STAFF_PASSWORDS, findDemoStaff, type DemoStaff } from "@/data/demoAccounts";
 
 type StaffAuthState = {
   staff: DemoStaff | null;
@@ -14,13 +13,11 @@ export const useStaffAuth = create<StaffAuthState>()(
     (set) => ({
       staff: null,
       login: async (email, password) => {
-        const s = findDemoStaff(email);
+        const normalizedEmail = email.trim().toLowerCase();
+        const s = findDemoStaff(normalizedEmail);
         if (!s) return { ok: false, error: "Unknown staff account" };
-        try {
-          const res = await verifyStaffLogin({ data: { email, password } });
-          if (!res.ok) return { ok: false, error: "Incorrect password" };
-        } catch {
-          return { ok: false, error: "Sign-in service unavailable" };
+        if (DEMO_STAFF_PASSWORDS[normalizedEmail] !== password) {
+          return { ok: false, error: "Incorrect password" };
         }
         set({ staff: s });
         return { ok: true, staff: s };
