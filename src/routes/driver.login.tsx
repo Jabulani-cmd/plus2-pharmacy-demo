@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Mail, Lock, Home, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { InstallDriverApp } from "@/components/driver/InstallDriverApp";
 import kingsLogo from "@/assets/kings-logo.png";
 
 export const Route = createFileRoute("/driver/login")({
@@ -168,9 +167,6 @@ function DriverLogin() {
           </div>
         </div>
 
-        <div className="mt-4">
-          <InstallDriverApp variant="card" />
-        </div>
       </div>
     </div>
   );

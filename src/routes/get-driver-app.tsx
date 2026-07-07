@@ -1,438 +1,226 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-// TODO: Replace with real Google Drive file id once the APK is uploaded.
-const APK_URL =
-  "https://drive.google.com/uc?export=download&id=YOUR_APK_FILE_ID";
-
 export const Route = createFileRoute("/get-driver-app")({
   head: () => ({
     meta: [
       { title: "Install KP Driver — Kings Pharmacy" },
-      {
-        name: "description",
-        content:
-          "Install the Kings Pharmacy Driver app on your phone before signing in.",
-      },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: DriverInstallGate,
+  component: GetDriverApp,
 });
 
-type Platform = "android" | "ios" | "other";
+type Device = "android" | "ios" | "checking";
 
-function DriverInstallGate() {
+interface BIPEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function GetDriverApp() {
   const navigate = useNavigate();
-  const [platform, setPlatform] = useState<Platform>("other");
-  const [ready, setReady] = useState(false);
+  const [device, setDevice] = useState<Device>("checking");
+  const [installPrompt, setInstallPrompt] = useState<BIPEvent | null>(null);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BIPEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
 
-    const isStandalone =
+    const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean })
-        .standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
-    if (isStandalone) {
-      localStorage.setItem("kp-driver-installed", "true");
+    if (standalone) {
       navigate({ to: "/driver", replace: true });
       return;
     }
 
-    if (localStorage.getItem("kp-driver-installed") === "true") {
+    if (localStorage.getItem("kp-driver-app") === "1") {
       navigate({ to: "/driver", replace: true });
       return;
     }
 
     const ua = navigator.userAgent;
     if (/android/i.test(ua)) {
-      setPlatform("android");
-      setReady(true);
+      setDevice("android");
     } else if (
-      /iPad|iPhone|iPod/.test(ua) &&
+      /iphone|ipad|ipod/i.test(ua) &&
       !(window as unknown as { MSStream?: unknown }).MSStream
     ) {
-      setPlatform("ios");
-      setReady(true);
+      setDevice("ios");
     } else {
-      // Desktop / other — no install possible, let them through
+      localStorage.setItem("kp-driver-app", "1");
       navigate({ to: "/driver", replace: true });
     }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
   }, [navigate]);
 
-  const markInstalled = () => {
-    localStorage.setItem("kp-driver-installed", "true");
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      setInstalling(true);
+      try {
+        await installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === "accepted") {
+          localStorage.setItem("kp-driver-app", "1");
+          navigate({ to: "/driver", replace: true });
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setInstalling(false);
+      }
+    } else {
+      document
+        .getElementById("install-steps")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleDone = () => {
+    localStorage.setItem("kp-driver-app", "1");
     navigate({ to: "/driver", replace: true });
   };
 
-  if (!ready) {
+  if (device === "checking") {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#1B3A6B",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-        }}
-      >
-        Loading…
+      <div className="flex min-h-screen items-center justify-center bg-[#1B3A6B] text-white">
+        <div className="text-sm opacity-80">Loading…</div>
       </div>
     );
   }
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#1B3A6B",
-        color: "white",
-        padding: "28px 20px 40px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: 420, margin: "0 auto" }}>
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: 24,
-            background: "rgba(255,255,255,0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 56,
-            margin: "0 auto 16px",
-          }}
-        >
-          🛵
-        </div>
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 26,
-            fontWeight: 900,
-            letterSpacing: -0.5,
-          }}
-        >
-          KP Driver
-        </div>
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 13,
-            opacity: 0.75,
-            marginTop: 4,
-          }}
-        >
-          Kings Pharmacy Delivery App
-        </div>
-
-        <div
-          style={{
-            marginTop: 22,
-            padding: "10px 14px",
-            borderRadius: 999,
-            background: "#F59E0B",
-            color: "#1B3A6B",
-            textAlign: "center",
-            fontWeight: 900,
-            fontSize: 12,
-            letterSpacing: 0.6,
-          }}
-        >
-          ⚠️ APP INSTALLATION REQUIRED
-        </div>
-
-        {platform === "android" && (
-          <AndroidBody
-            onInstalled={markInstalled}
-          />
-        )}
-        {platform === "ios" && <IosBody onInstalled={markInstalled} />}
-
-        <div
-          style={{
-            marginTop: 28,
-            textAlign: "center",
-            fontSize: 11,
-            opacity: 0.5,
-          }}
-        >
-          kingspharmacy.co.zw
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        marginTop: 20,
-        background: "rgba(255,255,255,0.08)",
-        borderRadius: 20,
-        padding: 18,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function StepList({ steps }: { steps: { n: string; text: string }[] }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {steps.map((s) => (
-        <div key={s.n} style={{ display: "flex", gap: 12 }}>
-          <div
-            style={{
-              flexShrink: 0,
-              width: 30,
-              height: 30,
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 900,
-              fontSize: 13,
-            }}
-          >
-            {s.n}
-          </div>
-          <div style={{ paddingTop: 4, fontSize: 13, opacity: 0.92 }}>
-            {s.text}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AndroidBody({ onInstalled }: { onInstalled: () => void }) {
-  return (
-    <>
-      <Card>
-        <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8 }}>
-          Step 1 — Download the app
-        </div>
-        <div
-          style={{ fontSize: 13, opacity: 0.85, marginBottom: 14, lineHeight: 1.5 }}
-        >
-          Download and install the KP Driver app on your Android phone. Takes
-          less than 30 seconds.
-        </div>
-        <a
-          href="https://www.kingspharmacy-mavingtech.online/get-driver-app"
-          download="KPDriver.apk"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-            height: 58,
-            borderRadius: 29,
-            background: "white",
-            color: "#1B3A6B",
-            fontWeight: 900,
-            fontSize: 16,
-            textDecoration: "none",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-          }}
-        >
-          ⬇️ Download KP Driver (.apk)
-        </a>
-        <div
-          style={{
-            marginTop: 10,
-            textAlign: "center",
-            fontSize: 11,
-            opacity: 0.7,
-          }}
-        >
-          Android APK · ~5MB · Free
-        </div>
-      </Card>
-
-      <Card>
-        <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 12 }}>
-          Step 2 — Install the downloaded file
-        </div>
-        <StepList
-          steps={[
-            { n: "1", text: "Open your Downloads folder or notification" },
-            { n: "2", text: "Tap KPDriver.apk to open it" },
-            {
-              n: "3",
-              text: 'If prompted, tap "Install anyway" or enable "Install unknown apps" in Settings',
-            },
-            { n: "4", text: "Tap Install — done!" },
-          ]}
-        />
-      </Card>
-
-      <Card>
-        <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
-          Alternative: Install via Chrome
-        </div>
-        {[
-          "Open this page in Chrome browser",
-          'Tap the ⋮ menu → "Add to Home screen"',
-          'Tap "Install" in the popup',
-        ].map((s, i) => (
-          <div
-            key={i}
-            style={{
-              fontSize: 12,
-              opacity: 0.85,
-              padding: "4px 0",
-            }}
-          >
-            {i + 1}. {s}
-          </div>
-        ))}
-      </Card>
-
-      <button
-        type="button"
-        onClick={onInstalled}
-        style={{
-          marginTop: 22,
-          width: "100%",
-          height: 54,
-          borderRadius: 27,
-          background: "transparent",
-          border: "2px solid rgba(255,255,255,0.6)",
-          color: "white",
-          fontWeight: 900,
-          fontSize: 14,
-          cursor: "pointer",
-        }}
-      >
-        ✅ I've installed the app — Continue
-      </button>
-    </>
-  );
-}
-
-function IosBody({ onInstalled }: { onInstalled: () => void }) {
-  const steps = [
-    {
-      icon: "↑",
-      title: "Tap Share",
-      desc: "Tap the Share button (□↑) at the bottom of Safari",
-    },
-    {
-      icon: "➕",
-      title: "Add to Home Screen",
-      desc: 'Scroll down in the menu and tap "Add to Home Screen"',
-    },
-    {
-      icon: "✓",
-      title: "Tap Add",
-      desc: 'Tap "Add" in the top right — KP Driver appears on your home screen',
-    },
-    {
-      icon: "🚀",
-      title: "Open KP Driver",
-      desc: "Open the app from your home screen and sign in",
-    },
+  const androidSteps = [
+    'Tap the button above — a popup will appear',
+    'Tap "Install" or "Add to Home screen"',
+    "Wait for the app to install",
+    "Open KP Driver from your home screen",
+    "Sign in with your driver email and password",
+  ];
+  const androidFallback = [
+    "Open this page in Chrome browser",
+    "Tap the ⋮ three-dot menu (top right)",
+    'Tap "Add to Home screen"',
+    'Tap "Install"',
+  ];
+  const iosSteps = [
+    "Open this link in Safari browser",
+    "Tap the Share button (□↑) at the bottom",
+    'Scroll down and tap "Add to Home Screen"',
+    'Tap "Add" in the top right corner',
+    "Open KP Driver from your home screen",
+    "Sign in with your driver email and password",
   ];
 
   return (
-    <>
-      <Card>
-        <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8 }}>
-          Install on iPhone
+    <div className="min-h-screen bg-[#1B3A6B] px-5 py-8 text-white">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-white/10 text-5xl">
+          🛵
         </div>
-        <div
-          style={{
-            fontSize: 13,
-            opacity: 0.85,
-            marginBottom: 16,
-            lineHeight: 1.5,
-          }}
+        <div className="mt-4 text-center text-2xl font-black tracking-tight">
+          KP Driver
+        </div>
+        <div className="mt-1 text-center text-xs opacity-75">
+          Kings Pharmacy Delivery
+        </div>
+
+        <div className="mx-auto mt-5 w-fit rounded-full bg-amber-500 px-4 py-1.5 text-center text-[11px] font-black tracking-wide text-[#1B3A6B]">
+          ⚠️ Install required before signing in
+        </div>
+
+        <button
+          type="button"
+          onClick={handleInstallClick}
+          disabled={installing}
+          className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-base font-black text-[#1B3A6B] shadow-lg transition active:scale-[0.98] disabled:opacity-70"
         >
-          Open this page in Safari (not Chrome) then follow these steps:
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {steps.map((s) => (
-            <div key={s.title} style={{ display: "flex", gap: 12 }}>
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: 36,
-                  height: 36,
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 18,
-                }}
-              >
-                {s.icon}
+          {installing ? (
+            <>
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#1B3A6B] border-t-transparent" />
+              Installing…
+            </>
+          ) : (
+            <>
+              <span>📲</span>
+              {installPrompt ? "Install KP Driver App" : "Add to Home Screen"}
+            </>
+          )}
+        </button>
+
+        <div id="install-steps" className="mt-6 space-y-4">
+          {device === "android" && (
+            <>
+              <div className="rounded-2xl bg-white/10 p-4">
+                <div className="mb-3 text-sm font-black">How to install on Android</div>
+                <ol className="space-y-2">
+                  {androidSteps.map((text, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-black">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm leading-snug opacity-90">{text}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 14 }}>{s.title}</div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    opacity: 0.85,
-                    marginTop: 2,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {s.desc}
+              <div className="rounded-2xl bg-white/5 p-4">
+                <div className="mb-2 text-xs font-black opacity-90">
+                  If the button above does not work
                 </div>
+                <ol className="space-y-1">
+                  {androidFallback.map((text, i) => (
+                    <li key={i} className="text-xs opacity-80">
+                      {i + 1}. {text}
+                    </li>
+                  ))}
+                </ol>
               </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            </>
+          )}
 
-      <Card>
-        <div
-          style={{
-            fontWeight: 900,
-            fontSize: 13,
-            marginBottom: 6,
-            color: "#FDE68A",
-          }}
-        >
-          ⚠️ Must use Safari on iPhone
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.5 }}>
-          The "Add to Home Screen" option only appears in Safari. If you are
-          using Chrome, copy the URL and open it in Safari instead.
-        </div>
-      </Card>
+          {device === "ios" && (
+            <>
+              <div className="rounded-2xl bg-amber-500/20 p-3 text-xs font-semibold text-amber-100">
+                ⚠️ You must use Safari (not Chrome) to install this app on iPhone
+              </div>
+              <div className="rounded-2xl bg-white/10 p-4">
+                <div className="mb-3 text-sm font-black">How to install on iPhone</div>
+                <ol className="space-y-2">
+                  {iosSteps.map((text, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-black">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm leading-snug opacity-90">{text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </>
+          )}
 
-      <button
-        type="button"
-        onClick={onInstalled}
-        style={{
-          marginTop: 22,
-          width: "100%",
-          height: 54,
-          borderRadius: 27,
-          background: "transparent",
-          border: "2px solid rgba(255,255,255,0.6)",
-          color: "white",
-          fontWeight: 900,
-          fontSize: 14,
-          cursor: "pointer",
-        }}
-      >
-        ✅ I've installed it — Open App
-      </button>
-    </>
+          <button
+            type="button"
+            onClick={handleDone}
+            className="mt-2 h-12 w-full rounded-full border-2 border-white/50 text-sm font-black text-white transition active:scale-[0.98]"
+          >
+            ✅ I have installed it — Sign In
+          </button>
+
+          <div className="pt-2 text-center text-[11px] opacity-50">
+            Kings Pharmacy · Bulawayo, Zimbabwe
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
