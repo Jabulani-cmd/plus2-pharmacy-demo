@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Truck,
@@ -9,10 +9,17 @@ import {
   Play,
   Navigation,
   User as UserIcon,
+  Camera,
+  X as XIcon,
+  Loader2,
 } from "lucide-react";
 import { STAFF_DRIVERS } from "@/data/staffDemo";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
 import { useSharedPrescriptions, type SharedPrescription } from "@/store/sharedPrescriptions";
+import {
+  useDeliveryProofs,
+  fileToCompressedDataUrl,
+} from "@/store/deliveryProofs";
 import { PageHeader, KPI, Card, StatusPill } from "./shared";
 
 /**
