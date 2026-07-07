@@ -131,10 +131,10 @@ function StaffLogin() {
         <div className="mt-5 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Are you a delivery driver?</p>
           <a
-            href="/get-driver-app"
+            href="/driver/login"
             onClick={(event) => {
               event.preventDefault();
-              window.location.assign("/get-driver-app");
+              window.location.assign("/driver/login");
             }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-primary bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
           >
