@@ -5,15 +5,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/driver")({
   head: () => ({
     meta: [
-      { name: "theme-color", content: "#1B3A6B" },
+      { title: "KP Driver — Kings Pharmacy" },
       { name: "apple-mobile-web-app-title", content: "KP Driver" },
-    ],
-    links: [
-      {
-        rel: "manifest",
-        href: "/driver-manifest.json?v=20260702-driver-install",
-      },
-      { rel: "apple-touch-icon", href: "/icons/driver-icon-192.png" },
     ],
   }),
   component: DriverLayout,
