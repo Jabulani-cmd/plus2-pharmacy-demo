@@ -624,6 +624,7 @@ function ActiveDeliveryCard({
 // ─────────────────────────────────────────────────────────────
 function CompletedDeliveries({ driver }: { driver: DriverRow }) {
   const orders = useSharedOrders((s) => s.orders);
+  const proofs = useDeliveryProofs((s) => s.proofs);
   const [filter, setFilter] = useState<"today" | "all">("today");
 
   const startOfToday = useMemo(() => {
@@ -719,6 +720,18 @@ function CompletedDeliveries({ driver }: { driver: DriverRow }) {
                 {deliveredAt && (
                   <div className="mt-1 text-[10px] text-slate-400">
                     Delivered at {deliveredAt}
+                  </div>
+                )}
+                {proofs[o.id]?.photoDataUrl && (
+                  <div className="mt-2">
+                    <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Proof of delivery
+                    </div>
+                    <img
+                      src={proofs[o.id].photoDataUrl}
+                      alt={"Proof of delivery for " + o.id}
+                      className="h-24 w-full rounded-lg border border-slate-200 object-cover"
+                    />
                   </div>
                 )}
               </div>
