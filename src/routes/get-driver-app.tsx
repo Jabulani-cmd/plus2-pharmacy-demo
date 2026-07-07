@@ -229,7 +229,7 @@ function AndroidBody({ onInstalled }: { onInstalled: () => void }) {
           less than 30 seconds.
         </div>
         <a
-          href={APK_URL}
+          href="https://www.kingspharmacy-mavingtech.online/get-driver-app"
           download="KPDriver.apk"
           style={{
             display: "flex",
