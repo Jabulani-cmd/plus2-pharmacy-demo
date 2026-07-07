@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const APK_URL =
   "https://drive.google.com/uc?export=download&id=YOUR_APK_FILE_ID";
 
-export const Route = createFileRoute("/driver-install")({
+export const Route = createFileRoute("/get-driver-app")({
   head: () => ({
     meta: [
       { title: "Install KP Driver — Kings Pharmacy" },
