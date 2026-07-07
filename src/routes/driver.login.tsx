@@ -17,6 +17,7 @@ const DEMO_DRIVERS = [
   { email: "rudo@kingspharmacy.co.zw", name: "Rudo Mhlanga" },
 ];
 const DEMO_PASSWORD = "Driver123!";
+const DRIVER_INSTALL_CONFIRMED_KEY = "kp-driver-app-installed-v2";
 
 function DriverLogin() {
   const navigate = useNavigate();
@@ -45,12 +46,13 @@ function DriverLogin() {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
     }
-    if (localStorage.getItem("kp-driver-app") === "1") {
+    if (localStorage.getItem(DRIVER_INSTALL_CONFIRMED_KEY) === "1") {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
     }
     const ua = navigator.userAgent;
-    const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+    const isMobile =
+      /android|iphone|ipad|ipod/i.test(ua) || window.innerWidth <= 640;
     if (!isMobile) {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
@@ -69,7 +71,7 @@ function DriverLogin() {
         installPrompt.prompt();
         const { outcome } = await installPrompt.userChoice;
         if (outcome === "accepted") {
-          localStorage.setItem("kp-driver-app", "1");
+          localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
           setGateState("pass");
         }
       } finally {
@@ -83,7 +85,7 @@ function DriverLogin() {
   };
 
   const handleAlreadyInstalled = () => {
-    localStorage.setItem("kp-driver-app", "1");
+    localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
     setGateState("pass");
   };
 
@@ -141,6 +143,7 @@ function DriverLogin() {
       >
         <div style={{ fontSize: 56 }}>🛵</div>
         <div
+          className="animate-spin"
           style={{
             marginTop: 20,
             width: 32,
@@ -148,10 +151,8 @@ function DriverLogin() {
             border: "3px solid rgba(255,255,255,0.3)",
             borderTopColor: "white",
             borderRadius: "50%",
-            animation: "kp-spin 0.8s linear infinite",
           }}
         />
-        <style>{`@keyframes kp-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -190,8 +191,6 @@ function DriverLogin() {
           boxSizing: "border-box",
         }}
       >
-        <style>{`@keyframes kp-spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
-
         <div
           style={{
             width: 96,
@@ -265,13 +264,13 @@ function DriverLogin() {
           {installing ? (
             <>
               <span
+                className="animate-spin"
                 style={{
                   width: 18,
                   height: 18,
                   border: "3px solid rgba(27,58,107,0.25)",
                   borderTopColor: "#1B3A6B",
                   borderRadius: "50%",
-                  animation: "kp-spin 0.8s linear infinite",
                   display: "inline-block",
                 }}
               />
