@@ -92,15 +92,6 @@ function DriverLogin() {
     if (gateState !== "pass") return;
     let cancelled = false;
     (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const fromInstall = params.get("fromInstall") === "1";
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true;
-      if (!fromInstall && !standalone) {
-        navigate({ to: "/get-driver-app", replace: true });
-        return;
-      }
       const { data } = await supabase.auth.getSession();
       if (cancelled || !data.session) return;
       navigate({ to: "/driver", replace: true });
