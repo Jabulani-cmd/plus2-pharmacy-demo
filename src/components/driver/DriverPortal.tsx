@@ -288,6 +288,9 @@ function ActiveDeliveryCard({
   const [starting, setStarting] = useState(false);
   const [marking, setMarking] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [proofPhoto, setProofPhoto] = useState<string | null>(null);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+  const setProof = useDeliveryProofs((s) => s.setProof);
 
   const outForDelivery = order.status === "Out for delivery";
 
@@ -322,13 +325,33 @@ function ActiveDeliveryCard({
   };
 
   const onDelivered = async () => {
+    if (!proofPhoto) {
+      toast.error("Take a proof-of-delivery photo first");
+      return;
+    }
     setMarking(true);
+    setProof(order.id, proofPhoto);
     updateStatus(order.id, "Delivered");
     setTimeout(() => {
       setMarking(false);
       setConfirm(false);
+      setProofPhoto(null);
     }, 400);
     toast.success("Order marked as delivered");
+  };
+
+  const onPickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setProcessingPhoto(true);
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setProofPhoto(dataUrl);
+    } catch (err) {
+      console.error("[proof] photo processing failed", err);
+      toast.error("Could not read that photo — please try again");
+    } finally {
+      setProcessingPhoto(false);
+    }
   };
 
   return (
