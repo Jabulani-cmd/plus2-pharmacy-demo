@@ -11,9 +11,15 @@ import {
   User as UserIcon,
   Loader2,
   Wallet,
+  Camera,
+  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
+import {
+  useDeliveryProofs,
+  fileToCompressedDataUrl,
+} from "@/store/deliveryProofs";
 import { InstallDriverApp } from "./InstallDriverApp";
 import kingsLogo from "@/assets/kings-logo.png";
 
