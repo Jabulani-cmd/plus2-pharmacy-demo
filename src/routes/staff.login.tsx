@@ -29,18 +29,35 @@ function StaffLogin() {
     }
   }, [staff, navigate]);
 
+  const signIn = async (em: string, pw: string) => {
+    setLoading(true);
+    try {
+      const r = await Promise.race([
+        login(em, pw),
+        new Promise<{ ok: false; error: string }>((resolve) =>
+          window.setTimeout(() => resolve({ ok: false, error: "Sign-in timed out. Please try again." }), 8000),
+        ),
+      ]);
+      if (!r.ok) {
+        toast.error(r.error ?? "Sign-in failed");
+        return;
+      }
+      toast.success(`Welcome, ${r.staff?.name.split(" ")[0]}`);
+      const adminRoles = ["system_admin", "super_admin"];
+      navigate({
+        to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
+        replace: true,
+      });
+    } catch {
+      toast.error("Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const r = await login(email, password);
-    setLoading(false);
-    if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
-    toast.success(`Welcome, ${r.staff?.name.split(" ")[0]}`);
-    const adminRoles = ["system_admin", "super_admin"];
-    navigate({
-      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
-      replace: true,
-    });
+    await signIn(email, password);
   };
 
   const prefill = async (em: string) => {
@@ -51,16 +68,7 @@ function StaffLogin() {
       toast.info("Enter the staff password to sign in.");
       return;
     }
-    setLoading(true);
-    const r = await login(em, pw);
-    setLoading(false);
-    if (!r.ok) return toast.error(r.error ?? "Sign-in failed");
-    toast.success(`Welcome, ${r.staff?.name.split(" ")[0]}`);
-    const adminRoles = ["system_admin", "super_admin"];
-    navigate({
-      to: r.staff && adminRoles.includes(r.staff.role) ? "/staff/select-portal" : "/staff/dashboard",
-      replace: true,
-    });
+    await signIn(em, pw);
   };
 
   return (
