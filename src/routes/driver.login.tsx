@@ -35,46 +35,79 @@ function DriverLogin() {
   useEffect(() => {
     const onPrompt = (e: Event) => {
       e.preventDefault();
+      (window as any).__kingsPwaDeferredPrompt = e;
       setInstallPrompt(e);
     };
+    const onPromptReady = () => {
+      const prompt = (window as any).__kingsPwaDeferredPrompt;
+      if (prompt) setInstallPrompt(prompt);
+    };
+    const onInstalled = () => {
+      localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
+      localStorage.setItem("kp-driver-installed", "1");
+      setGateState("pass");
+    };
     window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("kings-pwa-prompt-ready", onPromptReady as EventListener);
+    window.addEventListener("appinstalled", onInstalled);
+
+    const existingPrompt = (window as any).__kingsPwaDeferredPrompt;
+    if (existingPrompt) setInstallPrompt(existingPrompt);
 
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     if (isStandalone) {
       setGateState("pass");
-      return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", onPrompt);
+        window.removeEventListener("kings-pwa-prompt-ready", onPromptReady as EventListener);
+        window.removeEventListener("appinstalled", onInstalled);
+      };
     }
     if (localStorage.getItem(DRIVER_INSTALL_CONFIRMED_KEY) === "1") {
       setGateState("pass");
-      return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", onPrompt);
+        window.removeEventListener("kings-pwa-prompt-ready", onPromptReady as EventListener);
+        window.removeEventListener("appinstalled", onInstalled);
+      };
     }
     const ua = navigator.userAgent;
     const isMobile =
       /android|iphone|ipad|ipod/i.test(ua) || window.innerWidth <= 640;
     if (!isMobile) {
       setGateState("pass");
-      return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", onPrompt);
+        window.removeEventListener("kings-pwa-prompt-ready", onPromptReady as EventListener);
+        window.removeEventListener("appinstalled", onInstalled);
+      };
     }
     const t = setTimeout(() => setGateState("show-gate"), 800);
     return () => {
       clearTimeout(t);
       window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("kings-pwa-prompt-ready", onPromptReady as EventListener);
+      window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 
   const handleInstall = async () => {
-    if (installPrompt) {
+    const prompt = installPrompt || (window as any).__kingsPwaDeferredPrompt;
+    if (prompt) {
       setInstalling(true);
       try {
-        installPrompt.prompt();
-        const { outcome } = await installPrompt.userChoice;
+        await prompt.prompt();
+        const { outcome } = await prompt.userChoice;
         if (outcome === "accepted") {
           localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
+          localStorage.setItem("kp-driver-installed", "1");
           setGateState("pass");
         }
       } finally {
+        (window as any).__kingsPwaDeferredPrompt = undefined;
+        setInstallPrompt(null);
         setInstalling(false);
       }
     } else {
@@ -86,6 +119,7 @@ function DriverLogin() {
 
   const handleAlreadyInstalled = () => {
     localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
+    localStorage.setItem("kp-driver-installed", "1");
     setGateState("pass");
   };
 

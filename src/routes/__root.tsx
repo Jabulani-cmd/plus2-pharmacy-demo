@@ -146,8 +146,8 @@ function RootShell({ children }: { children: ReactNode }) {
                   var appleIconHref = isDriver ? '/icons/driver-icon-192.png' : '/icon-192.png';
                   var theme = isDriver ? '#1B3A6B' : '#0EA5E9';
 
-                  document.write('<link rel="manifest" href="' + manifestHref + '">');
-                  document.write('<link rel="apple-touch-icon" href="' + appleIconHref + '">');
+                  document.write('<link rel="manifest" data-kp-pwa="active" href="' + manifestHref + '">');
+                  document.write('<link rel="apple-touch-icon" data-kp-pwa="active" href="' + appleIconHref + '">');
                   document.write('<meta name="theme-color" content="' + theme + '">');
 
                   window.addEventListener('beforeinstallprompt', function(e) {
@@ -158,7 +158,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
                   window.addEventListener('appinstalled', function() {
                     if (isDriver) {
-                      try { window.localStorage.setItem('kp-driver-installed', '1'); } catch (e) {}
+                      try {
+                        window.localStorage.setItem('kp-driver-app-installed-v2', '1');
+                        window.localStorage.setItem('kp-driver-installed', '1');
+                      } catch (e) {}
                     }
                   });
 
@@ -212,25 +215,19 @@ function RootComponent() {
     if (typeof document === "undefined") return;
     const targetHref = isDriver ? "/driver-manifest.json?v=20260702-driver-install" : "/manifest.webmanifest";
     const appleIconHref = isDriver ? "/icons/driver-icon-192.png" : "/icon-192.png";
-    // Remove ALL existing manifest links, then add a fresh one. Chrome only
-    // re-evaluates installability (and re-fires beforeinstallprompt for the
-    // distinct manifest `id`) when the <link rel="manifest"> element is
-    // replaced, not when its href attribute is mutated in place.
-    const existing = document.querySelectorAll('link[rel="manifest"]');
-    let needsReplace = true;
-    existing.forEach((el) => {
-      const link = el as HTMLLinkElement;
-      if (link.getAttribute("href") === targetHref && needsReplace) {
-        needsReplace = false;
-      } else {
-        link.parentNode?.removeChild(link);
-      }
-    });
-    if (needsReplace) {
+    // Keep this DOM mutation non-destructive. Removing route-managed <head>
+    // nodes can race React's head cleanup and crash with removeChild(null).
+    let manifest = document.querySelector(
+      'link[rel="manifest"][data-kp-pwa="active"]'
+    ) as HTMLLinkElement | null;
+    if (!manifest) {
       const link = document.createElement("link");
       link.rel = "manifest";
+      link.dataset.kpPwa = "active";
       link.href = targetHref;
-      document.head.appendChild(link);
+      document.head.prepend(link);
+    } else if (manifest.getAttribute("href") !== targetHref) {
+      manifest.href = targetHref;
     }
     const themeMeta = document.querySelector(
       'meta[name="theme-color"]'
@@ -238,7 +235,7 @@ function RootComponent() {
     if (themeMeta) {
       themeMeta.content = isDriver ? "#1B3A6B" : "#0EA5E9";
     }
-    const appleIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    const appleIcon = document.querySelector('link[rel="apple-touch-icon"][data-kp-pwa="active"]') as HTMLLinkElement | null;
     if (appleIcon) {
       appleIcon.href = appleIconHref;
     } else {
