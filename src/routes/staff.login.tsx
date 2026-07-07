@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useStaffAuth } from "@/store/staffAuth";
-import { DEMO_STAFF, ROLE_BADGE_BG } from "@/data/demoAccounts";
+import { DEMO_STAFF, DEMO_STAFF_PASSWORDS, ROLE_BADGE_BG } from "@/data/demoAccounts";
 import { ShieldCheck, Lock, Mail, Home, ChevronRight, KeyRound, Truck } from "lucide-react";
 import kingsLogo from "@/assets/kings-logo.png";
 
@@ -44,9 +44,10 @@ function StaffLogin() {
   };
 
   const prefill = (em: string) => {
+    const pw = DEMO_STAFF_PASSWORDS[em] ?? "";
     setEmail(em);
-    setPassword("");
-    toast.info("Enter the staff password to sign in.");
+    setPassword(pw);
+    toast.info("Demo credentials filled in — press Sign in.");
   };
 
   return (
@@ -171,7 +172,7 @@ function StaffLogin() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 break-words text-[10px] text-muted-foreground">Click an account to prefill its email, then enter the password shared with your team.</p>
+          <p className="mt-3 break-words text-[10px] text-muted-foreground">Click an account to prefill its email and password, then press Sign in.</p>
         </div>
       </div>
     </div>

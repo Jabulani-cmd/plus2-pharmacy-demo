@@ -151,3 +151,15 @@ export const findDemoCustomer = (email: string) =>
 
 export const findDemoStaff = (email: string) =>
   DEMO_STAFF.find((s) => s.email.toLowerCase() === email.toLowerCase());
+
+// Demo-only passwords surfaced to the sign-in UI for the "click to prefill"
+// buttons. These match STAFF_PASSWORDS in src/lib/staffAuth.server.ts.
+export const DEMO_STAFF_PASSWORDS: Record<string, string> = {
+  "sysadmin@kingspharmacy.co.zw": "SysAdmin1234!",
+  "admin@kingspharmacy.co.zw": "Admin1234!",
+  "pharmacist@kingspharmacy.co.zw": "Staff1234!",
+  "manager@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher@kingspharmacy.co.zw": "Staff1234!",
+  "cashier@kingspharmacy.co.zw": "Staff1234!",
+  "inventory@kingspharmacy.co.zw": "Staff1234!",
+};
