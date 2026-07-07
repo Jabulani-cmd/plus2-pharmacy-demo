@@ -15,6 +15,7 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReceiptRouteImport } from './routes/receipt'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
+import { Route as DriverInstallRouteImport } from './routes/driver-install'
 import { Route as DriverRouteImport } from './routes/driver'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ConsultationRouteImport } from './routes/consultation'
@@ -61,6 +62,11 @@ const ReceiptRoute = ReceiptRouteImport.update({
 const PrescriptionsRoute = PrescriptionsRouteImport.update({
   id: '/prescriptions',
   path: '/prescriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriverInstallRoute = DriverInstallRouteImport.update({
+  id: '/driver-install',
+  path: '/driver-install',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DriverRoute = DriverRouteImport.update({
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/driver': typeof DriverRouteWithChildren
+  '/driver-install': typeof DriverInstallRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
+  '/driver-install': typeof DriverInstallRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/consultation': typeof ConsultationRoute
   '/demo': typeof DemoRoute
   '/driver': typeof DriverRouteWithChildren
+  '/driver-install': typeof DriverInstallRoute
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/driver'
+    | '/driver-install'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultation'
     | '/demo'
+    | '/driver-install'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/consultation'
     | '/demo'
     | '/driver'
+    | '/driver-install'
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
@@ -308,6 +320,7 @@ export interface RootRouteChildren {
   ConsultationRoute: typeof ConsultationRoute
   DemoRoute: typeof DemoRoute
   DriverRoute: typeof DriverRouteWithChildren
+  DriverInstallRoute: typeof DriverInstallRoute
   PrescriptionsRoute: typeof PrescriptionsRoute
   ReceiptRoute: typeof ReceiptRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/prescriptions'
       fullPath: '/prescriptions'
       preLoaderRoute: typeof PrescriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/driver-install': {
+      id: '/driver-install'
+      path: '/driver-install'
+      fullPath: '/driver-install'
+      preLoaderRoute: typeof DriverInstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/driver': {
@@ -524,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsultationRoute: ConsultationRoute,
   DemoRoute: DemoRoute,
   DriverRoute: DriverRouteWithChildren,
+  DriverInstallRoute: DriverInstallRoute,
   PrescriptionsRoute: PrescriptionsRoute,
   ReceiptRoute: ReceiptRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -536,13 +557,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
