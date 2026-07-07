@@ -1,0 +1,1 @@
+GRANT INSERT ON public.shared_orders TO anon, authenticated;
