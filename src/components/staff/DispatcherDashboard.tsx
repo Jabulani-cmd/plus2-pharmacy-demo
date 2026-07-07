@@ -15,18 +15,28 @@ import {
   X, Clock, UserCheck, FileText, User, Search, CalendarDays,
 } from "lucide-react";
 
+const PRODUCTION_DOMAIN = "https://www.kingspharmacy-mavingtech.online";
+
 function ShareDriverInstallCard() {
   const [copied, setCopied] = useState(false);
-  const installUrl =
-    typeof window !== "undefined"
-      ? window.location.origin + "/get-driver-app"
-      : "/get-driver-app";
+  const installUrl = PRODUCTION_DOMAIN + "/get-driver-app";
   const whatsappText = encodeURIComponent(
-    "Hi! Please install the Kings Pharmacy Driver app:\n\n" +
-      "📲 " + installUrl + "\n\n" +
-      "Open this link on your phone and follow the install instructions.\n\n" +
-      "After installing, use your driver email and password to sign in.\n\n" +
-      "— Kings Pharmacy Dispatch"
+    `Hi! Please install the Kings Pharmacy Driver app on your phone:\n\n` +
+    `📲 *Install link:*\n` +
+    `${installUrl}\n\n` +
+    `*Android phone:*\n` +
+    `1. Open the link in Chrome\n` +
+    `2. Tap the ⋮ menu → "Add to Home screen"\n` +
+    `3. Tap Install\n` +
+    `4. Open KP Driver from your home screen\n` +
+    `5. Sign in with your driver email and password\n\n` +
+    `*iPhone:*\n` +
+    `1. Open the link in Safari (not Chrome)\n` +
+    `2. Tap the Share button (□↑) at the bottom\n` +
+    `3. Tap "Add to Home Screen"\n` +
+    `4. Tap Add\n` +
+    `5. Open KP Driver and sign in\n\n` +
+    `— Kings Pharmacy Dispatch Team`
   );
   const onCopy = () => {
     navigator.clipboard.writeText(installUrl).then(() => {
