@@ -518,12 +518,65 @@ function ActiveDeliveryCard({
               Confirm delivery to {order.customer}?
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
-              This notifies the customer and dispatcher immediately.
+              A proof-of-delivery photo is required before marking as delivered.
             </div>
+
+            {/* Proof-of-delivery photo capture */}
+            <div className="mt-3">
+              {proofPhoto ? (
+                <div className="relative">
+                  <img
+                    src={proofPhoto}
+                    alt="Proof of delivery"
+                    className="h-40 w-full rounded-lg border border-slate-200 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setProofPhoto(null)}
+                    disabled={marking}
+                    aria-label="Remove photo"
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                  <div className="mt-1 text-[10px] font-bold text-emerald-700">
+                    ✓ Photo captured
+                  </div>
+                </div>
+              ) : (
+                <label
+                  className={
+                    "flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-dashed border-sky-400 bg-white text-xs font-black text-sky-700 transition hover:bg-sky-50 " +
+                    (processingPhoto ? "pointer-events-none opacity-60" : "")
+                  }
+                >
+                  {processingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {processingPhoto ? "Processing…" : "Take proof-of-delivery photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      void onPickPhoto(e.target.files?.[0]);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={() => setConfirm(false)}
+                onClick={() => {
+                  setConfirm(false);
+                  setProofPhoto(null);
+                }}
                 disabled={marking}
                 className="h-10 flex-1 rounded-full border-2 border-slate-300 text-xs font-bold text-slate-600 transition hover:bg-white disabled:opacity-60"
               >
@@ -532,7 +585,7 @@ function ActiveDeliveryCard({
               <button
                 type="button"
                 onClick={onDelivered}
-                disabled={marking}
+                disabled={marking || !proofPhoto}
                 className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 text-xs font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
               >
                 {marking ? (
