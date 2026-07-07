@@ -145,7 +145,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
       icon: Users,
     },
     {
-      to: "/staff/dashboard?view=driver-portal",
+      to: "/driver/install",
       label: "Driver Portal",
       icon: Truck,
     },
@@ -399,6 +399,19 @@ function StaffLayout() {
             <nav className="space-y-0.5">
               {nav.map((n) => {
                 const Icon = n.icon;
+                if (!n.to.startsWith("/staff/dashboard")) {
+                  return (
+                    <a
+                      key={n.to}
+                      href={n.to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
+                    >
+                      <Icon className="h-4 w-4" /> {n.label}
+                    </a>
+                  );
+                }
                 const viewKey = n.to.includes("view=")
                   ? n.to.split("view=")[1]
                   : "";
@@ -431,6 +444,19 @@ function StaffLayout() {
           <div className="flex gap-1 overflow-x-auto">
             {nav.map((n) => {
               const Icon = n.icon;
+              if (!n.to.startsWith("/staff/dashboard")) {
+                return (
+                  <a
+                    key={n.to}
+                    href={n.to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex shrink-0 flex-col items-center gap-0.5 rounded-md px-3 py-1.5 text-[10px] font-bold text-muted-foreground"
+                  >
+                    <Icon className="h-4 w-4" /> {n.label}
+                  </a>
+                );
+              }
               const viewKey = n.to.includes("view=")
                 ? n.to.split("view=")[1]
                 : "";
