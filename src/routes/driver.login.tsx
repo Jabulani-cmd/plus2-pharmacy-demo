@@ -17,6 +17,7 @@ const DEMO_DRIVERS = [
   { email: "rudo@kingspharmacy.co.zw", name: "Rudo Mhlanga" },
 ];
 const DEMO_PASSWORD = "Driver123!";
+const DRIVER_INSTALL_CONFIRMED_KEY = "kp-driver-app-installed-v2";
 
 function DriverLogin() {
   const navigate = useNavigate();
@@ -45,12 +46,13 @@ function DriverLogin() {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
     }
-    if (localStorage.getItem("kp-driver-app") === "1") {
+    if (localStorage.getItem(DRIVER_INSTALL_CONFIRMED_KEY) === "1") {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
     }
     const ua = navigator.userAgent;
-    const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+    const isMobile =
+      /android|iphone|ipad|ipod/i.test(ua) || window.innerWidth <= 640;
     if (!isMobile) {
       setGateState("pass");
       return () => window.removeEventListener("beforeinstallprompt", onPrompt);
@@ -69,7 +71,7 @@ function DriverLogin() {
         installPrompt.prompt();
         const { outcome } = await installPrompt.userChoice;
         if (outcome === "accepted") {
-          localStorage.setItem("kp-driver-app", "1");
+          localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
           setGateState("pass");
         }
       } finally {
@@ -83,7 +85,7 @@ function DriverLogin() {
   };
 
   const handleAlreadyInstalled = () => {
-    localStorage.setItem("kp-driver-app", "1");
+    localStorage.setItem(DRIVER_INSTALL_CONFIRMED_KEY, "1");
     setGateState("pass");
   };
 
