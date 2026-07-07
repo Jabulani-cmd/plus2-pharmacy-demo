@@ -143,6 +143,7 @@ function DriverLogin() {
       >
         <div style={{ fontSize: 56 }}>🛵</div>
         <div
+          className="animate-spin"
           style={{
             marginTop: 20,
             width: 32,
@@ -150,10 +151,8 @@ function DriverLogin() {
             border: "3px solid rgba(255,255,255,0.3)",
             borderTopColor: "white",
             borderRadius: "50%",
-            animation: "kp-spin 0.8s linear infinite",
           }}
         />
-        <style>{`@keyframes kp-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -192,8 +191,6 @@ function DriverLogin() {
           boxSizing: "border-box",
         }}
       >
-        <style>{`@keyframes kp-spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
-
         <div
           style={{
             width: 96,
@@ -267,13 +264,13 @@ function DriverLogin() {
           {installing ? (
             <>
               <span
+                className="animate-spin"
                 style={{
                   width: 18,
                   height: 18,
                   border: "3px solid rgba(27,58,107,0.25)",
                   borderTopColor: "#1B3A6B",
                   borderRadius: "50%",
-                  animation: "kp-spin 0.8s linear infinite",
                   display: "inline-block",
                 }}
               />
