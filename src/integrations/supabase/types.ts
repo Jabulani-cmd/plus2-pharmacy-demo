@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      driver_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          driver_auth_id: string
+          id: string
+          order_id: string
+          read: boolean
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          driver_auth_id: string
+          id?: string
+          order_id: string
+          read?: boolean
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          driver_auth_id?: string
+          id?: string
+          order_id?: string
+          read?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       drivers: {
         Row: {
           auth_user_id: string | null
@@ -436,9 +466,11 @@ export type Database = {
       }
       shared_orders: {
         Row: {
+          accepted_at: string | null
           address: string
           branch_id: string | null
           branch_name: string | null
+          collected_at: string | null
           created_at: string
           customer: string
           customer_email: string | null
@@ -452,6 +484,11 @@ export type Database = {
           discount_amount: number
           discount_code: string | null
           dispatched_at: string | null
+          driver_auth_id: string | null
+          driver_heading: number | null
+          driver_id: string | null
+          driver_lat: number | null
+          driver_lng: number | null
           driver_name: string | null
           driver_phone: string | null
           driver_vehicle: string | null
@@ -473,9 +510,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
           address?: string
           branch_id?: string | null
           branch_name?: string | null
+          collected_at?: string | null
           created_at?: string
           customer: string
           customer_email?: string | null
@@ -489,6 +528,11 @@ export type Database = {
           discount_amount?: number
           discount_code?: string | null
           dispatched_at?: string | null
+          driver_auth_id?: string | null
+          driver_heading?: number | null
+          driver_id?: string | null
+          driver_lat?: number | null
+          driver_lng?: number | null
           driver_name?: string | null
           driver_phone?: string | null
           driver_vehicle?: string | null
@@ -510,9 +554,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
           address?: string
           branch_id?: string | null
           branch_name?: string | null
+          collected_at?: string | null
           created_at?: string
           customer?: string
           customer_email?: string | null
@@ -526,6 +572,11 @@ export type Database = {
           discount_amount?: number
           discount_code?: string | null
           dispatched_at?: string | null
+          driver_auth_id?: string | null
+          driver_heading?: number | null
+          driver_id?: string | null
+          driver_lat?: number | null
+          driver_lng?: number | null
           driver_name?: string | null
           driver_phone?: string | null
           driver_vehicle?: string | null
@@ -545,6 +596,36 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          order_id: string | null
+          read: boolean
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string | null
+          read?: boolean
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string | null
+          read?: boolean
+          title?: string
         }
         Relationships: []
       }
