@@ -94,6 +94,13 @@ export type SharedOrder = {
   deliveredAt?: string;
   eta?: string;
   outForDeliveryTs?: number;
+  driverId?: string;
+  driverAuthId?: string;
+  acceptedAt?: string;
+  collectedAt?: string;
+  driverLat?: number;
+  driverLng?: number;
+  driverHeading?: number;
 };
 
 type State = {
@@ -152,6 +159,13 @@ type Row = {
   delivered_at: string | null;
   eta: string | null;
   out_for_delivery_ts: number | null;
+  driver_id: string | null;
+  driver_auth_id: string | null;
+  accepted_at: string | null;
+  collected_at: string | null;
+  driver_lat: number | null;
+  driver_lng: number | null;
+  driver_heading: number | null;
 };
 
 // ─── Status normalisation ────────────────────────────────────────────────────
@@ -208,6 +222,13 @@ const rowToOrder = (r: Row): SharedOrder => ({
   deliveredAt: r.delivered_at ?? undefined,
   eta: r.eta ?? undefined,
   outForDeliveryTs: r.out_for_delivery_ts ?? undefined,
+  driverId: r.driver_id ?? undefined,
+  driverAuthId: r.driver_auth_id ?? undefined,
+  acceptedAt: r.accepted_at ?? undefined,
+  collectedAt: r.collected_at ?? undefined,
+  driverLat: r.driver_lat != null ? Number(r.driver_lat) : undefined,
+  driverLng: r.driver_lng != null ? Number(r.driver_lng) : undefined,
+  driverHeading: r.driver_heading != null ? Number(r.driver_heading) : undefined,
 });
 
 const orderToRow = (o: SharedOrder) => ({
@@ -242,6 +263,13 @@ const orderToRow = (o: SharedOrder) => ({
   delivered_at: o.deliveredAt ?? null,
   eta: o.eta ?? null,
   out_for_delivery_ts: o.outForDeliveryTs ?? null,
+  driver_id: o.driverId ?? null,
+  driver_auth_id: o.driverAuthId ?? null,
+  accepted_at: o.acceptedAt ?? null,
+  collected_at: o.collectedAt ?? null,
+  driver_lat: o.driverLat ?? null,
+  driver_lng: o.driverLng ?? null,
+  driver_heading: o.driverHeading ?? null,
 });
 
 export const useSharedOrders = create<State>()((set, get) => ({
