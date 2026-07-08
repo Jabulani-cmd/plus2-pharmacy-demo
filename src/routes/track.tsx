@@ -74,6 +74,8 @@ function rowToShared(r: Record<string, unknown>): SharedOrder {
 
 function bannerFor(status: SharedOrderStatus): { text: string; tone: "info" | "success" } {
   switch (status) {
+    case "Preparing":
+      return { text: "👍 Driver accepted — heading to collect", tone: "info" };
     case "Packed":
       return { text: "📦 Order packed — awaiting driver", tone: "info" };
     case "Assigned":
@@ -95,7 +97,7 @@ function sharedHistory(o: SharedOrder | null) {
   out.push({ status: "Order Confirmed", at: o.placedTs });
   if (o.packedAt || ["Packed", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
     out.push({ status: "Preparing Order", at: o.placedTs + 60_000 });
-  if (o.dispatchedAt || ["Assigned", "Out for delivery", "Delivered"].includes(o.status))
+  if (o.dispatchedAt || ["Preparing", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
     out.push({ status: "Driver Assigned", at: o.placedTs + 120_000 });
   if (o.outForDeliveryTs || ["Out for delivery", "Delivered"].includes(o.status))
     out.push({ status: "Out for Delivery", at: o.outForDeliveryTs ?? o.placedTs + 180_000 });
@@ -129,6 +131,7 @@ const STEP_META: Record<string, { e: string; label: string }> = {
 // Map shared_orders status → display step in the OTC flow (shared_orders is OTC-only)
 const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, OTCStatus> = {
   Confirmed: "Order Confirmed",
+  Preparing: "Preparing Order", // driver accepted/collecting
   "Ready to dispatch": "Preparing Order",
   Packed: "Preparing Order",
   Assigned: "Driver Assigned",
@@ -878,9 +881,23 @@ function Track() {
 
   // Initial fetch + per-order Supabase Realtime subscription
   useEffect(() => {
-    if (!trackId) return;
     if (isRx) return; // prescription rows live in a different table/store
     let cancelled = false;
+
+    // If no trackId, fetch most recent order from shared_orders as fallback
+    if (!trackId) {
+      void supabase
+        .from("shared_orders")
+        .select("*")
+        .order("placed_ts", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (cancelled || !data) return;
+          setShared(rowToShared(data));
+        });
+      return () => { cancelled = true; };
+    }
 
     void supabase
       .from("shared_orders")
@@ -905,6 +922,12 @@ function Track() {
         (payload) => {
           const next = rowToShared(payload.new as Record<string, unknown>);
           setShared(next);
+          // Also update Zustand store so fromShared stays in sync
+          useSharedOrders.setState((s) => ({
+            orders: s.orders.some((o) => o.id === next.id)
+              ? s.orders.map((o) => (o.id === next.id ? next : o))
+              : [next, ...s.orders],
+          }));
         },
       )
       .subscribe((status) => {
