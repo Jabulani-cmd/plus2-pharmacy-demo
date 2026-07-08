@@ -1133,6 +1133,9 @@ function Track() {
             isActive={isOutForDelivery}
             branchName={branchName}
             demoMode={demoMode}
+            liveLat={liveShared?.driverLat}
+            liveLng={liveShared?.driverLng}
+            liveHeading={liveShared?.driverHeading}
           />
 
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
