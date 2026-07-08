@@ -174,6 +174,36 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
 
+  // Staff notifications realtime — driver acceptance / delivery confirmations
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        try { void Notification.requestPermission(); } catch { /* ignore */ }
+      }
+    }
+    const ch = supabase
+      .channel("staff_notifications_dispatch")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "staff_notifications" },
+        (payload) => {
+          const n = payload.new as { title?: string; body?: string };
+          const title = n.title ?? "Update";
+          const body = n.body ?? "";
+          toast.success(title, { description: body });
+          if (
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            try { new Notification(title, { body }); } catch { /* ignore */ }
+          }
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, []);
+
   const sharedPrescriptions = useSharedPrescriptions(
     (s) => s.prescriptions
   );
