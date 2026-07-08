@@ -120,6 +120,9 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           eta: o.eta,
           phone: o.phone,
           deliveryAddress: o.deliveryAddress,
+          driverLat: o.driverLat,
+          driverLng: o.driverLng,
+          driverHeading: o.driverHeading,
         };
       }),
     [sharedOrders]
