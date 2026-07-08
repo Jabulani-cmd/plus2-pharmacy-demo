@@ -62,6 +62,13 @@ function rowToShared(r: Record<string, unknown>): SharedOrder {
     deliveredAt: (g("delivered_at") as string | null) ?? undefined,
     eta: (g("eta") as string | null) ?? undefined,
     outForDeliveryTs: (g("out_for_delivery_ts") as number | null) ?? undefined,
+    driverId: (g("driver_id") as string | null) ?? undefined,
+    driverAuthId: (g("driver_auth_id") as string | null) ?? undefined,
+    acceptedAt: (g("accepted_at") as string | null) ?? undefined,
+    collectedAt: (g("collected_at") as string | null) ?? undefined,
+    driverLat: g("driver_lat") != null ? Number(g("driver_lat")) : undefined,
+    driverLng: g("driver_lng") != null ? Number(g("driver_lng")) : undefined,
+    driverHeading: g("driver_heading") != null ? Number(g("driver_heading")) : undefined,
   };
 }
 
