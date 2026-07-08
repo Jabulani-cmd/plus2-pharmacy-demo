@@ -9,8 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // localStorage queue of orders awaiting successful Supabase persistence.
-// Lets us retry on network blips and across page reloads so a checkout
-// success never silently fails to reach the dispatcher.
 const PENDING_KEY = "kings-shared-orders-pending";
 
 function readPending(): SharedOrder[] {
@@ -95,7 +93,6 @@ export type SharedOrder = {
   dispatchedAt?: string;
   deliveredAt?: string;
   eta?: string;
-  /** Numeric timestamp when status became "Out for delivery" — used by countdown timer. */
   outForDeliveryTs?: number;
 };
 
@@ -121,7 +118,6 @@ const stamp = () =>
     minute: "2-digit",
   });
 
-// --- Supabase <-> SharedOrder mapping ---
 const TABLE = "shared_orders";
 
 type Row = {
@@ -145,7 +141,7 @@ type Row = {
   discount_amount: number;
   discount_code: string | null;
   total: number;
-  status: SharedOrderStatus;
+  status: string;
   placed_at: string;
   placed_ts: number;
   driver_name: string | null;
@@ -158,6 +154,28 @@ type Row = {
   out_for_delivery_ts: number | null;
 };
 
+// ─── Status normalisation ────────────────────────────────────────────────────
+// The KP Driver app writes its own status strings which may differ from the
+// dispatcher's canonical strings. This map bridges the two so Realtime
+// updates from the driver app land in the correct Kanban column.
+function normaliseStatus(raw: string): SharedOrderStatus {
+  const map: Record<string, SharedOrderStatus> = {
+    // Driver app strings → dispatcher strings
+    "Confirmed":          "Confirmed",
+    "Preparing":          "Confirmed",
+    "Driver Assigned":    "Assigned",        // old driver string
+    "Assigned":           "Assigned",        // new driver string
+    "Out for Delivery":   "Out for delivery", // old driver string (capital D)
+    "Out for delivery":   "Out for delivery", // new driver string
+    "Delivered":          "Delivered",
+    // Dispatcher strings pass through unchanged
+    "Ready to dispatch":  "Ready to dispatch",
+    "Packed":             "Packed",
+  };
+  return (map[raw] as SharedOrderStatus) ?? (raw as SharedOrderStatus);
+}
+
+// ─── Row → SharedOrder ───────────────────────────────────────────────────────
 const rowToOrder = (r: Row): SharedOrder => ({
   id: r.id,
   customerId: r.customer_id ?? undefined,
@@ -179,7 +197,7 @@ const rowToOrder = (r: Row): SharedOrder => ({
   discountAmount: Number(r.discount_amount ?? 0),
   discountCode: r.discount_code ?? undefined,
   total: Number(r.total),
-  status: r.status,
+  status: normaliseStatus(r.status),   // ← normalise here
   placedAt: r.placed_at,
   placedTs: Number(r.placed_ts),
   driverName: r.driver_name ?? undefined,
@@ -227,204 +245,241 @@ const orderToRow = (o: SharedOrder) => ({
 });
 
 export const useSharedOrders = create<State>()((set, get) => ({
-      orders: [],
+  orders: [],
 
-      addOrder: (o) => {
-        const placedAt = stamp();
-        const order: SharedOrder = {
-          ...o,
-          status: "Confirmed",
-          placedAt,
-          placedTs: Date.now(),
-        };
-        // Optimistic local insert
-        set((s) => ({ orders: [order, ...s.orders.filter((x) => x.id !== order.id)] }));
-        // Persist to Supabase so every device sees it. Queue + retry on
-        // failure so the order eventually reaches the dispatch board.
-        queuePending(order);
-        void persistOrder(order);
+  addOrder: (o) => {
+    const placedAt = stamp();
+    const order: SharedOrder = {
+      ...o,
+      status: "Confirmed",
+      placedAt,
+      placedTs: Date.now(),
+    };
+    set((s) => ({
+      orders: [order, ...s.orders.filter((x) => x.id !== order.id)],
+    }));
+    queuePending(order);
+    void persistOrder(order);
 
-        // Customer confirmation
-        pushNotification({
-          audience: "customer",
-          userId: o.customerId ?? o.customerEmail,
-          title: "Order confirmed",
-          body:
-            "Order " + o.id + " received — staff have been notified to pack it.",
-          link: "/track",
-          linkSearch: { id: o.id },
-          tone: "success",
-        });
+    pushNotification({
+      audience: "customer",
+      userId: o.customerId ?? o.customerEmail,
+      title: "Order confirmed",
+      body:
+        "Order " +
+        o.id +
+        " received — staff have been notified to pack it.",
+      link: "/track",
+      linkSearch: { id: o.id },
+      tone: "success",
+    });
 
-        // Staff alert
-        pushNotification({
-          audience: "staff",
-          title: "NEW OTC order — needs packing",
-          body:
-            o.customer + " · $" + o.total.toFixed(2) + " · " + o.itemCount + " item" + (o.itemCount === 1 ? "" : "s"),
-          link: "/staff/dashboard",
-          tone: "info",
-        });
-      },
+    pushNotification({
+      audience: "staff",
+      title: "NEW OTC order — needs packing",
+      body:
+        o.customer +
+        " · $" +
+        o.total.toFixed(2) +
+        " · " +
+        o.itemCount +
+        " item" +
+        (o.itemCount === 1 ? "" : "s"),
+      link: "/staff/dashboard",
+      tone: "info",
+    });
+  },
 
-      markPacked: (id) => {
-        const o = get().orders.find((x) => x.id === id);
-        if (!o) return;
-        const packedAt = stamp();
-        set((s) => ({
-          orders: s.orders.map((x) =>
-            x.id === id ? { ...x, status: "Packed", packedAt } : x
-          ),
-        }));
-        void supabase
-          .from(TABLE)
-          .update({ status: "Packed", packed_at: packedAt, updated_at: new Date().toISOString() })
-          .eq("id", id)
-          .then(({ error }) => {
-            if (error) console.error("[sharedOrders] markPacked update failed", error);
-          });
-        pushNotification({
-          audience: "customer",
-          userId: o.customerId ?? o.customerEmail,
-          title: "Order packed",
-          body: "Order " + id + " has been packed and is awaiting a driver.",
-          link: "/track",
-          linkSearch: { id },
-          tone: "info",
-        });
-      },
+  markPacked: (id) => {
+    const o = get().orders.find((x) => x.id === id);
+    if (!o) return;
+    const packedAt = stamp();
+    set((s) => ({
+      orders: s.orders.map((x) =>
+        x.id === id ? { ...x, status: "Packed", packedAt } : x
+      ),
+    }));
+    void supabase
+      .from(TABLE)
+      .update({
+        status: "Packed",
+        packed_at: packedAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error)
+          console.error("[sharedOrders] markPacked update failed", error);
+      });
+    pushNotification({
+      audience: "customer",
+      userId: o.customerId ?? o.customerEmail,
+      title: "Order packed",
+      body: "Order " + id + " has been packed and is awaiting a driver.",
+      link: "/track",
+      linkSearch: { id },
+      tone: "info",
+    });
+  },
 
-      assignDriver: (id, driverName, driverPhone, driverVehicle) => {
-        const o = get().orders.find((x) => x.id === id);
-        if (!o) return;
-        const dispatchedAt = stamp();
-        set((s) => ({
-          orders: s.orders.map((x) =>
-            x.id === id
-              ? {
-                  ...x,
-                  status: "Assigned",
-                  driverName,
-                  driverPhone,
-                  driverVehicle,
-                  dispatchedAt,
-                  eta: "30 min",
-                }
-              : x
-          ),
-        }));
-        void supabase
-          .from(TABLE)
-          .update({
-            status: "Assigned",
-            driver_name: driverName,
-            driver_phone: driverPhone,
-            driver_vehicle: driverVehicle,
-            dispatched_at: dispatchedAt,
-            eta: "30 min",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id)
-          .then(({ error }) => {
-            if (error) console.error("[sharedOrders] assignDriver update failed", error);
-          });
-        pushNotification({
-          audience: "customer",
-          userId: o.customerId ?? o.customerEmail,
-          title: "Driver assigned",
-          body:
-            driverName + " has been assigned to order " + id + " — awaiting dispatch.",
-          link: "/track",
-          linkSearch: { id },
-          tone: "info",
-        });
-      },
+  assignDriver: (id, driverName, driverPhone, driverVehicle) => {
+    const o = get().orders.find((x) => x.id === id);
+    if (!o) return;
+    const dispatchedAt = stamp();
+    set((s) => ({
+      orders: s.orders.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              status: "Assigned",
+              driverName,
+              driverPhone,
+              driverVehicle,
+              dispatchedAt,
+              eta: "30 min",
+            }
+          : x
+      ),
+    }));
+    void supabase
+      .from(TABLE)
+      .update({
+        status: "Assigned",
+        driver_name: driverName,
+        driver_phone: driverPhone,
+        driver_vehicle: driverVehicle,
+        dispatched_at: dispatchedAt,
+        eta: "30 min",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error)
+          console.error("[sharedOrders] assignDriver update failed", error);
+      });
+    pushNotification({
+      audience: "customer",
+      userId: o.customerId ?? o.customerEmail,
+      title: "Driver assigned",
+      body:
+        driverName +
+        " has been assigned to order " +
+        id +
+        " — awaiting dispatch.",
+      link: "/track",
+      linkSearch: { id },
+      tone: "info",
+    });
+  },
 
-      startDelivery: (id) => {
-        const o = get().orders.find((x) => x.id === id);
-        if (!o) return;
-        const ts = Date.now();
-        set((s) => ({
-          orders: s.orders.map((x) =>
-            x.id === id
-              ? { ...x, status: "Out for delivery", eta: "20 min", outForDeliveryTs: ts }
-              : x
-          ),
-        }));
-        void supabase
-          .from(TABLE)
-          .update({
-            status: "Out for delivery",
-            eta: "20 min",
-            out_for_delivery_ts: ts,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id)
-          .then(({ error }) => {
-            if (error) console.error("[sharedOrders] startDelivery update failed", error);
-          });
-        pushNotification({
-          audience: "customer",
-          userId: o.customerId ?? o.customerEmail,
-          title: "Driver is on the way",
-          body:
-            (o.driverName ?? "Your driver") +
-            " has started delivery of order " +
-            id +
-            " — ETA 20 minutes.",
-          link: "/track",
-          linkSearch: { id },
-          tone: "success",
-        });
-      },
+  startDelivery: (id) => {
+    const o = get().orders.find((x) => x.id === id);
+    if (!o) return;
+    const ts = Date.now();
+    set((s) => ({
+      orders: s.orders.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              status: "Out for delivery",
+              eta: "20 min",
+              outForDeliveryTs: ts,
+            }
+          : x
+      ),
+    }));
+    void supabase
+      .from(TABLE)
+      .update({
+        status: "Out for delivery",
+        eta: "20 min",
+        out_for_delivery_ts: ts,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error)
+          console.error("[sharedOrders] startDelivery update failed", error);
+      });
+    pushNotification({
+      audience: "customer",
+      userId: o.customerId ?? o.customerEmail,
+      title: "Driver is on the way",
+      body:
+        (o.driverName ?? "Your driver") +
+        " has started delivery of order " +
+        id +
+        " — ETA 20 minutes.",
+      link: "/track",
+      linkSearch: { id },
+      tone: "success",
+    });
+  },
 
-      updateStatus: (id, status) => {
-        const o = get().orders.find((x) => x.id === id);
-        if (!o) return;
-        const patch: Partial<SharedOrder> = { status };
-        const dbPatch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
-        if (status === "Delivered") patch.deliveredAt = stamp();
-        if (status === "Delivered") dbPatch.delivered_at = patch.deliveredAt;
-        set((s) => ({
-          orders: s.orders.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-        }));
-        void supabase
-          .from(TABLE)
-          .update(dbPatch as never)
-          .eq("id", id)
-          .then(({ error }) => {
-            if (error) console.error("[sharedOrders] updateStatus update failed", error);
-          });
-        if (status === "Delivered") {
-          pushNotification({
-            audience: "customer",
-            userId: o.customerId ?? o.customerEmail,
-            title: "Order delivered",
-            body: "Order " + id + " was delivered. Thanks for shopping with Kings Pharmacy.",
-            link: "/account",
-            tone: "success",
-          });
-        }
-      },
+  updateStatus: (id, status) => {
+    const o = get().orders.find((x) => x.id === id);
+    if (!o) return;
+    const patch: Partial<SharedOrder> = { status };
+    const dbPatch: Record<string, unknown> = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    if (status === "Delivered") patch.deliveredAt = stamp();
+    if (status === "Delivered") dbPatch.delivered_at = patch.deliveredAt;
+    set((s) => ({
+      orders: s.orders.map((x) =>
+        x.id === id ? { ...x, ...patch } : x
+      ),
+    }));
+    void supabase
+      .from(TABLE)
+      .update(dbPatch as never)
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error)
+          console.error("[sharedOrders] updateStatus update failed", error);
+      });
+    if (status === "Delivered") {
+      pushNotification({
+        audience: "customer",
+        userId: o.customerId ?? o.customerEmail,
+        title: "Order delivered",
+        body:
+          "Order " +
+          id +
+          " was delivered. Thanks for shopping with Kings Pharmacy.",
+        link: "/account",
+        tone: "success",
+      });
+    }
+  },
 }));
 
-// --- Initial fetch + realtime subscription (browser only) ---
-// Persist a single order to Supabase with one immediate retry. On final
-// failure surface an error toast so checkout/customer flows aren't silent.
-async function persistOrder(order: SharedOrder, attempt = 0): Promise<void> {
-  const { error } = await supabase.from(TABLE).upsert(orderToRow(order));
+// ─── Initial fetch + realtime subscription (browser only) ───────────────────
+async function persistOrder(
+  order: SharedOrder,
+  attempt = 0
+): Promise<void> {
+  const { error } = await supabase
+    .from(TABLE)
+    .upsert(orderToRow(order));
   if (!error) {
     clearPending(order.id);
     return;
   }
-  console.error("[sharedOrders] insert failed (attempt " + (attempt + 1) + ")", error);
+  console.error(
+    "[sharedOrders] insert failed (attempt " + (attempt + 1) + ")",
+    error
+  );
   if (attempt < 2) {
     await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
     return persistOrder(order, attempt + 1);
   }
   try {
     toast.error(
-      "Order " + order.id + " was placed locally but couldn't sync to the dispatcher. We'll retry automatically."
+      "Order " +
+        order.id +
+        " was placed locally but couldn't sync to the dispatcher. We'll retry automatically."
     );
   } catch {
     /* toast may not be available in this context */
@@ -450,8 +505,11 @@ if (typeof window !== "undefined") {
         console.error("[sharedOrders] initial fetch failed", error);
         return;
       }
-          useSharedOrders.setState({ orders: (data ?? []).map((r) => rowToOrder(r as unknown as Row)) });
-      // Once we have the baseline, retry any orders that never landed.
+      useSharedOrders.setState({
+        orders: (data ?? []).map((r) =>
+          rowToOrder(r as unknown as Row)
+        ),
+      });
       await flushPending();
     } catch (e) {
       console.error("[sharedOrders] bootstrap error", e);
@@ -459,9 +517,12 @@ if (typeof window !== "undefined") {
   };
   void bootstrap();
 
-  // Retry pending orders whenever the tab regains focus or connectivity.
-  window.addEventListener("online", () => { void flushPending(); });
-  window.addEventListener("focus", () => { void flushPending(); });
+  window.addEventListener("online", () => {
+    void flushPending();
+  });
+  window.addEventListener("focus", () => {
+    void flushPending();
+  });
 
   supabase
     .channel("shared_orders_changes")
@@ -475,18 +536,25 @@ if (typeof window !== "undefined") {
           useSharedOrders.setState((s) => {
             const exists = s.orders.some((o) => o.id === order.id);
             const orders = exists
-              ? s.orders.map((o) => (o.id === order.id ? order : o))
+              ? s.orders.map((o) =>
+                  o.id === order.id ? order : o
+                )
               : [order, ...s.orders];
             return { orders };
           });
         } else if (evt === "DELETE") {
           const id = (payload.old as { id: string }).id;
-          useSharedOrders.setState((s) => ({ orders: s.orders.filter((o) => o.id !== id) }));
+          useSharedOrders.setState((s) => ({
+            orders: s.orders.filter((o) => o.id !== id),
+          }));
         }
       }
     )
     .subscribe();
 
-  // Clear any stale localStorage cache from the previous persisted store
-  try { localStorage.removeItem("kings-shared-orders"); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem("kings-shared-orders");
+  } catch {
+    /* ignore */
+  }
 }
