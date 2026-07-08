@@ -58,6 +58,9 @@ export type StaffDelivery = {
     phone?: string;
     email?: string;
   };
+  driverLat?: number;
+  driverLng?: number;
+  driverHeading?: number;
 };
 
 export type StaffInventoryItem = {
