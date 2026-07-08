@@ -318,15 +318,38 @@ function DeliveryMap({
   isActive,
   branchName,
   demoMode = false,
+  liveLat,
+  liveLng,
+  liveHeading,
 }: {
   progress: number;
   driverName: string;
   isActive: boolean;
   branchName: string;
   demoMode?: boolean;
+  liveLat?: number;
+  liveLng?: number;
+  liveHeading?: number;
 }) {
-  const driverPos = interpolateRoute(ROUTE_WAYPOINTS, progress);
-  const heading = routeHeading(ROUTE_WAYPOINTS, progress);
+  const hasLiveGps = liveLat != null && liveLng != null;
+  // Simple linear projection around Bulawayo CBD so real GPS lands on the map.
+  const projectLatLng = (lat: number, lng: number) => {
+    const centerLat = -20.15;
+    const centerLng = 28.58;
+    const scale = 4000; // px per degree
+    const x = MAP_W / 2 + (lng - centerLng) * scale;
+    const y = MAP_H / 2 - (lat - centerLat) * scale;
+    return {
+      x: Math.max(20, Math.min(MAP_W - 20, x)),
+      y: Math.max(20, Math.min(MAP_H - 20, y)),
+    };
+  };
+  const driverPos = hasLiveGps
+    ? projectLatLng(liveLat!, liveLng!)
+    : interpolateRoute(ROUTE_WAYPOINTS, progress);
+  const heading = hasLiveGps
+    ? liveHeading ?? 0
+    : routeHeading(ROUTE_WAYPOINTS, progress);
   const branch = BRANCHES[branchName] ?? BRANCHES["9th Ave CBD"];
   const routePath = waypointsToPath(ROUTE_WAYPOINTS);
 
