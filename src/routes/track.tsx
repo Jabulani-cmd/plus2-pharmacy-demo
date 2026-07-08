@@ -62,6 +62,13 @@ function rowToShared(r: Record<string, unknown>): SharedOrder {
     deliveredAt: (g("delivered_at") as string | null) ?? undefined,
     eta: (g("eta") as string | null) ?? undefined,
     outForDeliveryTs: (g("out_for_delivery_ts") as number | null) ?? undefined,
+    driverId: (g("driver_id") as string | null) ?? undefined,
+    driverAuthId: (g("driver_auth_id") as string | null) ?? undefined,
+    acceptedAt: (g("accepted_at") as string | null) ?? undefined,
+    collectedAt: (g("collected_at") as string | null) ?? undefined,
+    driverLat: g("driver_lat") != null ? Number(g("driver_lat")) : undefined,
+    driverLng: g("driver_lng") != null ? Number(g("driver_lng")) : undefined,
+    driverHeading: g("driver_heading") != null ? Number(g("driver_heading")) : undefined,
   };
 }
 
@@ -311,15 +318,38 @@ function DeliveryMap({
   isActive,
   branchName,
   demoMode = false,
+  liveLat,
+  liveLng,
+  liveHeading,
 }: {
   progress: number;
   driverName: string;
   isActive: boolean;
   branchName: string;
   demoMode?: boolean;
+  liveLat?: number;
+  liveLng?: number;
+  liveHeading?: number;
 }) {
-  const driverPos = interpolateRoute(ROUTE_WAYPOINTS, progress);
-  const heading = routeHeading(ROUTE_WAYPOINTS, progress);
+  const hasLiveGps = liveLat != null && liveLng != null;
+  // Simple linear projection around Bulawayo CBD so real GPS lands on the map.
+  const projectLatLng = (lat: number, lng: number) => {
+    const centerLat = -20.15;
+    const centerLng = 28.58;
+    const scale = 4000; // px per degree
+    const x = MAP_W / 2 + (lng - centerLng) * scale;
+    const y = MAP_H / 2 - (lat - centerLat) * scale;
+    return {
+      x: Math.max(20, Math.min(MAP_W - 20, x)),
+      y: Math.max(20, Math.min(MAP_H - 20, y)),
+    };
+  };
+  const driverPos = hasLiveGps
+    ? projectLatLng(liveLat!, liveLng!)
+    : interpolateRoute(ROUTE_WAYPOINTS, progress);
+  const heading = hasLiveGps
+    ? liveHeading ?? 0
+    : routeHeading(ROUTE_WAYPOINTS, progress);
   const branch = BRANCHES[branchName] ?? BRANCHES["9th Ave CBD"];
   const routePath = waypointsToPath(ROUTE_WAYPOINTS);
 
@@ -537,6 +567,17 @@ function DeliveryMap({
             <rect width={44} height={18} rx={4} fill="#FACC15" />
             <text x={22} y={13} fontSize="9" fill="#1B3A6B" textAnchor="middle" fontFamily="sans-serif" fontWeight="900">
               DEMO
+            </text>
+          </g>
+        )}
+        {hasLiveGps && (
+          <g transform={`translate(${MAP_W / 2 - 34}, ${MAP_H - 26})`}>
+            <rect width={68} height={18} rx={9} fill="#7C3AED" />
+            <circle cx={9} cy={9} r={3} fill="white">
+              <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite" />
+            </circle>
+            <text x={38} y={13} fontSize="9" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="900">
+              LIVE GPS
             </text>
           </g>
         )}
@@ -1103,6 +1144,9 @@ function Track() {
             isActive={isOutForDelivery}
             branchName={branchName}
             demoMode={demoMode}
+            liveLat={liveShared?.driverLat}
+            liveLng={liveShared?.driverLng}
+            liveHeading={liveShared?.driverHeading}
           />
 
           <div className="flex items-center gap-4 text-[11px] text-slate-500">

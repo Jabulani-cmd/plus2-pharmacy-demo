@@ -120,6 +120,9 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           eta: o.eta,
           phone: o.phone,
           deliveryAddress: o.deliveryAddress,
+          driverLat: o.driverLat,
+          driverLng: o.driverLng,
+          driverHeading: o.driverHeading,
         };
       }),
     [sharedOrders]
@@ -173,6 +176,36 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
+
+  // Staff notifications realtime — driver acceptance / delivery confirmations
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        try { void Notification.requestPermission(); } catch { /* ignore */ }
+      }
+    }
+    const ch = supabase
+      .channel("staff_notifications_dispatch")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "staff_notifications" },
+        (payload) => {
+          const n = payload.new as { title?: string; body?: string };
+          const title = n.title ?? "Update";
+          const body = n.body ?? "";
+          toast.success(title, { description: body });
+          if (
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            try { new Notification(title, { body }); } catch { /* ignore */ }
+          }
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, []);
 
   const sharedPrescriptions = useSharedPrescriptions(
     (s) => s.prescriptions
@@ -654,6 +687,15 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                             </div>
                           </div>
                         )}
+                        {d.status === "Out for delivery" && d.driverLat != null && (
+                          <div className="mt-2 flex items-center gap-1.5 rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-700">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-600" />
+                            </span>
+                            Live GPS · updating
+                          </div>
+                        )}
                         <div className="mt-2 flex gap-1">
                           {d.status === "Confirmed" && (
                             <button
@@ -1123,6 +1165,29 @@ function DriversView({
                   <Row label="Total" value={fmtUSD(Number(current.total))} />
                   <Row label="Payment" value={current.paymentMethod} />
                   <Row label="Status" value={current.status} />
+                  {current.driverLat != null && current.driverLng != null && (
+                    <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-2">
+                      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-600" />
+                        </span>
+                        📡 Live Location
+                      </div>
+                      <div className="text-[11px] text-violet-900 tabular-nums">
+                        {Number(current.driverLat).toFixed(5)}, {Number(current.driverLng).toFixed(5)}
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps?q=${current.driverLat},${current.driverLng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1 inline-block text-[11px] font-bold text-violet-700 hover:underline"
+                      >
+                        Open in Google Maps ↗
+                      </a>
+                    </div>
+                  )}
                   <div className="mt-3 flex gap-2 border-t border-border pt-3">
                     <a
                       href={"tel:" + current.phone}
