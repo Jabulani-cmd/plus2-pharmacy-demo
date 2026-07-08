@@ -385,6 +385,42 @@ export const useSharedOrders = create<State>()((set, get) => ({
         if (error)
           console.error("[sharedOrders] assignDriver update failed", error);
       });
+    // Look up driver's auth user id and notify the KP Driver app.
+    void (async () => {
+      try {
+        const { data: drv } = await supabase
+          .from("drivers")
+          .select("id, auth_user_id")
+          .eq("name", driverName)
+          .maybeSingle();
+        const driverAuthId = (drv as { auth_user_id?: string | null } | null)?.auth_user_id ?? null;
+        const driverRowId = (drv as { id?: string | null } | null)?.id ?? null;
+        if (driverAuthId || driverRowId) {
+          await supabase
+            .from(TABLE)
+            .update({
+              driver_auth_id: driverAuthId,
+              driver_id: driverRowId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+        }
+        if (driverAuthId) {
+          await supabase.from("driver_notifications").insert({
+            driver_auth_id: driverAuthId,
+            order_id: id,
+            title: "🛵 New Delivery Assigned!",
+            body:
+              "Order " + id + " for " + o.customer +
+              " · " + o.itemCount + " item" + (o.itemCount === 1 ? "" : "s") +
+              " · $" + o.total.toFixed(2) +
+              (o.address ? " · " + o.address : ""),
+          });
+        }
+      } catch (e) {
+        console.error("[sharedOrders] driver notification failed", e);
+      }
+    })();
     pushNotification({
       audience: "customer",
       userId: o.customerId ?? o.customerEmail,
