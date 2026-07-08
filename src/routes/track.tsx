@@ -570,6 +570,17 @@ function DeliveryMap({
             </text>
           </g>
         )}
+        {hasLiveGps && (
+          <g transform={`translate(${MAP_W / 2 - 34}, ${MAP_H - 26})`}>
+            <rect width={68} height={18} rx={9} fill="#7C3AED" />
+            <circle cx={9} cy={9} r={3} fill="white">
+              <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite" />
+            </circle>
+            <text x={38} y={13} fontSize="9" fill="white" textAnchor="middle" fontFamily="sans-serif" fontWeight="900">
+              LIVE GPS
+            </text>
+          </g>
+        )}
 
         <g transform={`translate(${MAP_W - 22}, ${MAP_H - 22})`}>
           <circle r="10" fill="white" opacity="0.8" />
