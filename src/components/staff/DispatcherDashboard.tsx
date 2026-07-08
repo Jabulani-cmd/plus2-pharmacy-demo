@@ -687,6 +687,15 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                             </div>
                           </div>
                         )}
+                        {d.status === "Out for delivery" && d.driverLat != null && (
+                          <div className="mt-2 flex items-center gap-1.5 rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-700">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-600" />
+                            </span>
+                            Live GPS · updating
+                          </div>
+                        )}
                         <div className="mt-2 flex gap-1">
                           {d.status === "Confirmed" && (
                             <button
