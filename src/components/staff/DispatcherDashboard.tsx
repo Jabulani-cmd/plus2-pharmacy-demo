@@ -1255,6 +1255,63 @@ function toMs(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
+function printOrder(r: HistoryRow) {
+  const win = window.open("", "_blank", "width=700,height=900");
+  if (!win) return;
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Kings Pharmacy — Order ${r.id}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #1B3A6B; max-width: 600px; margin: 0 auto; }
+        h1 { font-size: 22px; margin: 0; }
+        .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+        .logo { font-size: 26px; font-weight: 900; color: #1B3A6B; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        td { padding: 6px 0; font-size: 13px; vertical-align: top; }
+        td:first-child { font-weight: 700; width: 40%; color: #444; }
+        .divider { border-top: 2px solid #1E5BC6; margin: 16px 0; }
+        .total { font-size: 18px; font-weight: 900; }
+        .badge { display: inline-block; background: #EAF3FF; color: #1E5BC6; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+        .footer { margin-top: 32px; font-size: 11px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
+        @media print { button { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="logo">KINGS PHARMACY</div>
+      <div class="sub">At Your Service · Bulawayo, Zimbabwe</div>
+      <div class="divider"></div>
+      <h1>Delivery Receipt</h1>
+      <table>
+        <tr><td>Order ID:</td><td><strong>#${r.id}</strong></td></tr>
+        <tr><td>Type:</td><td>${r.kind}</td></tr>
+        <tr><td>Customer:</td><td>${r.customer}</td></tr>
+        ${r.phone ? `<tr><td>Phone:</td><td>${r.phone}</td></tr>` : ""}
+        <tr><td>Address:</td><td>${r.address}</td></tr>
+        ${r.driverName ? `<tr><td>Driver:</td><td>${r.driverName}</td></tr>` : ""}
+        <tr><td>Ordered:</td><td>${r.placedAtLabel}</td></tr>
+        ${r.deliveredAtLabel ? `<tr><td>Delivered:</td><td>${r.deliveredAtLabel}</td></tr>` : ""}
+        <tr><td>Payment:</td><td>${r.payment}</td></tr>
+      </table>
+      <div class="divider"></div>
+      <table>
+        <tr><td>Items:</td><td>${r.itemsLabel}</td></tr>
+        <tr><td>Status:</td><td><span class="badge">✓ Delivered</span></td></tr>
+      </table>
+      <div class="divider"></div>
+      <div class="total">Total: $${Number(r.total).toFixed(2)}</div>
+      <div class="footer">Kings Pharmacy · Printed ${new Date().toLocaleString()}<br/>Thank you for your business.</div>
+      <br/>
+      <button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#1E5BC6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;">🖨️ Print</button>
+    </body>
+    </html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}
+
 function HistoryView({
   sharedOrders,
   rxDelivered,
@@ -1482,11 +1539,80 @@ function HistoryView({
                         🚗 {r.driverName}
                       </div>
                     )}
+                    {/* Print + Delete buttons */}
+                    <div className="mt-2 flex gap-1 justify-end">
+                      <button
+                        onClick={() => printOrder(r)}
+                        title="Print receipt"
+                        className="inline-flex items-center gap-1 rounded-full border border-[#1E5BC6] px-2.5 py-1 text-[10px] font-bold text-[#1E5BC6] hover:bg-[#EAF3FF] transition"
+                      >
+                        🖨️ Print
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Delete order #${r.id}? This cannot be undone.`)) return;
+                          const { error } = await supabase
+                            .from("shared_orders")
+                            .delete()
+                            .eq("id", r.id);
+                          if (error) {
+                            toast.error("Failed to delete order: " + error.message);
+                          } else {
+                            toast.success("Order #" + r.id + " deleted from history");
+                            useSharedOrders.setState((s) => ({
+                              orders: s.orders.filter((o) => o.id !== r.id),
+                            }));
+                          }
+                        }}
+                        title="Delete from history"
+                        className="inline-flex items-center gap-1 rounded-full border border-red-200 px-2.5 py-1 text-[10px] font-bold text-red-400 hover:bg-red-50 transition"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Bulk delete old orders */}
+      {filtered.length > 0 && (
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={async () => {
+              const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days
+              const oldRows = rows.filter(
+                (r) => (r.deliveredAtMs ?? r.placedAtMs) < cutoff
+              );
+              if (oldRows.length === 0) {
+                toast.info("No orders older than 7 days to delete.");
+                return;
+              }
+              if (!window.confirm(
+                `Delete ${oldRows.length} orders older than 7 days? This cannot be undone.`
+              )) return;
+              const { error } = await supabase
+                .from("shared_orders")
+                .delete()
+                .in("id", oldRows.map((r) => r.id));
+              if (error) {
+                toast.error("Failed to delete old orders: " + error.message);
+              } else {
+                toast.success(`Deleted ${oldRows.length} old orders from history`);
+                useSharedOrders.setState((s) => ({
+                  orders: s.orders.filter(
+                    (o) => !oldRows.some((r) => r.id === o.id)
+                  ),
+                }));
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-50 transition shadow-sm"
+          >
+            🗑️ Delete orders older than 7 days
+          </button>
         </div>
       )}
     </div>
