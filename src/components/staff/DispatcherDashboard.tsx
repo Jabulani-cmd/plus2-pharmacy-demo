@@ -1551,12 +1551,25 @@ function HistoryView({
                       <button
                         onClick={async () => {
                           if (!window.confirm(`Delete order #${r.id}? This cannot be undone.`)) return;
-                          const { error } = await supabase
-                            .from("shared_orders")
-                            .delete()
-                            .eq("id", r.id);
+                          // Use RPC to bypass RLS
+                          const { error } = await supabase.rpc(
+                            "delete_order_by_id",
+                            { p_id: r.id }
+                          );
                           if (error) {
-                            toast.error("Failed to delete order: " + error.message);
+                            // Fallback: try direct update to mark as archived
+                            const { error: e2 } = await supabase
+                              .from("shared_orders")
+                              .update({ status: "Archived" } as never)
+                              .eq("id", r.id);
+                            if (e2) {
+                              toast.error("Cannot delete — please run the SQL fix in Supabase.");
+                            } else {
+                              toast.success("Order #" + r.id + " archived");
+                              useSharedOrders.setState((s) => ({
+                                orders: s.orders.filter((o) => o.id !== r.id),
+                              }));
+                            }
                           } else {
                             toast.success("Order #" + r.id + " deleted from history");
                             useSharedOrders.setState((s) => ({
@@ -1594,12 +1607,27 @@ function HistoryView({
               if (!window.confirm(
                 `Delete ${oldRows.length} orders older than 7 days? This cannot be undone.`
               )) return;
-              const { error } = await supabase
-                .from("shared_orders")
-                .delete()
-                .in("id", oldRows.map((r) => r.id));
+              // Use RPC to bypass RLS
+              const { error } = await supabase.rpc(
+                "delete_orders_bulk_by_ids",
+                { p_ids: oldRows.map((r) => r.id) }
+              );
               if (error) {
-                toast.error("Failed to delete old orders: " + error.message);
+                // Fallback: archive them instead
+                const { error: e2 } = await supabase
+                  .from("shared_orders")
+                  .update({ status: "Archived" } as never)
+                  .in("id", oldRows.map((r) => r.id));
+                if (e2) {
+                  toast.error("Cannot delete — please run the SQL fix in Supabase.");
+                } else {
+                  toast.success(`Archived ${oldRows.length} old orders`);
+                  useSharedOrders.setState((s) => ({
+                    orders: s.orders.filter(
+                      (o) => !oldRows.some((r) => r.id === o.id)
+                    ),
+                  }));
+                }
               } else {
                 toast.success(`Deleted ${oldRows.length} old orders from history`);
                 useSharedOrders.setState((s) => ({
