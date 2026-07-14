@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Bell, X, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import {
   useNotifications,
+  pushNotification,
   formatRelative,
   type AppNotification,
   type NotificationAudience,
 } from "@/store/notifications";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   audience: NotificationAudience;
@@ -30,6 +33,92 @@ export function NotificationsBell({
   const items = useNotifications((s) => s.items);
   const markAllRead = useNotifications((s) => s.markAllRead);
   const markRead = useNotifications((s) => s.markRead);
+
+  // Cross-device realtime notifications for the signed-in customer.
+  // Bridges Supabase `notifications` rows (written by pharmacist/dispatcher on
+  // other devices) into the local bell store + toast + browser Notification.
+  useEffect(() => {
+    if (audience !== "customer") return;
+    const isUuid = typeof userId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUuid) return;
+
+    if (typeof window !== "undefined" && "Notification" in window &&
+        Notification.permission === "default") {
+      try { void Notification.requestPermission(); } catch { /* ignore */ }
+    }
+
+    const seen = new Set<string>();
+
+    // Hydrate: pull recent unread notifications for this customer.
+    void supabase
+      .from("notifications")
+      .select("*")
+      .eq("audience", "customer")
+      .eq("user_id", userId!)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        (data ?? []).forEach((row) => {
+          const r = row as {
+            id: string; title: string; body: string | null;
+            link: string | null; tone: string | null;
+          };
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          pushNotification({
+            audience: "customer",
+            userId,
+            title: r.title,
+            body: r.body ?? "",
+            link: r.link ?? undefined,
+            tone: (r.tone as AppNotification["tone"]) ?? "info",
+          });
+        });
+      });
+
+    const ch = supabase
+      .channel("customer_notifications_" + userId)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: "user_id=eq." + userId,
+        },
+        (payload) => {
+          const r = payload.new as {
+            id: string; audience?: string; title: string; body: string | null;
+            link: string | null; tone: string | null;
+          };
+          if (r.audience && r.audience !== "customer") return;
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          pushNotification({
+            audience: "customer",
+            userId,
+            title: r.title,
+            body: r.body ?? "",
+            link: r.link ?? undefined,
+            tone: (r.tone as AppNotification["tone"]) ?? "info",
+          });
+          toast.success(r.title, { description: r.body ?? "", duration: 8000 });
+          if (typeof window !== "undefined" && "Notification" in window &&
+              Notification.permission === "granted") {
+            try {
+              new Notification(r.title, {
+                body: r.body ?? "",
+                icon: "/icons/icon-192.png",
+              });
+            } catch { /* ignore */ }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(ch); };
+  }, [audience, userId]);
 
   const filtered = useMemo(
     () =>
