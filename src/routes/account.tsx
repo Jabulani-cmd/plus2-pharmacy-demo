@@ -932,7 +932,6 @@ function AccountPage() {
           onClose={() => setPayingRx(null)}
           onSuccess={(ref, method) => {
             markSharedPaid(payingRx.id, ref, method);
-            setDismissedIds((prev) => [...prev, payingRx.id]);
             setPayingRx(null);
             toast.success("Payment confirmed — your medication will be dispatched shortly");
           }}
