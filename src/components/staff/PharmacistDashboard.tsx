@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { STAFF_RX_QUEUE, type StaffRxQueueItem } from "@/data/staffDemo";
-import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useSharedPrescriptions, refreshPrescriptions } from "@/store/sharedPrescriptions";
 import type { SharedPrescription, SharedQuotation } from "@/store/sharedPrescriptions";
 import { PageHeader, KPI, Card, StatusPill } from "./shared";
 import {
@@ -19,6 +19,12 @@ export function PharmacistDashboard(_props: { view?: string } = {}) {
   const approvePrescription = useSharedPrescriptions((s) => s.approvePrescription);
   const rejectPrescription = useSharedPrescriptions((s) => s.rejectPrescription);
   const dispensePrescription = useSharedPrescriptions((s) => s.dispensePrescription);
+
+  useEffect(() => {
+    void refreshPrescriptions();
+    const interval = setInterval(() => void refreshPrescriptions(), 15_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const customerRxItems: StaffRxQueueItem[] = sharedPrescriptions
     .filter(

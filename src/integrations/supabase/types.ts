@@ -319,14 +319,17 @@ export type Database = {
       }
       prescriptions: {
         Row: {
+          accepted_at: string | null
           approved_at: string | null
           branch_id: string | null
           branch_name: string | null
+          collected_at: string | null
           collection_branch_id: string | null
           customer_email: string | null
           customer_id: string | null
           customer_name: string
           customer_phone: string | null
+          delivered_at: string | null
           delivery: string | null
           delivery_address: Json | null
           dispatched_at: string | null
@@ -355,14 +358,17 @@ export type Database = {
           uploaded_at: string
         }
         Insert: {
+          accepted_at?: string | null
           approved_at?: string | null
           branch_id?: string | null
           branch_name?: string | null
+          collected_at?: string | null
           collection_branch_id?: string | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name: string
           customer_phone?: string | null
+          delivered_at?: string | null
           delivery?: string | null
           delivery_address?: Json | null
           dispatched_at?: string | null
@@ -391,14 +397,17 @@ export type Database = {
           uploaded_at?: string
         }
         Update: {
+          accepted_at?: string | null
           approved_at?: string | null
           branch_id?: string | null
           branch_name?: string | null
+          collected_at?: string | null
           collection_branch_id?: string | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name?: string
           customer_phone?: string | null
+          delivered_at?: string | null
           delivery?: string | null
           delivery_address?: Json | null
           dispatched_at?: string | null
@@ -655,6 +664,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_order_by_id: { Args: { p_id: string }; Returns: undefined }
+      delete_orders_bulk_by_ids: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

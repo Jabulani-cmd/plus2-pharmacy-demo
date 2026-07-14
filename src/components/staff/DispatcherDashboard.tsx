@@ -5,7 +5,7 @@ import {
   type StaffDelivery,
   type StaffDriver,
 } from "@/data/staffDemo";
-import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -201,10 +201,20 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           ) {
             try { new Notification(title, { body }); } catch { /* ignore */ }
           }
+          const kind = (payload.new as { kind?: string }).kind ?? "";
+          if (kind === "prescription_paid" || kind === "prescription_approved") {
+            void refreshRx();
+          }
         }
       )
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
+  }, []);
+
+  useEffect(() => {
+    void refreshRx();
+    const interval = setInterval(() => void refreshRx(), 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   const sharedPrescriptions = useSharedPrescriptions(

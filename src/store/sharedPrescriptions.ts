@@ -191,6 +191,15 @@ export const useSharedPrescriptions = create<SharedState>()(
             tone: "success",
           });
         }
+        void supabase.from("staff_notifications").insert({
+          order_id: id,
+          title: "✅ Prescription Approved",
+          body:
+            "Prescription #" + id +
+            " approved. Quotation $" + quotation.total.toFixed(2) +
+            " sent to customer — awaiting payment.",
+          kind: "prescription_approved",
+        } as never);
       },
 
       rejectPrescription: (id, reason) => {
@@ -285,6 +294,16 @@ export const useSharedPrescriptions = create<SharedState>()(
             tone: "success",
           });
         }
+        void supabase.from("staff_notifications").insert({
+          order_id: id,
+          title: "💊 Prescription Payment Received",
+          body:
+            "Prescription #" + id +
+            " · $" + (rx?.quotation?.total.toFixed(2) ?? paymentRef) +
+            " via " + paymentMethod +
+            " — ready to dispense and dispatch.",
+          kind: "prescription_paid",
+        } as never);
       },
 
       assignDriver: (
@@ -432,7 +451,24 @@ function isUuid(v: string | undefined | null): v is string {
   return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+export async function refreshPrescriptions() {
+  const { data, error } = await supabase
+    .from("prescriptions")
+    .select("*")
+    .order("uploaded_at", { ascending: false });
+  if (error) {
+    console.error("[rx] refresh failed", error);
+    return;
+  }
+  useSharedPrescriptions.setState({
+    prescriptions: ((data ?? []) as RxRow[]).map(rowToRx),
+  });
+}
+
 if (typeof window !== "undefined") {
+  window.addEventListener("focus", () => void refreshPrescriptions());
+  setInterval(() => void refreshPrescriptions(), 15_000);
+
   (async () => {
     const { data, error } = await supabase
       .from("prescriptions")
