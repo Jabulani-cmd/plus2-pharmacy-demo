@@ -10,6 +10,7 @@ import { useSharedOrders } from "@/store/sharedOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
+import { DispatcherRxQueue } from "./DispatcherRxQueue";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
   X, Clock, UserCheck, FileText, User, Search, CalendarDays,
@@ -375,6 +376,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   if (view === "drivers")
     return <DriversView drivers={drivers} />;
   if (view === "driver-portal") return <DriverPortalView />;
+  if (view === "prescriptions") return <DispatcherRxQueue />;
   if (view === "history")
     return (
       <HistoryView
