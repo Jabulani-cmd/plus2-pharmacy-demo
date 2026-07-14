@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
-import { useAuth, type Order } from "@/store/auth";
+import { useAuth, type Order, type PrescriptionStatus } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
