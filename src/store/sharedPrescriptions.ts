@@ -451,7 +451,24 @@ function isUuid(v: string | undefined | null): v is string {
   return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+export async function refreshPrescriptions() {
+  const { data, error } = await supabase
+    .from("prescriptions")
+    .select("*")
+    .order("uploaded_at", { ascending: false });
+  if (error) {
+    console.error("[rx] refresh failed", error);
+    return;
+  }
+  useSharedPrescriptions.setState({
+    prescriptions: ((data ?? []) as RxRow[]).map(rowToRx),
+  });
+}
+
 if (typeof window !== "undefined") {
+  window.addEventListener("focus", () => void refreshPrescriptions());
+  setInterval(() => void refreshPrescriptions(), 15_000);
+
   (async () => {
     const { data, error } = await supabase
       .from("prescriptions")
