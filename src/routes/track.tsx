@@ -140,10 +140,13 @@ const SHARED_STATUS_TO_FLOW: Record<SharedOrderStatus, OTCStatus> = {
 // can render prescription tracking without a separate component.
 const RX_STATUS_TO_FLOW: Record<SharedPrescriptionStatus, OTCStatus> = {
   Pending: "Order Confirmed",
+  Printing: "Order Confirmed",
+  "Ready to Quote": "Order Confirmed",
   "Under Review": "Order Confirmed",
   "Approved — Awaiting Payment": "Order Confirmed",
   Paid: "Preparing Order",
   Dispensing: "Preparing Order",
+  Assigned: "Driver Assigned",
   Dispensed: "Driver Assigned",
   "Out for Delivery": "Out for Delivery",
   Delivered: "Delivered",
