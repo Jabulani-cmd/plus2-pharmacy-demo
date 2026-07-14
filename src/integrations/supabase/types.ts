@@ -655,6 +655,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_order_by_id: { Args: { p_id: string }; Returns: undefined }
+      delete_orders_bulk_by_ids: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
