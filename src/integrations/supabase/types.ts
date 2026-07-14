@@ -321,6 +321,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           approved_at: string | null
+          assigned_at: string | null
           branch_id: string | null
           branch_name: string | null
           collected_at: string | null
@@ -333,6 +334,7 @@ export type Database = {
           delivery: string | null
           delivery_address: Json | null
           dispatched_at: string | null
+          dispatcher_notes: string | null
           doctor_name: string | null
           driver_id: string | null
           driver_name: string | null
@@ -349,7 +351,9 @@ export type Database = {
           payment_method: string | null
           payment_ref: string | null
           pharmacist_notes: string | null
+          printed_at: string | null
           quotation: Json | null
+          ready_at: string | null
           rejection_reason: string | null
           relationship: string | null
           repeats_left: number | null
@@ -361,6 +365,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           approved_at?: string | null
+          assigned_at?: string | null
           branch_id?: string | null
           branch_name?: string | null
           collected_at?: string | null
@@ -373,6 +378,7 @@ export type Database = {
           delivery?: string | null
           delivery_address?: Json | null
           dispatched_at?: string | null
+          dispatcher_notes?: string | null
           doctor_name?: string | null
           driver_id?: string | null
           driver_name?: string | null
@@ -389,7 +395,9 @@ export type Database = {
           payment_method?: string | null
           payment_ref?: string | null
           pharmacist_notes?: string | null
+          printed_at?: string | null
           quotation?: Json | null
+          ready_at?: string | null
           rejection_reason?: string | null
           relationship?: string | null
           repeats_left?: number | null
@@ -401,6 +409,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           approved_at?: string | null
+          assigned_at?: string | null
           branch_id?: string | null
           branch_name?: string | null
           collected_at?: string | null
@@ -413,6 +422,7 @@ export type Database = {
           delivery?: string | null
           delivery_address?: Json | null
           dispatched_at?: string | null
+          dispatcher_notes?: string | null
           doctor_name?: string | null
           driver_id?: string | null
           driver_name?: string | null
@@ -429,7 +439,9 @@ export type Database = {
           payment_method?: string | null
           payment_ref?: string | null
           pharmacist_notes?: string | null
+          printed_at?: string | null
           quotation?: Json | null
+          ready_at?: string | null
           rejection_reason?: string | null
           relationship?: string | null
           repeats_left?: number | null

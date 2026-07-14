@@ -12,9 +12,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type SharedPrescriptionStatus =
   | "Pending"
+  | "Printing"
+  | "Ready to Quote"
   | "Under Review"
   | "Approved — Awaiting Payment"
   | "Paid"
+  | "Assigned"
   | "Dispensing"
   | "Out for Delivery"
   | "Delivered"
