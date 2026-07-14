@@ -1025,8 +1025,7 @@ function AccountPage() {
                       .update({
                         status: "Rejected",
                         rejection_reason: reason,
-                        updated_at: new Date().toISOString(),
-                      })
+                      } as never)
                       .eq("id", cancellingRx.id);
                     if (error) {
                       toast.error("Failed to cancel order. Please try again.");
