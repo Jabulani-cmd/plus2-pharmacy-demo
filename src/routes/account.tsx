@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
 import { useAuth, type Order } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
+import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders } from "@/store/sharedOrders";
 import PaymentModal from "@/components/checkout/PaymentModal";
 import { getProduct } from "@/data/products";
@@ -265,7 +267,9 @@ function AccountPage() {
   const [tab, setTab] = useState("dash");
   const [activeReceipt, setActiveReceipt] = useState(null as Receipt | null);
   const [payingRx, setPayingRx] = useState(null as (typeof sharedPrescriptions)[0] | null);
-  const [dismissedIds, setDismissedIds] = useState([] as string[]);
+  const [cancellingRx, setCancellingRx] = useState(null as SharedPrescription | null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   if (!user) {
     return (
@@ -355,8 +359,7 @@ function AccountPage() {
   const pendingPayment = mySharedPrescriptions.filter(
     (p) =>
       p.status === "Approved — Awaiting Payment" &&
-      p.quotation &&
-      !dismissedIds.includes(p.id)
+      p.quotation
   );
 
   const activeRxOrders = mySharedPrescriptions.filter(
