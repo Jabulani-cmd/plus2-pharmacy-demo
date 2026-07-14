@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
-import { useAuth, type Order } from "@/store/auth";
+import { useAuth, type Order, type PrescriptionStatus } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
@@ -270,6 +270,114 @@ function AccountPage() {
   const [cancellingRx, setCancellingRx] = useState(null as SharedPrescription | null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+
+  // Sync the auth-store prescriptions with the pharmacist's quotation from
+  // Supabase, and toast when a fresh "Approved — Awaiting Payment" arrives.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    type QuotationRow = {
+      medicationName?: string;
+      medication_name?: string;
+      dosage?: string;
+      quantity?: string;
+      medicationCost?: number | string;
+      medication_cost?: number | string;
+      deliveryFee?: number | string;
+      delivery_fee?: number | string;
+      total?: number | string;
+      notes?: string;
+      pharmacistName?: string;
+      pharmacist_name?: string;
+      approvedAt?: string;
+      approved_at?: string;
+    };
+
+    type RxRow = {
+      id: string;
+      status: string;
+      quotation: QuotationRow | null;
+      pharmacist_notes?: string | null;
+      paid_at?: string | null;
+      payment_method?: string | null;
+    };
+
+    type LocalQuotation = NonNullable<
+      ReturnType<typeof useAuth.getState>["prescriptions"][number]["quotation"]
+    >;
+    const mapQuotation = (
+      q: QuotationRow | null | undefined,
+      prev: LocalQuotation | undefined,
+    ): LocalQuotation | undefined => {
+      if (!q) return prev;
+      return {
+        medicationName: q.medicationName ?? q.medication_name ?? prev?.medicationName ?? "Medication",
+        dosage: q.dosage ?? prev?.dosage ?? "",
+        quantity: q.quantity ?? prev?.quantity ?? "",
+        medicationCost: Number(q.medicationCost ?? q.medication_cost ?? prev?.medicationCost ?? 0),
+        deliveryFee: Number(q.deliveryFee ?? q.delivery_fee ?? prev?.deliveryFee ?? 0),
+        total: Number(q.total ?? prev?.total ?? 0),
+        notes: q.notes ?? prev?.notes,
+        pharmacistName: q.pharmacistName ?? q.pharmacist_name ?? prev?.pharmacistName ?? "Pharmacist",
+        approvedAt: q.approvedAt ?? q.approved_at ?? prev?.approvedAt ?? "",
+      };
+    };
+
+    const mergeRow = (fresh: RxRow) => {
+      useAuth.setState((s) => ({
+        prescriptions: s.prescriptions.map((p) =>
+          p.id !== fresh.id
+            ? p
+            : {
+                ...p,
+                status: fresh.status as PrescriptionStatus,
+                quotation: mapQuotation(fresh.quotation, p.quotation as LocalQuotation | undefined),
+                paidAt: fresh.paid_at ?? p.paidAt,
+                paymentMethod: fresh.payment_method ?? p.paymentMethod,
+              },
+        ),
+      }));
+    };
+
+    // Initial fetch — sync any pharmacist quotation into the auth store.
+    void supabase
+      .from("prescriptions")
+      .select("*")
+      .eq("customer_id", user.id)
+      .order("uploaded_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        (data as unknown as RxRow[]).forEach(mergeRow);
+      });
+
+    // Realtime — fires when the pharmacist approves / dispatcher updates.
+    const ch = supabase
+      .channel("customer_rx_sync_" + user.id)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "prescriptions",
+          filter: "customer_id=eq." + user.id,
+        },
+        (payload) => {
+          const fresh = payload.new as unknown as RxRow;
+          mergeRow(fresh);
+          if (fresh.status === "Approved — Awaiting Payment") {
+            toast.success("Quotation ready from your pharmacist", {
+              description: "Check your prescriptions to pay.",
+              duration: 5000,
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [user?.id]);
 
   if (!user) {
     return (
