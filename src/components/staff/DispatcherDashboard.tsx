@@ -202,8 +202,44 @@ export function DispatcherDashboard({ view }: { view?: string }) {
             try { new Notification(title, { body }); } catch { /* ignore */ }
           }
           const kind = (payload.new as { kind?: string }).kind ?? "";
-          if (kind === "prescription_paid" || kind === "prescription_approved") {
+          if (
+            kind === "prescription_paid" ||
+            kind === "prescription_approved" ||
+            kind === "prescription_uploaded"
+          ) {
             void refreshRx();
+            const orderId = (payload.new as { order_id?: string }).order_id;
+            if (orderId) {
+              void supabase
+                .from("prescriptions")
+                .select("*")
+                .eq("id", orderId)
+                .maybeSingle()
+                .then(({ data }) => {
+                  if (!data) return;
+                  useSharedPrescriptions.setState((s) => {
+                    const exists = s.prescriptions.some((p) => p.id === data.id);
+                    if (!exists) {
+                      void refreshRx();
+                      return s;
+                    }
+                    return {
+                      prescriptions: s.prescriptions.map((p) =>
+                        p.id === data.id
+                          ? {
+                              ...p,
+                              status: (data.status as typeof p.status) ?? p.status,
+                              paymentMethod: data.payment_method ?? p.paymentMethod,
+                              paidAt: data.paid_at
+                                ? new Date(String(data.paid_at)).toLocaleString("en-ZW")
+                                : p.paidAt,
+                            }
+                          : p
+                      ),
+                    };
+                  });
+                });
+            }
           }
         }
       )
