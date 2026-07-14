@@ -304,7 +304,7 @@ function AccountPage() {
 
     const mapQuotation = (
       q: QuotationRow | null | undefined,
-      prev: NonNullable<ReturnType<typeof pickPrev>>["quotation"] | undefined,
+      prev: NonNullable<ReturnType<typeof useAuth.getState>["prescriptions"][number]["quotation"]> | undefined,
     ) => {
       if (!q) return prev;
       return {
@@ -320,9 +320,6 @@ function AccountPage() {
       };
     };
 
-    const pickPrev = (id: string) =>
-      useAuth.getState().prescriptions.find((p) => p.id === id);
-
     const mergeRow = (fresh: RxRow) => {
       useAuth.setState((s) => ({
         prescriptions: s.prescriptions.map((p) =>
@@ -331,7 +328,7 @@ function AccountPage() {
             : {
                 ...p,
                 status: fresh.status as PrescriptionStatus,
-                quotation: mapQuotation(fresh.quotation, p.quotation),
+                quotation: mapQuotation(fresh.quotation, p.quotation ?? undefined),
                 paidAt: fresh.paid_at ?? p.paidAt,
                 paymentMethod: fresh.payment_method ?? p.paymentMethod,
               },
