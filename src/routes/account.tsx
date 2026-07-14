@@ -433,14 +433,7 @@ function AccountPage() {
                 border: "2px solid #0EA5E9",
               }}
             >
-              <button
-                onClick={() => setDismissedIds((prev) => [...prev, rx.id])}
-                className="absolute right-3 top-3 rounded-full p-1 hover:bg-black/5"
-                aria-label="Dismiss"
-              >
-                <X className="h-4 w-4 text-[#6B7280]" />
-              </button>
-              <div className="flex items-start gap-4 pr-6">
+              <div className="flex items-start gap-4">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-sm"
                   style={{ background: "#0EA5E9" }}
@@ -496,13 +489,21 @@ function AccountPage() {
                     {" · "}Pay via EcoCash, OneMoney, ZimSwitch or Bank Transfer
                   </p>
                 </div>
-                <button
-                  onClick={() => setPayingRx(rx)}
-                  className="shrink-0 self-center rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-                  style={{ background: "#0EA5E9" }}
-                >
-                  Pay Now
-                </button>
+                <div className="flex shrink-0 flex-col items-stretch gap-2 self-center">
+                  <button
+                    onClick={() => setPayingRx(rx)}
+                    className="rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+                    style={{ background: "#0EA5E9" }}
+                  >
+                    Pay Now
+                  </button>
+                  <button
+                    onClick={() => { setCancellingRx(rx); setCancelReason(""); }}
+                    className="rounded-lg border-2 border-red-300 px-4 py-2 text-xs font-bold text-red-500 transition hover:bg-red-50"
+                  >
+                    Cancel Order
+                  </button>
+                </div>
               </div>
             </div>
           ))}
