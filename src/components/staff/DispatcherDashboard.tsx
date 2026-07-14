@@ -254,6 +254,31 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Real-time: new prescription uploaded → notify dispatcher
+  useEffect(() => {
+    const ch = supabase
+      .channel("dispatcher_rx_incoming")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "prescriptions" },
+        (payload) => {
+          const rx = payload.new as { id?: string; customer_name?: string; patient_name?: string };
+          toast("💊 New prescription received", {
+            description:
+              (rx.customer_name ?? rx.patient_name ?? "Customer") +
+              " uploaded a prescription — " + (rx.id ?? ""),
+            duration: 8000,
+          });
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+            try { navigator.vibrate([300, 100, 300]); } catch { /* ignore */ }
+          }
+          void refreshRx();
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, []);
+
   const sharedPrescriptions = useSharedPrescriptions(
     (s) => s.prescriptions
   );
