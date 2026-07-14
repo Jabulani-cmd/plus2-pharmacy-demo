@@ -302,10 +302,13 @@ function AccountPage() {
       payment_method?: string | null;
     };
 
+    type LocalQuotation = NonNullable<
+      ReturnType<typeof useAuth.getState>["prescriptions"][number]["quotation"]
+    >;
     const mapQuotation = (
       q: QuotationRow | null | undefined,
-      prev: NonNullable<ReturnType<typeof useAuth.getState>["prescriptions"][number]["quotation"]> | undefined,
-    ) => {
+      prev: LocalQuotation | undefined,
+    ): LocalQuotation | undefined => {
       if (!q) return prev;
       return {
         medicationName: q.medicationName ?? q.medication_name ?? prev?.medicationName ?? "Medication",
@@ -328,7 +331,7 @@ function AccountPage() {
             : {
                 ...p,
                 status: fresh.status as PrescriptionStatus,
-                quotation: mapQuotation(fresh.quotation, p.quotation ?? undefined),
+                quotation: mapQuotation(fresh.quotation, p.quotation as LocalQuotation | undefined),
                 paidAt: fresh.paid_at ?? p.paidAt,
                 paymentMethod: fresh.payment_method ?? p.paymentMethod,
               },
