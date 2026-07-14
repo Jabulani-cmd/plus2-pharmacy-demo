@@ -355,6 +355,7 @@ export type Database = {
           repeats_left: number | null
           script_date: string | null
           status: string
+          updated_at: string | null
           uploaded_at: string
         }
         Insert: {
@@ -394,6 +395,7 @@ export type Database = {
           repeats_left?: number | null
           script_date?: string | null
           status?: string
+          updated_at?: string | null
           uploaded_at?: string
         }
         Update: {
@@ -433,6 +435,7 @@ export type Database = {
           repeats_left?: number | null
           script_date?: string | null
           status?: string
+          updated_at?: string | null
           uploaded_at?: string
         }
         Relationships: []
