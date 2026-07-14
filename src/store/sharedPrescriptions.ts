@@ -173,12 +173,46 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
-        void supabase.from("prescriptions").update({
-          status: "Approved — Awaiting Payment",
-          quotation: quotation as unknown as never,
-          pharmacist_notes: pharmacistNotes ?? null,
-          approved_at: new Date().toISOString(),
-        }).eq("id", id);
+        void (async () => {
+          const { data, error } = await supabase
+            .from("prescriptions")
+            .update({
+              status: "Approved — Awaiting Payment",
+              quotation: quotation as unknown as never,
+              pharmacist_notes: pharmacistNotes ?? null,
+              approved_at: new Date().toISOString(),
+            })
+            .eq("id", id)
+            .select();
+          if (error) {
+            console.error("[sharedPrescriptions] approve update failed", error);
+            return;
+          }
+          // If the row didn't exist yet (e.g. customer uploaded but DB insert lagged),
+          // upsert it so the customer's account page picks it up via realtime.
+          if (!data || data.length === 0) {
+            const rx = useSharedPrescriptions
+              .getState()
+              .prescriptions.find((p) => p.id === id);
+            if (rx) {
+              const { error: upErr } = await supabase
+                .from("prescriptions")
+                .upsert(rxToRow({
+                  ...rx,
+                  status: "Approved — Awaiting Payment",
+                  quotation,
+                  pharmacistNotes,
+                  approvedAt,
+                }) as never);
+              if (upErr) console.error("[sharedPrescriptions] approve upsert failed", upErr);
+            } else {
+              console.warn(
+                "[sharedPrescriptions] approve: no DB row for " + id +
+                " — likely a demo queue item, not a customer upload.",
+              );
+            }
+          }
+        })();
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
