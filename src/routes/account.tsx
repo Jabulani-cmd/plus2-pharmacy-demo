@@ -972,6 +972,103 @@ function AccountPage() {
           onClose={() => setActiveReceipt(null)}
         />
       )}
+
+      {cancellingRx && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            if (!cancelling) { setCancellingRx(null); setCancelReason(""); }
+          }}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-red-100 bg-red-50 px-5 py-4">
+              <div className="text-base font-black text-red-700">Cancel Prescription Order?</div>
+              <div className="mt-1 text-sm text-red-500">
+                #{cancellingRx.id}
+                {cancellingRx.quotation?.medicationName ? " · " + cancellingRx.quotation.medicationName : ""}
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="text-sm leading-relaxed text-slate-600">
+                Are you sure you want to cancel this prescription order? The pharmacist will be notified and your prescription will be marked as cancelled.
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Reason for cancelling (optional)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="e.g. No longer needed, found medication elsewhere..."
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-red-300"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { if (!cancelling) { setCancellingRx(null); setCancelReason(""); } }}
+                  disabled={cancelling}
+                  className="h-11 flex-1 rounded-full border-2 border-slate-200 text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancellingRx) return;
+                    setCancelling(true);
+                    const reason = cancelReason.trim() || "Cancelled by customer";
+                    const { error } = await supabase
+                      .from("prescriptions")
+                      .update({
+                        status: "Rejected",
+                        rejection_reason: reason,
+                        updated_at: new Date().toISOString(),
+                      })
+                      .eq("id", cancellingRx.id);
+                    if (error) {
+                      toast.error("Failed to cancel order. Please try again.");
+                      setCancelling(false);
+                      return;
+                    }
+                    useSharedPrescriptions.setState((s) => ({
+                      prescriptions: s.prescriptions.map((p) =>
+                        p.id === cancellingRx.id
+                          ? { ...p, status: "Rejected" as SharedPrescriptionStatus, rejectionReason: reason }
+                          : p
+                      ),
+                    }));
+                    await supabase.from("staff_notifications").insert({
+                      order_id: cancellingRx.id,
+                      title: "Prescription Order Cancelled",
+                      body:
+                        cancellingRx.customerName +
+                        " cancelled prescription #" + cancellingRx.id +
+                        (cancelReason.trim() ? " — Reason: " + cancelReason.trim() : ""),
+                      kind: "prescription_cancelled",
+                    } as never);
+                    setCancelling(false);
+                    setCancellingRx(null);
+                    setCancelReason("");
+                    toast.success("Prescription order cancelled.", {
+                      description: "The pharmacy has been notified.",
+                    });
+                  }}
+                  disabled={cancelling}
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  {cancelling && (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  )}
+                  {cancelling ? "Cancelling..." : "Yes, Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
