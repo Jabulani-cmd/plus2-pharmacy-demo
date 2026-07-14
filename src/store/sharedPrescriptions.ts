@@ -200,6 +200,20 @@ export const useSharedPrescriptions = create<SharedState>()(
             " sent to customer — awaiting payment.",
           kind: "prescription_approved",
         } as never);
+        // Cross-device customer notification (bell + toast on any signed-in device)
+        if (rx && isUuid(rx.customerId)) {
+          void supabase.from("notifications").insert({
+            audience: "customer",
+            user_id: rx.customerId,
+            title: "Quotation Ready — Action Required",
+            body:
+              "Your prescription #" + id +
+              " has been approved. Total $" +
+              quotation.total.toFixed(2) + ". Tap to pay now.",
+            link: "/account",
+            tone: "success",
+          } as never);
+        }
       },
 
       rejectPrescription: (id, reason) => {
