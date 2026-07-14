@@ -191,6 +191,15 @@ export const useSharedPrescriptions = create<SharedState>()(
             tone: "success",
           });
         }
+        void supabase.from("staff_notifications").insert({
+          order_id: id,
+          title: "✅ Prescription Approved",
+          body:
+            "Prescription #" + id +
+            " approved. Quotation $" + quotation.total.toFixed(2) +
+            " sent to customer — awaiting payment.",
+          kind: "prescription_approved",
+        } as never);
       },
 
       rejectPrescription: (id, reason) => {
@@ -285,6 +294,16 @@ export const useSharedPrescriptions = create<SharedState>()(
             tone: "success",
           });
         }
+        void supabase.from("staff_notifications").insert({
+          order_id: id,
+          title: "💊 Prescription Payment Received",
+          body:
+            "Prescription #" + id +
+            " · $" + (rx?.quotation?.total.toFixed(2) ?? paymentRef) +
+            " via " + paymentMethod +
+            " — ready to dispense and dispatch.",
+          kind: "prescription_paid",
+        } as never);
       },
 
       assignDriver: (
