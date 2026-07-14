@@ -857,6 +857,12 @@ function AccountPage() {
                         >
                           Pay Now
                         </button>
+                        <button
+                          onClick={() => { setCancellingRx(rx); setCancelReason(""); }}
+                          className="shrink-0 rounded-md border border-red-300 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -864,17 +870,29 @@ function AccountPage() {
 
                 <ul className="mt-4 divide-y divide-border">
                   {(mergedPrescriptions.length > 0 ? mergedPrescriptions : prescriptions).map((p) => (
-                    <li key={p.id} className="flex items-center gap-3 py-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                        <FileText className="h-5 w-5" />
+                    <li key={p.id} className="py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold">{p.id} &middot; {p.fileName}</div>
+                          <div className="text-xs text-muted-foreground">{p.doctorName} &middot; {p.uploadedAt}</div>
+                        </div>
+                        <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold " + scriptStatusColor(p.status)}>
+                          {p.status}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold">{p.id} &middot; {p.fileName}</div>
-                        <div className="text-xs text-muted-foreground">{p.doctorName} &middot; {p.uploadedAt}</div>
-                      </div>
-                      <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold " + scriptStatusColor(p.status)}>
-                        {p.status}
-                      </span>
+                      {p.status === "Rejected" && (
+                        <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                          <div className="text-sm font-bold text-red-600">❌ Order Cancelled</div>
+                          {("rejectionReason" in p && (p as { rejectionReason?: string }).rejectionReason) && (
+                            <div className="mt-1 text-xs text-red-500">
+                              {(p as { rejectionReason?: string }).rejectionReason}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
