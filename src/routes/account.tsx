@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { useShop, formatUSD } from "@/store/shop";
 import { useAuth, type Order } from "@/store/auth";
 import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
+import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
+import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders } from "@/store/sharedOrders";
 import PaymentModal from "@/components/checkout/PaymentModal";
 import { getProduct } from "@/data/products";
@@ -265,7 +267,9 @@ function AccountPage() {
   const [tab, setTab] = useState("dash");
   const [activeReceipt, setActiveReceipt] = useState(null as Receipt | null);
   const [payingRx, setPayingRx] = useState(null as (typeof sharedPrescriptions)[0] | null);
-  const [dismissedIds, setDismissedIds] = useState([] as string[]);
+  const [cancellingRx, setCancellingRx] = useState(null as SharedPrescription | null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   if (!user) {
     return (
@@ -355,8 +359,7 @@ function AccountPage() {
   const pendingPayment = mySharedPrescriptions.filter(
     (p) =>
       p.status === "Approved — Awaiting Payment" &&
-      p.quotation &&
-      !dismissedIds.includes(p.id)
+      p.quotation
   );
 
   const activeRxOrders = mySharedPrescriptions.filter(
@@ -430,14 +433,7 @@ function AccountPage() {
                 border: "2px solid #0EA5E9",
               }}
             >
-              <button
-                onClick={() => setDismissedIds((prev) => [...prev, rx.id])}
-                className="absolute right-3 top-3 rounded-full p-1 hover:bg-black/5"
-                aria-label="Dismiss"
-              >
-                <X className="h-4 w-4 text-[#6B7280]" />
-              </button>
-              <div className="flex items-start gap-4 pr-6">
+              <div className="flex items-start gap-4">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-sm"
                   style={{ background: "#0EA5E9" }}
@@ -493,13 +489,21 @@ function AccountPage() {
                     {" · "}Pay via EcoCash, OneMoney, ZimSwitch or Bank Transfer
                   </p>
                 </div>
-                <button
-                  onClick={() => setPayingRx(rx)}
-                  className="shrink-0 self-center rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-                  style={{ background: "#0EA5E9" }}
-                >
-                  Pay Now
-                </button>
+                <div className="flex shrink-0 flex-col items-stretch gap-2 self-center">
+                  <button
+                    onClick={() => setPayingRx(rx)}
+                    className="rounded-lg px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+                    style={{ background: "#0EA5E9" }}
+                  >
+                    Pay Now
+                  </button>
+                  <button
+                    onClick={() => { setCancellingRx(rx); setCancelReason(""); }}
+                    className="rounded-lg border-2 border-red-300 px-4 py-2 text-xs font-bold text-red-500 transition hover:bg-red-50"
+                  >
+                    Cancel Order
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -853,6 +857,12 @@ function AccountPage() {
                         >
                           Pay Now
                         </button>
+                        <button
+                          onClick={() => { setCancellingRx(rx); setCancelReason(""); }}
+                          className="shrink-0 rounded-md border border-red-300 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -860,17 +870,29 @@ function AccountPage() {
 
                 <ul className="mt-4 divide-y divide-border">
                   {(mergedPrescriptions.length > 0 ? mergedPrescriptions : prescriptions).map((p) => (
-                    <li key={p.id} className="flex items-center gap-3 py-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                        <FileText className="h-5 w-5" />
+                    <li key={p.id} className="py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold">{p.id} &middot; {p.fileName}</div>
+                          <div className="text-xs text-muted-foreground">{p.doctorName} &middot; {p.uploadedAt}</div>
+                        </div>
+                        <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold " + scriptStatusColor(p.status)}>
+                          {p.status}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold">{p.id} &middot; {p.fileName}</div>
-                        <div className="text-xs text-muted-foreground">{p.doctorName} &middot; {p.uploadedAt}</div>
-                      </div>
-                      <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold " + scriptStatusColor(p.status)}>
-                        {p.status}
-                      </span>
+                      {p.status === "Rejected" && (
+                        <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                          <div className="text-sm font-bold text-red-600">❌ Order Cancelled</div>
+                          {("rejectionReason" in p && (p as { rejectionReason?: string }).rejectionReason) && (
+                            <div className="mt-1 text-xs text-red-500">
+                              {(p as { rejectionReason?: string }).rejectionReason}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -928,7 +950,6 @@ function AccountPage() {
           onClose={() => setPayingRx(null)}
           onSuccess={(ref, method) => {
             markSharedPaid(payingRx.id, ref, method);
-            setDismissedIds((prev) => [...prev, payingRx.id]);
             setPayingRx(null);
             toast.success("Payment confirmed — your medication will be dispatched shortly");
           }}
@@ -950,6 +971,102 @@ function AccountPage() {
           receipt={activeReceipt}
           onClose={() => setActiveReceipt(null)}
         />
+      )}
+
+      {cancellingRx && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            if (!cancelling) { setCancellingRx(null); setCancelReason(""); }
+          }}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-red-100 bg-red-50 px-5 py-4">
+              <div className="text-base font-black text-red-700">Cancel Prescription Order?</div>
+              <div className="mt-1 text-sm text-red-500">
+                #{cancellingRx.id}
+                {cancellingRx.quotation?.medicationName ? " · " + cancellingRx.quotation.medicationName : ""}
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="text-sm leading-relaxed text-slate-600">
+                Are you sure you want to cancel this prescription order? The pharmacist will be notified and your prescription will be marked as cancelled.
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Reason for cancelling (optional)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="e.g. No longer needed, found medication elsewhere..."
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-red-300"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { if (!cancelling) { setCancellingRx(null); setCancelReason(""); } }}
+                  disabled={cancelling}
+                  className="h-11 flex-1 rounded-full border-2 border-slate-200 text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancellingRx) return;
+                    setCancelling(true);
+                    const reason = cancelReason.trim() || "Cancelled by customer";
+                    const { error } = await supabase
+                      .from("prescriptions")
+                      .update({
+                        status: "Rejected",
+                        rejection_reason: reason,
+                      } as never)
+                      .eq("id", cancellingRx.id);
+                    if (error) {
+                      toast.error("Failed to cancel order. Please try again.");
+                      setCancelling(false);
+                      return;
+                    }
+                    useSharedPrescriptions.setState((s) => ({
+                      prescriptions: s.prescriptions.map((p) =>
+                        p.id === cancellingRx.id
+                          ? { ...p, status: "Rejected" as SharedPrescriptionStatus, rejectionReason: reason }
+                          : p
+                      ),
+                    }));
+                    await supabase.from("staff_notifications").insert({
+                      order_id: cancellingRx.id,
+                      title: "Prescription Order Cancelled",
+                      body:
+                        cancellingRx.customerName +
+                        " cancelled prescription #" + cancellingRx.id +
+                        (cancelReason.trim() ? " — Reason: " + cancelReason.trim() : ""),
+                      kind: "prescription_cancelled",
+                    } as never);
+                    setCancelling(false);
+                    setCancellingRx(null);
+                    setCancelReason("");
+                    toast.success("Prescription order cancelled.", {
+                      description: "The pharmacy has been notified.",
+                    });
+                  }}
+                  disabled={cancelling}
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-500 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  {cancelling && (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  )}
+                  {cancelling ? "Cancelling..." : "Yes, Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
