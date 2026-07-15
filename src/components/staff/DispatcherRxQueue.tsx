@@ -470,16 +470,6 @@ function ActionButtons({
   if (status === "Paid" || status === "Dispensing") {
     return (
       <div className="space-y-2">
-        <div className="rounded-lg border border-green-200 bg-green-50 p-2 text-[11px]">
-          <div className="font-bold text-green-700">
-            ✅ Paid ${rx.quotation?.total?.toFixed(2) ?? ""}
-          </div>
-          {rx.paymentMethod && (
-            <div className="text-[10px] text-green-600">
-              via {getMethodLabel(rx.paymentMethod)}
-            </div>
-          )}
-        </div>
         <a
           href={`/rx-receipt?id=${encodeURIComponent(rx.id)}`}
           target="_blank"
@@ -489,21 +479,7 @@ function ActionButtons({
           <Printer className="h-3.5 w-3.5" />
           Print Invoice & Receipt
         </a>
-        {!rx.driverName ? (
-          <button
-            onClick={onAssignDriver}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-[11px] font-black text-white transition"
-            style={{ background: BRAND_LIGHT }}
-          >
-            <Truck className="h-3.5 w-3.5" />
-            Assign Driver & Dispatch
-          </button>
-        ) : (
-          <div className="rounded border bg-violet-50 p-2 text-[10px] text-violet-800">
-            <div className="font-bold">{rx.driverName}</div>
-            <div>{rx.driverVehicle}</div>
-          </div>
-        )}
+        <PaidActionInline rx={rx} />
       </div>
     );
   }
