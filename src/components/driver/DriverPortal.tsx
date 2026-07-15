@@ -17,6 +17,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders, type SharedOrder } from "@/store/sharedOrders";
 import {
+  useSharedPrescriptions,
+  type SharedPrescription,
+} from "@/store/sharedPrescriptions";
+import {
   useDeliveryProofs,
   fileToCompressedDataUrl,
 } from "@/store/deliveryProofs";
