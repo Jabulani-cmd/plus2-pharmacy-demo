@@ -295,7 +295,10 @@ function ActionButtons({
             void supabase
               .from("prescriptions")
               .update({ status: "Printing", printed_at: new Date().toISOString() })
-              .eq("id", rx.id);
+              .eq("id", rx.id)
+              .then(({ error }) => {
+                if (error) console.error("[RxQueue] set Printing failed:", error);
+              });
             toast.success("Sent to pharmacist");
           }}
           className="w-full rounded-full border-2 py-2 text-[11px] font-bold transition"
@@ -315,7 +318,10 @@ function ActionButtons({
           void supabase
             .from("prescriptions")
             .update({ status: "Ready to Quote", ready_at: new Date().toISOString() })
-            .eq("id", rx.id);
+            .eq("id", rx.id)
+            .then(({ error }) => {
+              if (error) console.error("[RxQueue] set Ready to Quote failed:", error);
+            });
           toast.success("Ready to quote");
         }}
         className="flex w-full items-center justify-center gap-1.5 rounded-full bg-green-600 py-2 text-[11px] font-black text-white hover:bg-green-700"

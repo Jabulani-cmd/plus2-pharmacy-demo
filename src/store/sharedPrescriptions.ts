@@ -268,7 +268,9 @@ export const useSharedPrescriptions = create<SharedState>()(
         void supabase.from("prescriptions").update({
           status: "Rejected",
           rejection_reason: reason,
-        }).eq("id", id);
+        }).eq("id", id).then(({ error }) => {
+          if (error) console.error("[rx] reject failed", error);
+        });
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -293,7 +295,9 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
-        void supabase.from("prescriptions").update({ status: "Dispensing" }).eq("id", id);
+        void supabase.from("prescriptions").update({ status: "Dispensing" }).eq("id", id).then(({ error }) => {
+          if (error) console.error("[rx] dispense failed", error);
+        });
       },
 
       markPaid: (id, paymentRef, paymentMethod) => {
@@ -322,7 +326,9 @@ export const useSharedPrescriptions = create<SharedState>()(
           payment_ref: paymentRef,
           payment_method: paymentMethod,
           paid_at: new Date().toISOString(),
-        }).eq("id", id);
+        }).eq("id", id).then(({ error }) => {
+          if (error) console.error("[rx] markPaid failed", error);
+        });
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         pushNotification({
           audience: "staff",
@@ -393,7 +399,9 @@ export const useSharedPrescriptions = create<SharedState>()(
           driver_phone: driverPhone,
           driver_vehicle: driverVehicle,
           dispatched_at: new Date().toISOString(),
-        }).eq("id", id);
+        }).eq("id", id).then(({ error }) => {
+          if (error) console.error("[rx] assignDriver failed", error);
+        });
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -414,7 +422,9 @@ export const useSharedPrescriptions = create<SharedState>()(
             p.id === id ? { ...p, status, ...extra } : p
           ),
         }));
-        void supabase.from("prescriptions").update({ status }).eq("id", id);
+        void supabase.from("prescriptions").update({ status }).eq("id", id).then(({ error }) => {
+          if (error) console.error("[rx] updateStatus failed", error);
+        });
         if (status === "Delivered") {
           const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
           if (rx) {
