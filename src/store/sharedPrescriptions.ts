@@ -105,7 +105,7 @@ type SharedState = {
     id: string,
     paymentRef: string,
     paymentMethod: string
-  ) => void;
+  ) => Promise<void>;
   assignDriver: (
     id: string,
     driverName: string,
@@ -300,7 +300,7 @@ export const useSharedPrescriptions = create<SharedState>()(
         });
       },
 
-      markPaid: (id, paymentRef, paymentMethod) => {
+      markPaid: async (id, paymentRef, paymentMethod) => {
         const paidAt = new Date().toLocaleString("en-ZW", {
           day: "2-digit",
           month: "short",
@@ -321,14 +321,42 @@ export const useSharedPrescriptions = create<SharedState>()(
               : p
           ),
         }));
-        void supabase.from("prescriptions").update({
-          status: "Paid",
-          payment_ref: paymentRef,
-          payment_method: paymentMethod,
-          paid_at: new Date().toISOString(),
-        }).eq("id", id).then(({ error }) => {
-          if (error) console.error("[rx] markPaid failed", error);
-        });
+        const { data, error } = await supabase
+          .from("prescriptions")
+          .update({
+            status: "Paid",
+            payment_ref: paymentRef,
+            payment_method: paymentMethod,
+            paid_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .select();
+        if (error) {
+          console.error("[rx] markPaid update failed", error);
+          throw error;
+        }
+        // If the row wasn't in the DB yet (e.g. locally-seeded demo rx),
+        // upsert the full record so it persists and other portals see it.
+        if (!data || data.length === 0) {
+          const rxNow = useSharedPrescriptions
+            .getState()
+            .prescriptions.find((p) => p.id === id);
+          if (rxNow) {
+            const { error: upErr } = await supabase
+              .from("prescriptions")
+              .upsert({
+                ...rxToRow(rxNow),
+                status: "Paid",
+                payment_ref: paymentRef,
+                payment_method: paymentMethod,
+                paid_at: new Date().toISOString(),
+              } as never);
+            if (upErr) {
+              console.error("[rx] markPaid upsert failed", upErr);
+              throw upErr;
+            }
+          }
+        }
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         pushNotification({
           audience: "staff",
