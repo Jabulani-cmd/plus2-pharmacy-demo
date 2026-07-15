@@ -13,7 +13,7 @@ import { STAFF_DRIVERS, type StaffDriver } from "@/data/staffDemo";
 import { PageHeader } from "./shared";
 import {
   FileText, User, Phone, MapPin, Clock, Printer,
-  CheckCircle2, DollarSign, Truck, Store, X, Image as ImageIcon,
+  CheckCircle2, DollarSign, Store, X, Image as ImageIcon,
 } from "lucide-react";
 import { getMethodLabel } from "@/data/paymentMethods";
 
