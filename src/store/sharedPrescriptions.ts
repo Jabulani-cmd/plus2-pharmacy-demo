@@ -243,12 +243,12 @@ export const useSharedPrescriptions = create<SharedState>()(
             audience: "customer",
             user_id: rx.customerId,
             title: "Quotation Ready — Action Required",
-            body:
+            message:
               "Your prescription #" + id +
               " has been approved. Total $" +
               quotation.total.toFixed(2) + ". Tap to pay now.",
             link: "/account",
-            tone: "success",
+            kind: "success",
           } as never);
         }
       },

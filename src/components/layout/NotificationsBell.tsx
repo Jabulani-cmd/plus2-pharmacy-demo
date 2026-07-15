@@ -61,8 +61,8 @@ export function NotificationsBell({
       .then(({ data }) => {
         (data ?? []).forEach((row) => {
           const r = row as {
-            id: string; title: string; body: string | null;
-            link: string | null; tone: string | null;
+            id: string; title: string; message: string | null;
+            link: string | null; kind: string | null;
           };
           if (seen.has(r.id)) return;
           seen.add(r.id);
@@ -70,9 +70,9 @@ export function NotificationsBell({
             audience: "customer",
             userId,
             title: r.title,
-            body: r.body ?? "",
+            body: r.message ?? "",
             link: r.link ?? undefined,
-            tone: (r.tone as AppNotification["tone"]) ?? "info",
+            tone: (r.kind as AppNotification["tone"]) ?? "info",
           });
         });
       });
@@ -89,8 +89,8 @@ export function NotificationsBell({
         },
         (payload) => {
           const r = payload.new as {
-            id: string; audience?: string; title: string; body: string | null;
-            link: string | null; tone: string | null;
+            id: string; audience?: string; title: string; message: string | null;
+            link: string | null; kind: string | null;
           };
           if (r.audience && r.audience !== "customer") return;
           if (seen.has(r.id)) return;
@@ -99,16 +99,16 @@ export function NotificationsBell({
             audience: "customer",
             userId,
             title: r.title,
-            body: r.body ?? "",
+            body: r.message ?? "",
             link: r.link ?? undefined,
-            tone: (r.tone as AppNotification["tone"]) ?? "info",
+            tone: (r.kind as AppNotification["tone"]) ?? "info",
           });
-          toast.success(r.title, { description: r.body ?? "", duration: 8000 });
+          toast.success(r.title, { description: r.message ?? "", duration: 8000 });
           if (typeof window !== "undefined" && "Notification" in window &&
               Notification.permission === "granted") {
             try {
               new Notification(r.title, {
-                body: r.body ?? "",
+                body: r.message ?? "",
                 icon: "/icons/icon-192.png",
               });
             } catch { /* ignore */ }

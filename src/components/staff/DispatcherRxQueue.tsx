@@ -499,12 +499,12 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
             audience: "customer",
             user_id: rx.customerId,
             title: "Quotation Ready — Pay Now",
-            body:
+            message:
               "Your prescription #" + rx.id +
               " has been approved. " + quotation.medicationName +
               " — Total: $" + total.toFixed(2) + ". Tap to pay now.",
             link: "/account",
-            tone: "success",
+            kind: "success",
             read: false,
           } as never);
         if (notifError) {
