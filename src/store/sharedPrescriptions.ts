@@ -546,15 +546,15 @@ const rxToRow = (p: SharedPrescription): Record<string, unknown> => ({
   quotation: (p.quotation ?? null) as unknown,
   payment_ref: p.paymentRef ?? null,
   payment_method: p.paymentMethod ?? null,
-  paid_at: p.paidAt ? new Date(p.paidAt).toISOString() : null,
+  paid_at: dateStringToIso(p.paidAt),
   pharmacist_notes: p.pharmacistNotes ?? null,
-  approved_at: p.approvedAt ? new Date(p.approvedAt).toISOString() : null,
+  approved_at: dateStringToIso(p.approvedAt),
   rejection_reason: p.rejectionReason ?? null,
   driver_id: isUuid(p.driverId) ? p.driverId : null,
   driver_name: p.driverName ?? null,
   driver_phone: p.driverPhone ?? null,
   driver_vehicle: p.driverVehicle ?? null,
-  dispatched_at: p.dispatchedAt ? new Date(p.dispatchedAt).toISOString() : null,
+  dispatched_at: dateStringToIso(p.dispatchedAt),
 });
 
 const rowToRx = (r: RxRow): SharedPrescription => ({
@@ -598,6 +598,12 @@ const rowToRx = (r: RxRow): SharedPrescription => ({
 
 function isUuid(v: string | undefined | null): v is string {
   return !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+function dateStringToIso(value: string | undefined | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 export async function refreshPrescriptions() {
