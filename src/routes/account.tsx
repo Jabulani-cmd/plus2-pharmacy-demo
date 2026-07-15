@@ -1056,10 +1056,15 @@ function AccountPage() {
         <PaymentModal
           isOpen={true}
           onClose={() => setPayingRx(null)}
-          onSuccess={(ref, method) => {
-            markSharedPaid(payingRx.id, ref, method);
-            setPayingRx(null);
-            toast.success("Payment confirmed — your medication will be dispatched shortly");
+          onSuccess={async (ref, method) => {
+            try {
+              await markSharedPaid(payingRx.id, ref, method);
+              setPayingRx(null);
+              toast.success("Payment confirmed — your medication will be dispatched shortly");
+            } catch (err) {
+              console.error("[account] markPaid failed", err);
+              toast.error("Couldn't confirm payment. Please try again.");
+            }
           }}
           amount={payingRx.quotation.total}
           orderId={payingRx.id}
