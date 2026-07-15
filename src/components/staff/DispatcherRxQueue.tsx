@@ -277,6 +277,13 @@ function ActionButtons({
   ) => void;
 }) {
   const status = rx.status;
+  // Once the quotation form has been opened for this card, keep it mounted
+  // until the user successfully submits — background refreshes that flip
+  // status must not wipe what the dispatcher has typed.
+  const [stickyQuote, setStickyQuote] = useState(false);
+  useEffect(() => {
+    if (status === "Ready to Quote") setStickyQuote(true);
+  }, [status]);
 
   if (status === "Pending" || status === "Under Review") {
     return (
@@ -332,8 +339,8 @@ function ActionButtons({
     );
   }
 
-  if (status === "Ready to Quote") {
-    return <QuotationForm rx={rx} />;
+  if (status === "Ready to Quote" || stickyQuote) {
+    return <QuotationForm rx={rx} onSuccess={() => setStickyQuote(false)} />;
   }
 
   if (status === "Approved — Awaiting Payment") {
