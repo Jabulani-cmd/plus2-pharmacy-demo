@@ -43,6 +43,17 @@ type Tab = "deliveries" | "completed" | "profile";
 const SKY = "#0EA5E9";
 const SKY_DARK = "#0369A1";
 
+function cleanDriverName(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function prescriptionBelongsToDriver(rx: SharedPrescription, driver: DriverRow) {
+  return (
+    (rx.driverId && rx.driverId === driver.auth_user_id) ||
+    cleanDriverName(rx.driverName) === cleanDriverName(driver.name)
+  );
+}
+
 export function DriverPortal({ driver }: { driver: DriverRow }) {
   const [tab, setTab] = useState<Tab>("deliveries");
   const [driverState, setDriverState] = useState<DriverRow>(driver);
@@ -101,7 +112,9 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
         (p: any) => {
           const row = p.new;
           if (!row) return;
-          const assignedToMe = row.driver_name === driverState.name;
+          const assignedToMe =
+            row.driver_id === driverState.auth_user_id ||
+            cleanDriverName(row.driver_name) === cleanDriverName(driverState.name);
           const justAssigned =
             row.status === "Assigned" || row.status === "Driver Assigned";
           if (!assignedToMe || !justAssigned) return;
@@ -149,7 +162,8 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
           if (!assignedToMe || !outForDelivery) return;
           if (p.eventType === "UPDATE") {
             const prev =
-              p.old?.driver_name === driverState.name &&
+              (p.old?.driver_id === driverState.auth_user_id ||
+                cleanDriverName(p.old?.driver_name) === cleanDriverName(driverState.name)) &&
               p.old?.status === "Out for Delivery";
             if (prev) return;
           }
@@ -298,9 +312,9 @@ function ActiveDeliveries({ driver }: { driver: DriverRow }) {
     () =>
       prescriptions.filter(
         (p) =>
-          p.driverName === driver.name && p.status === "Out for Delivery",
+          prescriptionBelongsToDriver(p, driver) && p.status === "Out for Delivery",
       ),
-    [prescriptions, driver.name],
+    [prescriptions, driver],
   );
 
   const totalCount = active.length + activeRx.length;
@@ -709,9 +723,9 @@ function CompletedDeliveries({ driver }: { driver: DriverRow }) {
   const rxList = useMemo(
     () =>
       prescriptions.filter(
-        (p) => p.driverName === driver.name && p.status === "Delivered",
+        (p) => prescriptionBelongsToDriver(p, driver) && p.status === "Delivered",
       ),
-    [prescriptions, driver.name],
+    [prescriptions, driver],
   );
 
   const total = list.reduce((s, o) => s + (Number(o.total) || 0), 0);

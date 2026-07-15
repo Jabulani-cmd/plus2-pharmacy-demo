@@ -84,6 +84,7 @@ export type SharedPrescription = {
   approvedAt?: string;
   rejectionReason?: string;
   driverName?: string;
+  driverId?: string;
   driverPhone?: string;
   driverVehicle?: string;
   dispatchedAt?: string;
@@ -111,7 +112,7 @@ type SharedState = {
     driverName: string,
     driverPhone: string,
     driverVehicle: string
-  ) => void;
+  ) => Promise<void>;
   updateStatus: (
     id: string,
     status: SharedPrescriptionStatus,
@@ -391,12 +392,17 @@ export const useSharedPrescriptions = create<SharedState>()(
         } as never);
       },
 
-      assignDriver: (
+      assignDriver: async (
         id,
         driverName,
         driverPhone,
         driverVehicle
       ) => {
+        const rxBefore = useSharedPrescriptions
+          .getState()
+          .prescriptions.find((p) => p.id === id);
+        if (!rxBefore) throw new Error("Prescription not found in the queue");
+
         const dispatchedAt = new Date().toLocaleString(
           "en-ZW",
           {
@@ -406,30 +412,73 @@ export const useSharedPrescriptions = create<SharedState>()(
             minute: "2-digit",
           }
         );
-        set((state) => ({
-          prescriptions: state.prescriptions.map((p) =>
-            p.id === id
-              ? {
-                  ...p,
-                  status:
-                    "Out for Delivery" as SharedPrescriptionStatus,
-                  driverName,
-                  driverPhone,
-                  driverVehicle,
-                  dispatchedAt,
-                }
-              : p
-          ),
-        }));
-        void supabase.from("prescriptions").update({
+        const dispatchedIso = new Date().toISOString();
+
+        let driverAuthId: string | null = null;
+        try {
+          const { data: driverRow, error: driverLookupError } = await supabase
+            .from("drivers")
+            .select("auth_user_id")
+            .eq("name", driverName)
+            .maybeSingle();
+          if (driverLookupError) {
+            console.error("[rx] driver lookup failed", driverLookupError);
+          }
+          driverAuthId =
+            (driverRow as { auth_user_id?: string | null } | null)?.auth_user_id ?? null;
+        } catch (e) {
+          console.error("[rx] driver lookup failed", e);
+        }
+
+        const nextRx: SharedPrescription = {
+          ...rxBefore,
+          status: "Out for Delivery" as SharedPrescriptionStatus,
+          driverId: driverAuthId ?? rxBefore.driverId,
+          driverName,
+          driverPhone,
+          driverVehicle,
+          dispatchedAt,
+        };
+
+        const assignmentRow = {
           status: "Out for Delivery",
+          driver_id: driverAuthId,
           driver_name: driverName,
           driver_phone: driverPhone,
           driver_vehicle: driverVehicle,
-          dispatched_at: new Date().toISOString(),
-        }).eq("id", id).then(({ error }) => {
-          if (error) console.error("[rx] assignDriver failed", error);
-        });
+          dispatched_at: dispatchedIso,
+          assigned_at: dispatchedIso,
+          updated_at: dispatchedIso,
+        };
+
+        const { data, error } = await supabase
+          .from("prescriptions")
+          .update(assignmentRow as never)
+          .eq("id", id)
+          .select("id");
+        if (error) {
+          console.error("[rx] assignDriver failed", error);
+          throw error;
+        }
+        if (!data || data.length === 0) {
+          const { error: upsertError } = await supabase
+            .from("prescriptions")
+            .upsert({
+              ...rxToRow(nextRx),
+              ...assignmentRow,
+            } as never);
+          if (upsertError) {
+            console.error("[rx] assignDriver upsert failed", upsertError);
+            throw upsertError;
+          }
+        }
+
+        set((state) => ({
+          prescriptions: state.prescriptions.map((p) =>
+            p.id === id ? nextRx : p
+          ),
+        }));
+
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
         if (rx) {
           pushNotification({
@@ -495,7 +544,17 @@ const rxToRow = (p: SharedPrescription): Record<string, unknown> => ({
   branch_id: p.branchId ?? null,
   branch_name: p.branchName ?? null,
   quotation: (p.quotation ?? null) as unknown,
+  payment_ref: p.paymentRef ?? null,
+  payment_method: p.paymentMethod ?? null,
+  paid_at: p.paidAt ? new Date(p.paidAt).toISOString() : null,
   pharmacist_notes: p.pharmacistNotes ?? null,
+  approved_at: p.approvedAt ? new Date(p.approvedAt).toISOString() : null,
+  rejection_reason: p.rejectionReason ?? null,
+  driver_id: isUuid(p.driverId) ? p.driverId : null,
+  driver_name: p.driverName ?? null,
+  driver_phone: p.driverPhone ?? null,
+  driver_vehicle: p.driverVehicle ?? null,
+  dispatched_at: p.dispatchedAt ? new Date(p.dispatchedAt).toISOString() : null,
 });
 
 const rowToRx = (r: RxRow): SharedPrescription => ({
@@ -530,6 +589,7 @@ const rowToRx = (r: RxRow): SharedPrescription => ({
   pharmacistNotes: (r.pharmacist_notes as string | null) ?? undefined,
   approvedAt: r.approved_at ? new Date(String(r.approved_at)).toLocaleString("en-ZW") : undefined,
   rejectionReason: (r.rejection_reason as string | null) ?? undefined,
+  driverId: (r.driver_id as string | null) ?? undefined,
   driverName: (r.driver_name as string | null) ?? undefined,
   driverPhone: (r.driver_phone as string | null) ?? undefined,
   driverVehicle: (r.driver_vehicle as string | null) ?? undefined,
