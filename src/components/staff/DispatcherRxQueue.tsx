@@ -454,15 +454,86 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
       notes: notes.trim() || undefined,
     };
 
-    // Persist to DB + notify customer via shared store (upsert-safe)
-    useSharedPrescriptions
-      .getState()
-      .approvePrescription(rx.id, quotation, notes.trim() || undefined);
+    try {
+      // Step 1: Write to Supabase and AWAIT the result before showing success.
+      const { error: dbError } = await supabase
+        .from("prescriptions")
+        .update({
+          status: "Approved — Awaiting Payment",
+          quotation: quotation as unknown as never,
+          pharmacist_notes: notes.trim() || null,
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rx.id);
 
-    toast.success("Quotation sent to customer", {
-      description: "Customer notified to pay $" + total.toFixed(2),
-    });
-    setSending(false);
+      if (dbError) {
+        console.error("[QuotationForm] DB update failed:", dbError);
+        toast.error("Failed to save quotation: " + dbError.message);
+        return;
+      }
+
+      // Step 2: Update local store so the dispatcher UI moves the card immediately.
+      useSharedPrescriptions.setState((s) => ({
+        prescriptions: s.prescriptions.map((p) =>
+          p.id === rx.id
+            ? {
+                ...p,
+                status: "Approved — Awaiting Payment" as SharedPrescriptionStatus,
+                quotation,
+                pharmacistNotes: notes.trim() || undefined,
+              }
+            : p
+        ),
+      }));
+
+      // Step 3: Customer notification (uses this project's actual notifications schema:
+      // audience/body/tone are required columns, user_id is uuid FK — insert only when
+      // we have a real uuid customerId; otherwise skip silently rather than 500).
+      const isUuid = (v: string | undefined | null): v is string =>
+        !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+      if (isUuid(rx.customerId)) {
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert({
+            audience: "customer",
+            user_id: rx.customerId,
+            title: "Quotation Ready — Pay Now",
+            body:
+              "Your prescription #" + rx.id +
+              " has been approved. " + quotation.medicationName +
+              " — Total: $" + total.toFixed(2) + ". Tap to pay now.",
+            link: "/account",
+            tone: "success",
+            read: false,
+          } as never);
+        if (notifError) {
+          console.error("[QuotationForm] Customer notification failed:", notifError);
+        }
+      }
+
+      // Step 4: Staff confirmation.
+      await supabase.from("staff_notifications").insert({
+        order_id: rx.id,
+        title: "✅ Quotation Sent",
+        body:
+          "Quotation $" + total.toFixed(2) +
+          " sent to " + (rx.customerName ?? "customer") +
+          " for prescription #" + rx.id,
+        kind: "prescription_approved",
+      } as never);
+
+      // Step 5: Show success ONLY after the DB write is confirmed.
+      toast.success("Quotation sent to customer!", {
+        description: "Customer will be notified to pay $" + total.toFixed(2),
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error("[QuotationForm] Unexpected error:", err);
+      toast.error("Something went wrong: " + msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
