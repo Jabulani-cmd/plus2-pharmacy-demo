@@ -15,6 +15,7 @@ import {
   FileText, User, Phone, MapPin, Clock, Printer,
   CheckCircle2, DollarSign, Truck, Store, X, Image as ImageIcon,
 } from "lucide-react";
+import { getMethodLabel } from "@/data/paymentMethods";
 
 const BRAND = "#1B3A6B";
 const BRAND_LIGHT = "#1E5BC6";
@@ -364,9 +365,20 @@ function ActionButtons({
             ✅ Paid ${rx.quotation?.total?.toFixed(2) ?? ""}
           </div>
           {rx.paymentMethod && (
-            <div className="text-[10px] text-green-600">via {rx.paymentMethod}</div>
+            <div className="text-[10px] text-green-600">
+              via {getMethodLabel(rx.paymentMethod)}
+            </div>
           )}
         </div>
+        <a
+          href={`/rx-receipt?id=${encodeURIComponent(rx.id)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border border-primary bg-white py-2 text-[11px] font-black text-primary hover:bg-primary/5"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          Print Invoice & Receipt
+        </a>
         {!rx.driverName ? (
           <button
             onClick={onAssignDriver}
