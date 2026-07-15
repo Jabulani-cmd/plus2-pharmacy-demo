@@ -134,6 +134,47 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
     return () => { void supabase.removeChannel(ch); };
   }, [driver.id, driverState.name]);
 
+  // Push notification on new prescription assignment
+  useEffect(() => {
+    const ch = supabase
+      .channel("driver_rx_assign_" + driver.id)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prescriptions" },
+        (p: any) => {
+          const row = p.new;
+          if (!row) return;
+          const assignedToMe = row.driver_name === driverState.name;
+          const outForDelivery = row.status === "Out for Delivery";
+          if (!assignedToMe || !outForDelivery) return;
+          if (p.eventType === "UPDATE") {
+            const prev =
+              p.old?.driver_name === driverState.name &&
+              p.old?.status === "Out for Delivery";
+            if (prev) return;
+          }
+          try {
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              new Notification("New Prescription Delivery", {
+                body: `Deliver ${row.id} to ${row.patient_name ?? "patient"}`,
+                icon: "/icons/driver-icon-192.png",
+                tag: row.id,
+              });
+            }
+          } catch {}
+          if ("vibrate" in navigator) {
+            try { (navigator as any).vibrate([200, 100, 200]); } catch {}
+          }
+          toast("💊 New prescription delivery!", {
+            description: `${row.patient_name ?? "Patient"} — ${row.id}`,
+            duration: 8000,
+          });
+        },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [driver.id, driverState.name]);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <InstallDriverApp variant="banner" />
