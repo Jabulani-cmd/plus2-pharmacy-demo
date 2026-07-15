@@ -354,11 +354,11 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     );
   };
 
-  const assignRxDriver = (
+  const assignRxDriver = async (
     rxId: string,
     driver: StaffDriver
   ) => {
-    assignDriverShared(
+    await assignDriverShared(
       rxId,
       driver.name,
       driver.phone,
@@ -852,8 +852,26 @@ function AssignRxDriverModal({
   patientName: string;
   drivers: StaffDriver[];
   onCancel: () => void;
-  onAssign: (driver: StaffDriver) => void;
+  onAssign: (driver: StaffDriver) => Promise<void>;
 }) {
+  const [assigningDriverId, setAssigningDriverId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const assign = async (driver: StaffDriver) => {
+    setAssigningDriverId(driver.id);
+    setErrorMsg(null);
+    try {
+      await onAssign(driver);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not assign this driver";
+      console.error("[AssignRxDriverModal] assignment failed", err);
+      setErrorMsg("Driver assignment failed: " + msg);
+      toast.error("Driver assignment failed", { description: msg });
+    } finally {
+      setAssigningDriverId(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
@@ -882,7 +900,8 @@ function AssignRxDriverModal({
           {drivers.map((d) => (
             <button
               key={d.id}
-              onClick={() => onAssign(d)}
+              onClick={() => void assign(d)}
+              disabled={assigningDriverId !== null}
               className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left hover:border-primary hover:bg-primary/5"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
@@ -902,7 +921,7 @@ function AssignRxDriverModal({
               </div>
               <div className="text-right text-[10px]">
                 <div className="font-bold text-emerald-600">
-                  Available
+                  {assigningDriverId === d.id ? "Assigning…" : "Available"}
                 </div>
                 <div className="text-muted-foreground">
                   {d.completedToday} today
@@ -910,6 +929,11 @@ function AssignRxDriverModal({
               </div>
             </button>
           ))}
+          {errorMsg && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+              {errorMsg}
+            </div>
+          )}
         </div>
       </div>
     </div>

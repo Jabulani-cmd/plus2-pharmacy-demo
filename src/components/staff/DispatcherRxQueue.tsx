@@ -133,8 +133,8 @@ export function DispatcherRxQueue() {
         <AssignDriverModal
           rx={assignFor}
           onClose={() => setAssignFor(null)}
-          onAssign={(driver) => {
-            assignDriver(assignFor.id, driver.name, driver.phone, driver.vehicle);
+          onAssign={async (driver) => {
+            await assignDriver(assignFor.id, driver.name, driver.phone, driver.vehicle);
             toast.success("Driver assigned", {
               description: driver.name + " → " + assignFor.patientName,
             });
@@ -653,9 +653,27 @@ function AssignDriverModal({
 }: {
   rx: SharedPrescription;
   onClose: () => void;
-  onAssign: (driver: StaffDriver) => void;
+  onAssign: (driver: StaffDriver) => Promise<void>;
 }) {
+  const [assigningDriverId, setAssigningDriverId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const available = STAFF_DRIVERS.filter((d) => d.status === "Available");
+
+  const assign = async (driver: StaffDriver) => {
+    setAssigningDriverId(driver.id);
+    setErrorMsg(null);
+    try {
+      await onAssign(driver);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not assign this driver";
+      console.error("[AssignDriverModal] assignment failed", err);
+      setErrorMsg("Driver assignment failed: " + msg);
+      toast.error("Driver assignment failed", { description: msg });
+    } finally {
+      setAssigningDriverId(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
@@ -680,7 +698,8 @@ function AssignDriverModal({
           {available.map((d) => (
             <button
               key={d.id}
-              onClick={() => onAssign(d)}
+              onClick={() => void assign(d)}
+              disabled={assigningDriverId !== null}
               className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition hover:border-[color:var(--brand)]"
               style={{ ["--brand" as string]: BRAND_LIGHT }}
             >
@@ -689,10 +708,15 @@ function AssignDriverModal({
                 <div className="text-[11px] text-slate-500">{d.vehicle}</div>
               </div>
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                Available
+                {assigningDriverId === d.id ? "Assigning…" : "Available"}
               </span>
             </button>
           ))}
+          {errorMsg && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+              {errorMsg}
+            </div>
+          )}
         </div>
       </div>
     </div>
