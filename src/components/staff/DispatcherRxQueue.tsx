@@ -32,6 +32,7 @@ const COLUMNS: ColDef[] = [
   { key: "Ready to Quote", label: "READY TO QUOTE", color: "#8B5CF6" },
   { key: "Approved — Awaiting Payment", label: "QUOTED", color: "#F97316" },
   { key: "Paid", label: "PAID", color: "#10B981" },
+  { key: "Assigned", label: "ASSIGNED", color: "#6366F1" },
   { key: "Out for Delivery", label: "OUT FOR DELIVERY", color: "#7C3AED" },
   { key: "Delivered", label: "DELIVERED", color: "#059669" },
 ];
@@ -39,10 +40,41 @@ const COLUMNS: ColDef[] = [
 export function DispatcherRxQueue() {
   const prescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const updateStatus = useSharedPrescriptions((s) => s.updateStatus);
-  const assignDriver = useSharedPrescriptions((s) => s.assignDriver);
+
+  const [realDrivers, setRealDrivers] = useState<StaffDriver[]>([]);
 
   useEffect(() => {
     void refreshPrescriptions();
+    const loadDrivers = async () => {
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("*")
+        .eq("off_duty", false)
+        .order("name");
+      if (error) {
+        console.error("[RxQueue] drivers load failed:", error);
+        return;
+      }
+      if (data) {
+        setRealDrivers(
+          data.map((d: Record<string, unknown>) => ({
+            id: String(d.id ?? ""),
+            name: String(d.name ?? ""),
+            phone: String(d.phone ?? ""),
+            vehicle:
+              String(d.vehicle ?? "") +
+              (d.plate ? " · " + String(d.plate) : ""),
+            status: d.off_duty ? "Off duty" : "Available",
+            zone: String(d.branch ?? "CBD"),
+            activeOrders: 0,
+            completedToday: 0,
+          })),
+        );
+      }
+    };
+    void loadDrivers();
+    const interval = setInterval(() => void loadDrivers(), 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const grouped = useMemo(() => {
@@ -132,11 +164,89 @@ export function DispatcherRxQueue() {
       {assignFor && (
         <AssignDriverModal
           rx={assignFor}
+          drivers={realDrivers}
           onClose={() => setAssignFor(null)}
           onAssign={async (driver) => {
-            await assignDriver(assignFor.id, driver.name, driver.phone, driver.vehicle);
-            toast.success("Driver assigned", {
-              description: driver.name + " → " + assignFor.patientName,
+            const { error } = await supabase
+              .from("prescriptions")
+              .update({
+                status: "Assigned",
+                driver_name: driver.name,
+                driver_phone: driver.phone,
+                driver_vehicle: driver.vehicle,
+                dispatched_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", assignFor.id);
+            if (error) {
+              toast.error("Failed to assign driver: " + error.message);
+              throw error;
+            }
+
+            useSharedPrescriptions.setState((s) => ({
+              prescriptions: s.prescriptions.map((p) =>
+                p.id === assignFor.id
+                  ? {
+                      ...p,
+                      status: "Assigned" as SharedPrescriptionStatus,
+                      driverName: driver.name,
+                      driverPhone: driver.phone,
+                      driverVehicle: driver.vehicle,
+                    }
+                  : p,
+              ),
+            }));
+
+            const { data: driverRecord } = await supabase
+              .from("drivers")
+              .select("auth_user_id, id")
+              .eq("name", driver.name)
+              .maybeSingle();
+
+            if (driverRecord?.auth_user_id) {
+              const { error: notifErr } = await supabase
+                .from("driver_notifications")
+                .insert({
+                  driver_auth_id: driverRecord.auth_user_id,
+                  order_id: assignFor.id,
+                  title: "🛵 New Prescription Delivery Assigned!",
+                  body:
+                    "Prescription #" +
+                    assignFor.id +
+                    " for " +
+                    (assignFor.patientName ?? "patient") +
+                    " — collect from branch and deliver to " +
+                    (assignFor.deliveryAddress?.suburb ??
+                      assignFor.deliveryAddress?.city ??
+                      "customer") +
+                    ". Tap to accept.",
+                  read: false,
+                });
+              if (notifErr) {
+                console.error("[RxQueue] driver_notification failed:", notifErr);
+              }
+            } else {
+              console.warn(
+                "[RxQueue] No auth_user_id for driver:",
+                driver.name,
+                "— driver may not receive app notification",
+              );
+            }
+
+            await supabase.from("staff_notifications").insert({
+              order_id: assignFor.id,
+              title: "🚗 Driver Assigned",
+              body:
+                driver.name +
+                " assigned to prescription #" +
+                assignFor.id +
+                " for " +
+                (assignFor.patientName ?? "patient"),
+              kind: "driver_assigned",
+            } as never);
+
+            toast.success("Driver assigned!", {
+              description: driver.name + " assigned to " + assignFor.patientName,
             });
             setAssignFor(null);
           }}
@@ -648,16 +758,21 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
 // ─────────────────────────────────────────────────────────
 function AssignDriverModal({
   rx,
+  drivers,
   onClose,
   onAssign,
 }: {
   rx: SharedPrescription;
+  drivers: StaffDriver[];
   onClose: () => void;
   onAssign: (driver: StaffDriver) => Promise<void>;
 }) {
   const [assigningDriverId, setAssigningDriverId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const available = STAFF_DRIVERS.filter((d) => d.status === "Available");
+  const available =
+    drivers.length > 0
+      ? drivers.filter((d) => d.status !== "Off duty")
+      : STAFF_DRIVERS.filter((d) => d.status === "Available");
 
   const assign = async (driver: StaffDriver) => {
     setAssigningDriverId(driver.id);
@@ -690,12 +805,21 @@ function AssignDriverModal({
           #{rx.id} · {rx.patientName}
         </p>
         <div className="mt-4 space-y-2">
-          {available.length === 0 && (
-            <p className="rounded bg-slate-50 p-3 text-center text-xs text-slate-500">
-              No drivers available right now.
-            </p>
-          )}
-          {available.map((d) => (
+          {available.length === 0 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+              <div className="mb-1 text-sm font-bold text-amber-700">
+                No drivers available
+              </div>
+              <div className="text-xs text-amber-600">
+                All drivers are currently off duty or unavailable. Check the Drivers page.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-1 text-xs font-bold text-slate-500">
+                {available.length} driver{available.length !== 1 ? "s" : ""} available
+              </div>
+              {available.map((d) => (
             <button
               key={d.id}
               onClick={() => void assign(d)}
@@ -711,7 +835,9 @@ function AssignDriverModal({
                 {assigningDriverId === d.id ? "Assigning…" : "Available"}
               </span>
             </button>
-          ))}
+              ))}
+            </>
+          )}
           {errorMsg && (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
               {errorMsg}
