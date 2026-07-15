@@ -252,8 +252,19 @@ function ActiveDeliveries({ driver }: { driver: DriverRow }) {
         .sort((a, b) => a.placedTs - b.placedTs),
     [orders, driver.name]
   );
+  const prescriptions = useSharedPrescriptions((s) => s.prescriptions);
+  const activeRx = useMemo(
+    () =>
+      prescriptions.filter(
+        (p) =>
+          p.driverName === driver.name && p.status === "Out for Delivery",
+      ),
+    [prescriptions, driver.name],
+  );
 
-  if (active.length === 0) {
+  const totalCount = active.length + activeRx.length;
+
+  if (totalCount === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center">
         <div className="mb-3 text-5xl">🛵</div>
@@ -270,8 +281,11 @@ function ActiveDeliveries({ driver }: { driver: DriverRow }) {
   return (
     <div className="space-y-4">
       <div className="text-xs font-bold text-slate-500">
-        {active.length} active deliver{active.length === 1 ? "y" : "ies"}
+        {totalCount} active deliver{totalCount === 1 ? "y" : "ies"}
       </div>
+      {activeRx.map((p) => (
+        <ActivePrescriptionCard key={p.id} rx={p} driver={driver} />
+      ))}
       {active.map((o) => (
         <ActiveDeliveryCard key={o.id} order={o} driver={driver} />
       ))}
