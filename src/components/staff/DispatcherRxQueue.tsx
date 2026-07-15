@@ -13,7 +13,7 @@ import { STAFF_DRIVERS, type StaffDriver } from "@/data/staffDemo";
 import { PageHeader } from "./shared";
 import {
   FileText, User, Phone, MapPin, Clock, Printer,
-  CheckCircle2, DollarSign, Truck, Store, X, Image as ImageIcon,
+  CheckCircle2, DollarSign, Store, X, Image as ImageIcon,
 } from "lucide-react";
 import { getMethodLabel } from "@/data/paymentMethods";
 
@@ -470,16 +470,6 @@ function ActionButtons({
   if (status === "Paid" || status === "Dispensing") {
     return (
       <div className="space-y-2">
-        <div className="rounded-lg border border-green-200 bg-green-50 p-2 text-[11px]">
-          <div className="font-bold text-green-700">
-            ✅ Paid ${rx.quotation?.total?.toFixed(2) ?? ""}
-          </div>
-          {rx.paymentMethod && (
-            <div className="text-[10px] text-green-600">
-              via {getMethodLabel(rx.paymentMethod)}
-            </div>
-          )}
-        </div>
         <a
           href={`/rx-receipt?id=${encodeURIComponent(rx.id)}`}
           target="_blank"
@@ -489,21 +479,7 @@ function ActionButtons({
           <Printer className="h-3.5 w-3.5" />
           Print Invoice & Receipt
         </a>
-        {!rx.driverName ? (
-          <button
-            onClick={onAssignDriver}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-[11px] font-black text-white transition"
-            style={{ background: BRAND_LIGHT }}
-          >
-            <Truck className="h-3.5 w-3.5" />
-            Assign Driver & Dispatch
-          </button>
-        ) : (
-          <div className="rounded border bg-violet-50 p-2 text-[10px] text-violet-800">
-            <div className="font-bold">{rx.driverName}</div>
-            <div>{rx.driverVehicle}</div>
-          </div>
-        )}
+        <PaidActionInline rx={rx} />
       </div>
     );
   }
@@ -756,6 +732,184 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
 // ─────────────────────────────────────────────────────────
 // Assign driver modal
 // ─────────────────────────────────────────────────────────
+function PaidActionInline({ rx }: { rx: SharedPrescription }) {
+  const [drivers, setDrivers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      vehicle: string;
+      auth_user_id: string | null;
+    }>
+  >([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const [assignedTo, setAssignedTo] = useState<string | null>(rx.driverName ?? null);
+
+  useEffect(() => {
+    supabase
+      .from("drivers")
+      .select("id, name, phone, vehicle, plate, auth_user_id, off_duty")
+      .order("name")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[PaidAction] fetch drivers:", error);
+        } else if (data) {
+          setDrivers(
+            (data as Array<Record<string, unknown>>)
+              .filter((d) => !d.off_duty)
+              .map((d) => ({
+                id: String(d.id),
+                name: String(d.name ?? ""),
+                phone: String(d.phone ?? ""),
+                vehicle:
+                  String(d.vehicle ?? "") +
+                  (d.plate ? " · " + String(d.plate) : ""),
+                auth_user_id: (d.auth_user_id as string | null) ?? null,
+              })),
+          );
+        }
+        setLoadingDrivers(false);
+      });
+  }, []);
+
+  const assign = async (driver: {
+    id: string;
+    name: string;
+    phone: string;
+    vehicle: string;
+    auth_user_id: string | null;
+  }) => {
+    setAssigning(driver.id);
+    try {
+      const { error } = await supabase
+        .from("prescriptions")
+        .update({
+          status: "Assigned",
+          driver_name: driver.name,
+          driver_phone: driver.phone,
+          driver_vehicle: driver.vehicle,
+          dispatched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rx.id);
+
+      if (error) {
+        toast.error("Failed: " + error.message);
+        return;
+      }
+
+      useSharedPrescriptions.setState((s) => ({
+        prescriptions: s.prescriptions.map((p) =>
+          p.id === rx.id
+            ? {
+                ...p,
+                status: "Assigned" as SharedPrescriptionStatus,
+                driverName: driver.name,
+                driverPhone: driver.phone,
+                driverVehicle: driver.vehicle,
+              }
+            : p,
+        ),
+      }));
+
+      if (driver.auth_user_id) {
+        await supabase.from("driver_notifications").insert({
+          driver_auth_id: driver.auth_user_id,
+          order_id: rx.id,
+          title: "🛵 New Prescription Delivery!",
+          body:
+            "Prescription #" +
+            rx.id +
+            " for " +
+            (rx.patientName ?? "patient") +
+            " — collect from branch and deliver.",
+          read: false,
+        });
+      } else {
+        console.warn("[PaidAction] driver has no auth_user_id:", driver.name);
+      }
+
+      await supabase.from("staff_notifications").insert({
+        order_id: rx.id,
+        title: "🚗 Driver Assigned",
+        body: driver.name + " assigned to prescription #" + rx.id,
+        kind: "driver_assigned",
+      } as never);
+
+      setAssignedTo(driver.name);
+      toast.success(driver.name + " assigned to Rx #" + rx.id);
+    } catch (err) {
+      console.error("[PaidAction] assign:", err);
+      toast.error("Unexpected error — check console");
+    } finally {
+      setAssigning(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border border-green-200 bg-green-50 p-2 text-[11px]">
+        <div className="font-bold text-green-700">
+          ✅ Paid ${rx.quotation?.total?.toFixed(2) ?? ""}
+        </div>
+        {rx.paymentMethod && (
+          <div className="text-[10px] text-green-600">
+            via {getMethodLabel(rx.paymentMethod)}
+          </div>
+        )}
+      </div>
+
+      {assignedTo ? (
+        <div className="rounded border bg-violet-50 p-2 text-[10px] text-violet-800">
+          <div className="font-bold">✓ Assigned to {assignedTo}</div>
+          <div className="text-violet-600">Driver notified on KP Driver app</div>
+        </div>
+      ) : (
+        <div>
+          <div
+            className="mb-1.5 text-[10px] font-black uppercase tracking-wide"
+            style={{ color: BRAND }}
+          >
+            Select Driver:
+          </div>
+          {loadingDrivers && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px] text-slate-400">
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+              Loading drivers...
+            </div>
+          )}
+          {!loadingDrivers && drivers.length === 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] font-semibold text-amber-700">
+              ⚠️ No drivers available. Check the Drivers page to set drivers online.
+            </div>
+          )}
+          {!loadingDrivers &&
+            drivers.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => void assign(d)}
+                disabled={assigning !== null}
+                className="mb-1.5 flex w-full items-center justify-between rounded-lg border-2 border-slate-100 bg-white p-2.5 text-left transition hover:border-[#1E5BC6] hover:bg-[#EAF3FF] disabled:opacity-50"
+              >
+                <div>
+                  <div className="text-[12px] font-bold text-slate-800">{d.name}</div>
+                  <div className="text-[10px] text-slate-400">{d.vehicle}</div>
+                </div>
+                <span
+                  className="ml-2 shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
+                  style={{ background: BRAND_LIGHT }}
+                >
+                  {assigning === d.id ? "Assigning…" : "Assign →"}
+                </span>
+              </button>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssignDriverModal({
   rx,
   drivers,
