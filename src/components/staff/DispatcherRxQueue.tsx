@@ -277,6 +277,13 @@ function ActionButtons({
   ) => void;
 }) {
   const status = rx.status;
+  // Once the quotation form has been opened for this card, keep it mounted
+  // until the user successfully submits — background refreshes that flip
+  // status must not wipe what the dispatcher has typed.
+  const [stickyQuote, setStickyQuote] = useState(false);
+  useEffect(() => {
+    if (status === "Ready to Quote") setStickyQuote(true);
+  }, [status]);
 
   if (status === "Pending" || status === "Under Review") {
     return (
@@ -332,8 +339,8 @@ function ActionButtons({
     );
   }
 
-  if (status === "Ready to Quote") {
-    return <QuotationForm rx={rx} />;
+  if (status === "Ready to Quote" || stickyQuote) {
+    return <QuotationForm rx={rx} onSuccess={() => setStickyQuote(false)} />;
   }
 
   if (status === "Approved — Awaiting Payment") {
@@ -426,7 +433,7 @@ function ActionButtons({
 // ─────────────────────────────────────────────────────────
 // Quotation form (inline)
 // ─────────────────────────────────────────────────────────
-function QuotationForm({ rx }: { rx: SharedPrescription }) {
+function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: () => void }) {
   const staff = useStaffAuth((s) => s.staff);
   const [medicationName, setMedicationName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -436,6 +443,7 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
   );
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const total =
     (Number(medicationCost) || 0) + (Number(deliveryFee) || 0);
@@ -445,6 +453,7 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
   const send = async () => {
     if (!canSend) return;
     setSending(true);
+    setErrorMsg(null);
 
     const quotation: SharedQuotation = {
       medicationName: medicationName.trim(),
@@ -475,6 +484,7 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
 
       if (dbError) {
         console.error("[QuotationForm] DB update failed:", dbError);
+        setErrorMsg("Failed to save quotation: " + dbError.message);
         toast.error("Failed to save quotation: " + dbError.message);
         return;
       }
@@ -533,9 +543,11 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
       toast.success("Quotation sent to customer!", {
         description: "Customer will be notified to pay $" + total.toFixed(2),
       });
+      onSuccess?.();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.error("[QuotationForm] Unexpected error:", err);
+      setErrorMsg("Something went wrong: " + msg);
       toast.error("Something went wrong: " + msg);
     } finally {
       setSending(false);
@@ -621,6 +633,12 @@ function QuotationForm({ rx }: { rx: SharedPrescription }) {
         <DollarSign className="h-3.5 w-3.5" />
         {sending ? "Sending…" : "Send Quotation to Customer"}
       </button>
+
+      {errorMsg && (
+        <div className="rounded border border-rose-200 bg-rose-50 px-2 py-1.5 text-[10px] font-bold text-rose-700">
+          {errorMsg}
+        </div>
+      )}
     </div>
   );
 }
