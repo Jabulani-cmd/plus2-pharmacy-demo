@@ -432,7 +432,7 @@ export const useSharedPrescriptions = create<SharedState>()(
 
         const nextRx: SharedPrescription = {
           ...rxBefore,
-          status: "Out for Delivery" as SharedPrescriptionStatus,
+          status: "Assigned" as SharedPrescriptionStatus,
           driverId: driverAuthId ?? rxBefore.driverId,
           driverName,
           driverPhone,
@@ -441,7 +441,7 @@ export const useSharedPrescriptions = create<SharedState>()(
         };
 
         const assignmentRow = {
-          status: "Out for Delivery",
+          status: "Assigned",
           driver_id: driverAuthId,
           driver_name: driverName,
           driver_phone: driverPhone,
