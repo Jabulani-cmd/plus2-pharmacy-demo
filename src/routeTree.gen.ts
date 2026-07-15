@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ServicesRouteImport } from './routes/services'
+import { Route as RxReceiptRouteImport } from './routes/rx-receipt'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReceiptRouteImport } from './routes/receipt'
 import { Route as PrescriptionsRouteImport } from './routes/prescriptions'
@@ -46,6 +47,11 @@ const StaffRoute = StaffRouteImport.update({
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RxReceiptRoute = RxReceiptRouteImport.update({
+  id: '/rx-receipt',
+  path: '/rx-receipt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/rx-receipt': typeof RxReceiptRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/rx-receipt': typeof RxReceiptRoute
   '/services': typeof ServicesRoute
   '/track': typeof TrackRoute
   '/category/$slug': typeof CategorySlugRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/prescriptions': typeof PrescriptionsRoute
   '/receipt': typeof ReceiptRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/rx-receipt': typeof RxReceiptRoute
   '/services': typeof ServicesRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
+    | '/rx-receipt'
     | '/services'
     | '/staff'
     | '/track'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
+    | '/rx-receipt'
     | '/services'
     | '/track'
     | '/category/$slug'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/prescriptions'
     | '/receipt'
     | '/reset-password'
+    | '/rx-receipt'
     | '/services'
     | '/staff'
     | '/track'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   PrescriptionsRoute: typeof PrescriptionsRoute
   ReceiptRoute: typeof ReceiptRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RxReceiptRoute: typeof RxReceiptRoute
   ServicesRoute: typeof ServicesRoute
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rx-receipt': {
+      id: '/rx-receipt'
+      path: '/rx-receipt'
+      fullPath: '/rx-receipt'
+      preLoaderRoute: typeof RxReceiptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -527,6 +547,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrescriptionsRoute: PrescriptionsRoute,
   ReceiptRoute: ReceiptRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RxReceiptRoute: RxReceiptRoute,
   ServicesRoute: ServicesRoute,
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
