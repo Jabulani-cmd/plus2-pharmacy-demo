@@ -435,9 +435,7 @@ function ActionButtons({
 // ─────────────────────────────────────────────────────────
 function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: () => void }) {
   const staff = useStaffAuth((s) => s.staff);
-  const [medicationName, setMedicationName] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [medicationCost, setMedicationCost] = useState("");
+  const [medicationTotal, setMedicationTotal] = useState("");
   const [deliveryFee, setDeliveryFee] = useState(
     rx.delivery === "collect" ? "0" : "2.50",
   );
@@ -446,20 +444,21 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const total =
-    (Number(medicationCost) || 0) + (Number(deliveryFee) || 0);
+    (Number(medicationTotal) || 0) + (Number(deliveryFee) || 0);
   const canSend =
-    medicationName.trim() && medicationCost && !sending;
+    medicationTotal !== "" && !sending;
 
   const send = async () => {
     if (!canSend) return;
     setSending(true);
     setErrorMsg(null);
 
+    const medicationTotalNum = Number(medicationTotal);
     const quotation: SharedQuotation = {
-      medicationName: medicationName.trim(),
+      medicationName: "Prescription items",
       dosage: "",
-      quantity: quantity.trim() || "—",
-      medicationCost: Number(medicationCost),
+      quantity: "As listed",
+      medicationCost: medicationTotalNum,
       deliveryFee: Number(deliveryFee) || 0,
       total,
       pharmacistName: staff?.name ?? "Dispatcher",
@@ -504,7 +503,7 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
       }));
 
       // Step 3: Customer notification (uses this project's actual notifications schema:
-      // audience/body/tone are required columns, user_id is uuid FK — insert only when
+      // audience/message/kind are required columns, user_id is uuid FK — insert only when
       // we have a real uuid customerId; otherwise skip silently rather than 500).
       const isUuid = (v: string | undefined | null): v is string =>
         !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -517,8 +516,7 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
             title: "Quotation Ready — Pay Now",
             message:
               "Your prescription #" + rx.id +
-              " has been approved. " + quotation.medicationName +
-              " — Total: $" + total.toFixed(2) + ". Tap to pay now.",
+              " has been approved. Total: $" + total.toFixed(2) + ". Tap to pay now.",
             link: "/account",
             kind: "success",
             read: false,
@@ -560,33 +558,14 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
         Enter Quotation
       </div>
 
-      <div>
-        <label className="text-[10px] font-bold text-slate-600">Medication name</label>
-        <input
-          value={medicationName}
-          onChange={(e) => setMedicationName(e.target.value)}
-          placeholder="e.g. Amoxicillin 500mg"
-          className="mt-0.5 w-full rounded border px-2 py-1.5 text-[11px]"
-        />
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-slate-600">Quantity</label>
-        <input
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-          placeholder="e.g. 21 tablets"
-          className="mt-0.5 w-full rounded border px-2 py-1.5 text-[11px]"
-        />
-      </div>
-
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] font-bold text-slate-600">Medication ($)</label>
+          <label className="text-[10px] font-bold text-slate-600">Medications total ($)</label>
           <input
             type="number"
             step="0.01"
-            value={medicationCost}
-            onChange={(e) => setMedicationCost(e.target.value)}
+            value={medicationTotal}
+            onChange={(e) => setMedicationTotal(e.target.value)}
             placeholder="0.00"
             className="mt-0.5 w-full rounded border px-2 py-1.5 text-[11px]"
           />
@@ -615,7 +594,7 @@ function QuotationForm({ rx, onSuccess }: { rx: SharedPrescription; onSuccess?: 
         />
       </div>
 
-      {medicationCost && (
+      {medicationTotal !== "" && (
         <div className="flex items-center justify-between rounded border bg-white px-2 py-1.5">
           <span className="text-[10px] font-bold text-slate-500">Total Due</span>
           <span className="text-sm font-black" style={{ color: BRAND_LIGHT }}>
