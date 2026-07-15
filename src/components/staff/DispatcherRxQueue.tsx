@@ -407,6 +407,15 @@ function ActionButtons({
             <div>{rx.driverVehicle}</div>
           </div>
         )}
+        <a
+          href={`/rx-receipt?id=${encodeURIComponent(rx.id)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border border-primary bg-white py-2 text-[11px] font-black text-primary hover:bg-primary/5"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          Print for Driver
+        </a>
         <button
           onClick={() => {
             onUpdateStatus(rx.id, "Delivered");
