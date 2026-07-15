@@ -642,6 +642,7 @@ function ActiveDeliveryCard({
 // ─────────────────────────────────────────────────────────────
 function CompletedDeliveries({ driver }: { driver: DriverRow }) {
   const orders = useSharedOrders((s) => s.orders);
+  const prescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const proofs = useDeliveryProofs((s) => s.proofs);
   const [filter, setFilter] = useState<"today" | "all">("today");
 
@@ -662,6 +663,14 @@ function CompletedDeliveries({ driver }: { driver: DriverRow }) {
         )
         .sort((a, b) => b.placedTs - a.placedTs),
     [orders, driver.name, filter, startOfToday]
+  );
+
+  const rxList = useMemo(
+    () =>
+      prescriptions.filter(
+        (p) => p.driverName === driver.name && p.status === "Delivered",
+      ),
+    [prescriptions, driver.name],
   );
 
   const total = list.reduce((s, o) => s + (Number(o.total) || 0), 0);
@@ -703,7 +712,9 @@ function CompletedDeliveries({ driver }: { driver: DriverRow }) {
 
       {list.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center text-xs text-slate-500">
-          No completed deliveries{filter === "today" ? " today" : ""}
+          {rxList.length === 0
+            ? `No completed deliveries${filter === "today" ? " today" : ""}`
+            : "No completed OTC orders — see prescriptions below"}
         </div>
       ) : (
         <div className="space-y-2">
@@ -757,6 +768,257 @@ function CompletedDeliveries({ driver }: { driver: DriverRow }) {
           })}
         </div>
       )}
+
+      {rxList.length > 0 && (
+        <div className="space-y-2">
+          <div className="pt-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+            Prescription deliveries
+          </div>
+          {rxList.map((p) => (
+            <div
+              key={p.id}
+              className="rounded-xl border border-slate-200 bg-white p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-black text-slate-800">
+                    {p.patientName}
+                  </div>
+                  <div className="truncate text-[11px] text-slate-500">
+                    #{p.id}
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                  <CheckCircle2 className="h-3 w-3" /> Delivered
+                </div>
+              </div>
+              {p.deliveryAddress && (
+                <div className="mt-1 truncate text-[11px] text-slate-500">
+                  📍 {p.deliveryAddress.streetAddress},{" "}
+                  {p.deliveryAddress.suburb}
+                </div>
+              )}
+              {proofs[p.id]?.photoDataUrl && (
+                <img
+                  src={proofs[p.id].photoDataUrl}
+                  alt={"Proof for " + p.id}
+                  className="mt-2 h-24 w-full rounded-lg border border-slate-200 object-cover"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Active prescription delivery card
+// ─────────────────────────────────────────────────────────────
+function ActivePrescriptionCard({
+  rx,
+  driver,
+}: {
+  rx: SharedPrescription;
+  driver: DriverRow;
+}) {
+  const updateStatus = useSharedPrescriptions((s) => s.updateStatus);
+  const setProof = useDeliveryProofs((s) => s.setProof);
+
+  const [confirm, setConfirm] = useState(false);
+  const [proofPhoto, setProofPhoto] = useState<string | null>(null);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+  const [marking, setMarking] = useState(false);
+
+  const address = rx.deliveryAddress
+    ? `${rx.deliveryAddress.streetAddress}, ${rx.deliveryAddress.suburb}, ${rx.deliveryAddress.city}`
+    : "—";
+
+  const total = rx.quotation?.total;
+  const paymentLabel = rx.paymentMethod ?? "Paid online";
+
+  const onPickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setProcessingPhoto(true);
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setProofPhoto(dataUrl);
+    } catch (err) {
+      console.error("[proof] photo processing failed", err);
+      toast.error("Could not read that photo — please try again");
+    } finally {
+      setProcessingPhoto(false);
+    }
+  };
+
+  const onDelivered = async () => {
+    if (!proofPhoto) {
+      toast.error("Take a proof-of-delivery photo first");
+      return;
+    }
+    setMarking(true);
+    setProof(rx.id, proofPhoto);
+    updateStatus(rx.id, "Delivered");
+    setTimeout(() => {
+      setMarking(false);
+      setConfirm(false);
+      setProofPhoto(null);
+    }, 400);
+    toast.success("Prescription marked as delivered");
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between bg-purple-100 px-4 py-2 text-[11px] font-black uppercase tracking-wider text-purple-800">
+        <span className="flex items-center gap-1.5">
+          <Package className="h-3.5 w-3.5" /> Prescription · Out for delivery
+        </span>
+        <span className="text-[10px] text-slate-600">#{rx.id}</span>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-black text-slate-800">
+              {rx.patientName}
+            </div>
+            <div className="text-xs text-slate-500">
+              {typeof total === "number" ? `US$${total.toFixed(2)} · ` : ""}
+              {paymentLabel}
+            </div>
+          </div>
+          <a
+            href={"tel:" + rx.customerPhone}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition hover:bg-sky-600 hover:text-white"
+            aria-label="Call customer"
+          >
+            <Phone className="h-4 w-4" />
+          </a>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <MapPin className="h-3 w-3" /> Deliver to
+          </div>
+          <div className="text-xs font-semibold text-slate-700">{address}</div>
+          <div className="pt-1 text-[11px] text-slate-500">
+            📞 {rx.customerPhone}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">
+          <span className="text-base leading-none">✅</span>
+          <span>
+            <span className="block text-[11px] font-black uppercase tracking-wider">
+              Payment already received
+            </span>
+            <span className="block font-semibold normal-case">
+              Paid via {paymentLabel} — do NOT collect payment
+            </span>
+          </span>
+        </div>
+
+        {!confirm && (
+          <button
+            type="button"
+            onClick={() => setConfirm(true)}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1B3A6B] text-sm font-black text-white transition hover:bg-sky-700"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Mark as delivered
+          </button>
+        )}
+
+        {confirm && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs font-black text-slate-800">
+              Confirm delivery to {rx.patientName}?
+            </div>
+            <div className="mt-1 text-[11px] text-slate-500">
+              A proof-of-delivery photo is required.
+            </div>
+            <div className="mt-3">
+              {proofPhoto ? (
+                <div className="relative">
+                  <img
+                    src={proofPhoto}
+                    alt="Proof of delivery"
+                    className="h-40 w-full rounded-lg border border-slate-200 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setProofPhoto(null)}
+                    disabled={marking}
+                    aria-label="Remove photo"
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={
+                    "flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full border-2 border-dashed border-sky-400 bg-white text-xs font-black text-sky-700 transition hover:bg-sky-50 " +
+                    (processingPhoto ? "pointer-events-none opacity-60" : "")
+                  }
+                >
+                  {processingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {processingPhoto ? "Processing…" : "Take proof-of-delivery photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      void onPickPhoto(e.target.files?.[0]);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirm(false);
+                  setProofPhoto(null);
+                }}
+                disabled={marking}
+                className="h-10 flex-1 rounded-full border-2 border-slate-300 text-xs font-bold text-slate-600 transition hover:bg-white disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onDelivered}
+                disabled={marking || !proofPhoto}
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 text-xs font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {marking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
+
+        <a
+          href={"https://maps.google.com/?q=" + encodeURIComponent(address)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-sky-500 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+        >
+          <MapPin className="h-4 w-4" /> Open in Maps
+        </a>
+      </div>
     </div>
   );
 }
