@@ -104,38 +104,38 @@ export type Database = {
       notifications: {
         Row: {
           audience: string
-          body: string | null
           created_at: string
           id: string
+          kind: string | null
           link: string | null
           link_search: Json | null
+          message: string | null
           read: boolean
           title: string
-          tone: string | null
           user_id: string | null
         }
         Insert: {
           audience: string
-          body?: string | null
           created_at?: string
           id?: string
+          kind?: string | null
           link?: string | null
           link_search?: Json | null
+          message?: string | null
           read?: boolean
           title: string
-          tone?: string | null
           user_id?: string | null
         }
         Update: {
           audience?: string
-          body?: string | null
           created_at?: string
           id?: string
+          kind?: string | null
           link?: string | null
           link_search?: Json | null
+          message?: string | null
           read?: boolean
           title?: string
-          tone?: string | null
           user_id?: string | null
         }
         Relationships: []
