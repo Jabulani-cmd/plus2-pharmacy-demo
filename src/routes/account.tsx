@@ -274,7 +274,7 @@ function PrescriptionTracker({
       {rx.delivery === "delivery" && rx.deliveryAddress && (
         <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          <span>
+          <span className="min-w-0 break-words">
             {rx.deliveryAddress.firstName} {rx.deliveryAddress.lastName} &middot;{" "}
             {rx.deliveryAddress.streetAddress}, {rx.deliveryAddress.suburb},{" "}
             {rx.deliveryAddress.city}
@@ -284,7 +284,7 @@ function PrescriptionTracker({
       {rx.delivery === "collect" && (
         <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <Store className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          <span>
+          <span className="min-w-0 break-words">
             Collection:{" "}
             {rx.collectionBranchId
               ? rx.collectionBranchId.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
@@ -292,6 +292,7 @@ function PrescriptionTracker({
           </span>
         </div>
       )}
+
     </div>
   );
 }
