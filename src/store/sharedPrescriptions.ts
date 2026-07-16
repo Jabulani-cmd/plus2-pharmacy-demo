@@ -147,12 +147,13 @@ export const useSharedPrescriptions = create<SharedState>()(
           link: "/account",
           tone: "info",
         });
-        pushNotification({
-          audience: "staff",
-          title: "New prescription to review",
+        // Staff bell hydrates from `staff_notifications` — insert a row so
+        // every dispatcher device sees the alert in the bell.
+        void supabase.from("staff_notifications").insert({
+          order_id: p.id,
+          kind: "prescription_uploaded",
+          title: "💊 New prescription to review",
           body: p.patientName + " uploaded " + p.fileName,
-          link: "/staff/dashboard",
-          tone: "warning",
         });
       },
 
@@ -359,16 +360,6 @@ export const useSharedPrescriptions = create<SharedState>()(
           }
         }
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
-        pushNotification({
-          audience: "staff",
-          title: "Payment received — ready to pack",
-          body:
-            "Prescription " + id + " · $" +
-            (rx?.quotation?.total.toFixed(2) ?? paymentRef) +
-            " via " + paymentMethod,
-          link: "/staff/dashboard",
-          tone: "success",
-        });
         if (rx) {
           pushNotification({
             audience: "customer",

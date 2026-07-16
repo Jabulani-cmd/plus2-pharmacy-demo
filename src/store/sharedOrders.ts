@@ -303,21 +303,6 @@ export const useSharedOrders = create<State>()((set, get) => ({
       tone: "success",
     });
 
-    pushNotification({
-      audience: "staff",
-      title: "NEW OTC order — needs packing",
-      body:
-        o.customer +
-        " · $" +
-        o.total.toFixed(2) +
-        " · " +
-        o.itemCount +
-        " item" +
-        (o.itemCount === 1 ? "" : "s"),
-      link: "/staff/dashboard",
-      tone: "info",
-    });
-
     // Write to staff_notifications so dispatcher gets
     // real-time toast on their device via Supabase Realtime
     void supabase.from("staff_notifications").insert({

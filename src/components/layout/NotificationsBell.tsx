@@ -137,6 +137,92 @@ export function NotificationsBell({
     return () => { void supabase.removeChannel(ch); };
   }, [audience, userId]);
 
+  // Cross-device realtime notifications for staff (dispatcher/pharmacist).
+  // Hydrates + subscribes to `staff_notifications` and auto-purges rows
+  // older than 24 hours so old items disappear on their own.
+  useEffect(() => {
+    if (audience !== "staff") return;
+
+    // Purge anything older than 24h — old notifications delete themselves.
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    void supabase.from("staff_notifications").delete().lt("created_at", cutoff);
+    useNotifications
+      .getState()
+      .removeWhere(
+        (n) => n.audience === "staff" && n.ts < Date.now() - 24 * 60 * 60 * 1000,
+      );
+
+    const seen = new Set<string>();
+
+    void supabase
+      .from("staff_notifications")
+      .select("*")
+      .eq("read", false)
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        (data ?? []).forEach((row) => {
+          const r = row as {
+            id: string; title: string; body: string | null; kind: string | null;
+            order_id: string | null;
+          };
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          const link =
+            r.kind === "new_order"
+              ? "/staff/dashboard"
+              : r.kind && r.kind.startsWith("prescription_")
+                ? "/staff/dashboard"
+                : "/staff/dashboard";
+          pushNotification({
+            externalId: r.id,
+            audience: "staff",
+            title: r.title,
+            body: r.body ?? "",
+            link,
+            tone: "warning",
+          });
+        });
+      });
+
+    const ch = supabase
+      .channel("staff_notifications_bell")
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "staff_notifications" },
+        (payload) => {
+          const r = payload.old as { id?: string };
+          if (!r.id) return;
+          seen.delete(r.id);
+          useNotifications.getState().removeWhere((n) => n.externalId === r.id);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "staff_notifications" },
+        (payload) => {
+          const r = payload.new as {
+            id: string; title: string; body: string | null; kind: string | null;
+          };
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          pushNotification({
+            externalId: r.id,
+            audience: "staff",
+            title: r.title,
+            body: r.body ?? "",
+            link: "/staff/dashboard",
+            tone: "warning",
+          });
+          toast(r.title, { description: r.body ?? "", duration: 6000 });
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(ch); };
+  }, [audience]);
+
   const filtered = useMemo(
     () =>
       items
@@ -150,18 +236,25 @@ export function NotificationsBell({
 
   const removeReadCustomerNotification = (n: AppNotification) => {
     removeNotification(n.id);
-    if (audience !== "customer" || !n.externalId) return;
-    void supabase.from("notifications").delete().eq("id", n.externalId);
+    if (!n.externalId) return;
+    if (audience === "customer") {
+      void supabase.from("notifications").delete().eq("id", n.externalId);
+    } else if (audience === "staff") {
+      void supabase.from("staff_notifications").delete().eq("id", n.externalId);
+    }
   };
 
   const removeAllVisible = () => {
     const externalIds: string[] = [];
     filtered.forEach((n) => {
       removeNotification(n.id);
-      if (audience === "customer" && n.externalId) externalIds.push(n.externalId);
+      if (n.externalId) externalIds.push(n.externalId);
     });
-    if (externalIds.length > 0) {
+    if (externalIds.length === 0) return;
+    if (audience === "customer") {
       void supabase.from("notifications").delete().in("id", externalIds);
+    } else if (audience === "staff") {
+      void supabase.from("staff_notifications").delete().in("id", externalIds);
     }
   };
 
