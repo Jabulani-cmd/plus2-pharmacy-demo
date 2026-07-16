@@ -1105,6 +1105,17 @@ function AssignDriverModal({
           </button>
         </header>
         <div className="space-y-2 p-5">
+          <div className="rounded-lg border-2 border-[#1E5BC6]/30 bg-[#EAF3FF] p-2">
+            <div className="text-[9px] font-black uppercase tracking-wider text-[#1B3A6B]">
+              Collection Branch
+            </div>
+            <div className="text-sm font-bold text-[#1B3A6B]">
+              🏪 {delivery.branchName ?? "9th Ave Branch CBD"}
+            </div>
+            <div className="text-[10px] text-slate-600">
+              Driver must collect from this branch before delivery
+            </div>
+          </div>
           {drivers.length === 0 && (
             <p className="text-center text-sm text-muted-foreground">
               No drivers available right now.
