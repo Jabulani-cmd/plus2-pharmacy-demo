@@ -7,13 +7,14 @@ import {
 } from "@/data/staffDemo";
 import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
+import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
 import { DispatcherRxQueue } from "./DispatcherRxQueue";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
-  X, Clock, UserCheck, FileText, User, Search, CalendarDays,
+  X, Clock, UserCheck, FileText, User, Search, CalendarDays, Store,
 } from "lucide-react";
 
 const PRODUCTION_DOMAIN = "https://www.kingspharmacy-mavingtech.online";
@@ -90,7 +91,18 @@ const COLUMNS: {
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
 ];
 
+// Kings Pharmacy branches — used for the dispatch branch filter.
+const DISPATCH_BRANCHES = [
+  "9th Ave Branch CBD",
+  "6th Ave Branch CBD",
+  "Old Mutual Centre, Jason Moyo Ave",
+  "Ascot Shopping Centre",
+] as const;
+
 export function DispatcherDashboard({ view }: { view?: string }) {
+  const staff = useStaffAuth((s) => s.staff);
+  const branchName = staff?.branch ?? "Head Office — Bulawayo";
+
   const sharedOrders = useSharedOrders((s) => s.orders);
   const markPackedShared = useSharedOrders((s) => s.markPacked);
   const assignDriverSharedOrder = useSharedOrders((s) => s.assignDriver);
@@ -124,6 +136,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           driverLat: o.driverLat,
           driverLng: o.driverLng,
           driverHeading: o.driverHeading,
+            branchName: o.branchName ?? "9th Ave Branch CBD",
         };
       }),
     [sharedOrders]
@@ -177,6 +190,34 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
+
+  // Branch filter — defaults to dispatcher's own branch when known.
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  useEffect(() => {
+    if (
+      staff?.branch &&
+      (DISPATCH_BRANCHES as readonly string[]).includes(staff.branch)
+    ) {
+      setBranchFilter(staff.branch);
+    }
+  }, [staff?.branch]);
+
+  const filteredDeliveries = useMemo(
+    () =>
+      branchFilter === "all"
+        ? deliveries
+        : deliveries.filter(
+            (d) => (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
+          ),
+    [deliveries, branchFilter],
+  );
+
+  const filteredRxOrdersFor = (list: typeof sharedPrescriptions) =>
+    branchFilter === "all"
+      ? list
+      : list.filter(
+          (p) => (p.branchName ?? "9th Ave Branch CBD") === branchFilter,
+        );
 
   // Staff notifications realtime — driver acceptance / delivery confirmations
   useEffect(() => {
