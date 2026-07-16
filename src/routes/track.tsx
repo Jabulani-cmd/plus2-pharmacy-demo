@@ -905,7 +905,7 @@ function Track() {
   const fromShared = trackId
     ? sharedOrders.find((o) => o.id === trackId) ??
       (matchedRx ? rxToSharedOrder(matchedRx) : undefined)
-    : sharedOrders[0];
+    : sharedOrders.find((o) => o.status !== "Delivered");
   // Use the directly-fetched shared order (from Supabase)
   // OR the one from the Zustand store
   // This ensures cross-device tracking works even when
@@ -914,7 +914,7 @@ function Track() {
   const localOrder = trackId
     ? localOrders.find((o) => o.id === trackId)
     : !fromShared && !shared && !matchedRx
-      ? localOrders[0]
+      ? localOrders.find((o) => o.status !== "Delivered")
       : undefined;
 
   // Initial fetch + per-order Supabase Realtime subscription
@@ -934,6 +934,7 @@ function Track() {
             .from("shared_orders")
             .select("*")
             .eq("customer_id", user.id)
+            .neq("status", "Delivered")
             .order("placed_ts", { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -945,6 +946,7 @@ function Track() {
           const result = await supabase
             .from("shared_orders")
             .select("*")
+            .neq("status", "Delivered")
             .order("placed_ts", { ascending: false })
             .limit(1)
             .maybeSingle();
