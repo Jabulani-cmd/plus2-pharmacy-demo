@@ -788,7 +788,8 @@ function AccountPage() {
           </nav>
         </aside>
 
-        <div>
+        <div className="min-w-0">
+
           {tab === "dash" && (
             <div className="grid gap-4 sm:grid-cols-2">
               {activeSharedOrder && (
