@@ -28,6 +28,10 @@ export type StaffDriver = {
   zone: string;
   activeOrders: number;
   completedToday: number;
+  currentLat?: number | null;
+  currentLng?: number | null;
+  heading?: number | null;
+  locationUpdatedAt?: string | null;
 };
 
 export type StaffDelivery = {
