@@ -1038,13 +1038,14 @@ function Track() {
   }
 
   // Resolve the unified display model (prefer shared/realtime)
-  const displayStatus: OTCStatus = liveShared
-    ? SHARED_STATUS_TO_FLOW[liveShared.status]
-    : (localOrder!.status as OTCStatus);
+  const displayStatus: OTCStatus =
+    (liveShared
+      ? SHARED_STATUS_TO_FLOW[liveShared.status]
+      : (localOrder!.status as OTCStatus)) ?? OTC_ORDER_FLOW[0];
   const stepIdx = OTC_ORDER_FLOW.indexOf(displayStatus);
   const safeStepIdx = stepIdx === -1 ? 0 : Math.min(stepIdx, OTC_ORDER_FLOW.length - 1);
   const progress = safeStepIdx / (OTC_ORDER_FLOW.length - 1);
-  const delivered = displayStatus.trim().toLowerCase() === "delivered";
+  const delivered = (displayStatus ?? "").trim().toLowerCase() === "delivered";
   const OUT_FOR_DELIVERY_IDX = OTC_ORDER_FLOW.indexOf("Out for Delivery");
   const isOutForDelivery = safeStepIdx >= OUT_FOR_DELIVERY_IDX;
   const driverName =
