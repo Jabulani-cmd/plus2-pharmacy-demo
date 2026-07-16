@@ -189,6 +189,64 @@ export function DriverPortal({ driver }: { driver: DriverRow }) {
     return () => { void supabase.removeChannel(ch); };
   }, [driver.id, driverState.name]);
 
+  // ─── Live location tracking ───────────────────────────────────────────
+  // While the driver is Online, stream GPS position to the drivers row so
+  // the dispatcher can see where every driver is in real-time.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (driverState.off_duty) return;
+    if (!("geolocation" in navigator)) {
+      console.warn("[driver] geolocation not available");
+      return;
+    }
+
+    let lastSent = 0;
+    let lastLat: number | null = null;
+    let lastLng: number | null = null;
+
+    const push = async (lat: number, lng: number, heading: number | null) => {
+      lastSent = Date.now();
+      lastLat = lat;
+      lastLng = lng;
+      const { error } = await supabase
+        .from("drivers")
+        .update({
+          current_lat: lat,
+          current_lng: lng,
+          heading: heading,
+          location_updated_at: new Date().toISOString(),
+        })
+        .eq("id", driver.id);
+      if (error) console.warn("[driver] location update failed", error.message);
+    };
+
+    const onPos = (pos: GeolocationPosition) => {
+      const { latitude, longitude, heading } = pos.coords;
+      const now = Date.now();
+      // Throttle: at most every 8s, OR when moved > ~30m.
+      const movedMeters =
+        lastLat != null && lastLng != null
+          ? haversineMeters(lastLat, lastLng, latitude, longitude)
+          : Infinity;
+      if (now - lastSent < 8000 && movedMeters < 30) return;
+      void push(latitude, longitude, Number.isFinite(heading) ? heading : null);
+    };
+
+    const onErr = (err: GeolocationPositionError) => {
+      console.warn("[driver] geolocation error", err.message);
+    };
+
+    const watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 20000,
+    });
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [driver.id, driverState.off_duty]);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <InstallDriverApp variant="banner" />
