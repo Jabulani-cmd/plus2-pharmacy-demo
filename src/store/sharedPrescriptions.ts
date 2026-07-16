@@ -360,16 +360,6 @@ export const useSharedPrescriptions = create<SharedState>()(
           }
         }
         const rx = useSharedPrescriptions.getState().prescriptions.find((p) => p.id === id);
-        pushNotification({
-          audience: "staff",
-          title: "Payment received — ready to pack",
-          body:
-            "Prescription " + id + " · $" +
-            (rx?.quotation?.total.toFixed(2) ?? paymentRef) +
-            " via " + paymentMethod,
-          link: "/staff/dashboard",
-          tone: "success",
-        });
         if (rx) {
           pushNotification({
             audience: "customer",
