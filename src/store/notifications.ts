@@ -28,6 +28,7 @@ type State = {
   markRead: (id: string) => void;
   markAllRead: (audience?: NotificationAudience, userId?: string) => void;
   clearAll: () => void;
+  removeWhere: (predicate: (n: AppNotification) => boolean) => void;
 };
 
 export const useNotifications = create<State>()(
@@ -70,6 +71,8 @@ export const useNotifications = create<State>()(
           ),
         })),
       clearAll: () => set({ items: [] }),
+      removeWhere: (predicate) =>
+        set((s) => ({ items: s.items.filter((n) => !predicate(n)) })),
     }),
     { name: "kings-notifications" }
   )
