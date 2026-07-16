@@ -61,6 +61,7 @@ export type StaffDelivery = {
   driverLat?: number;
   driverLng?: number;
   driverHeading?: number;
+  branchName?: string;
 };
 
 export type StaffInventoryItem = {
@@ -186,19 +187,19 @@ export const STAFF_SYSTEM_USERS: StaffSystemUser[] = [
   // Seed data removed
 ];
 
-export const SALES_HOURLY = [
+export const SALES_HOURLY: { hour: string; sales: number; orders: number }[] = [
   // Seed data removed
 ];
 
-export const SALES_7DAY = [
+export const SALES_7DAY: { day: string; sales: number }[] = [
   // Seed data removed
 ];
 
-export const SALES_BY_CATEGORY = [
+export const SALES_BY_CATEGORY: { category: string; value: number }[] = [
   // Seed data removed
 ];
 
-export const TOP_SELLERS_TODAY = [
+export const TOP_SELLERS_TODAY: { name: string; revenue: number; units: number }[] = [
   // Seed data removed
 ];
 

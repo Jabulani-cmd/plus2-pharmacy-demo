@@ -226,27 +226,10 @@ export const useAuth = create<AuthState>()(
         if (!email || !password)
           return { ok: false, error: "Email and password are required" };
 
-        // Auth call with 8s timeout to prevent infinite hang
-        type AuthResult = Awaited<
-          ReturnType<typeof supabase.auth.signInWithPassword>
-        >;
-        const authResult = await Promise.race([
-          supabase.auth.signInWithPassword({
-            email: email.trim().toLowerCase(),
-            password,
-          }),
-          new Promise<AuthResult>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Login timed out — please check your internet connection and try again.")),
-              8000
-            )
-          ),
-        ]).catch((err: Error) => ({
-          data: { user: null, session: null },
-          error: { message: err.message } as { message: string },
-        }));
-
-        const { data, error } = authResult;
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
 
         if (error || !data?.user) {
           return {
@@ -281,25 +264,12 @@ export const useAuth = create<AuthState>()(
         let user: User = fallbackUser;
 
         try {
-          const profileResult = await Promise.race([
-            supabase
-              .from("profiles")
-              .select(
-                "first_name,last_name,full_name," +
-                "phone,branch_id,last_address"
-              )
-              .eq("id", uid)
-              .maybeSingle(),
-            new Promise<{ data: null; error: null }>(
-              (resolve) =>
-                setTimeout(
-                  () => resolve({ data: null, error: null }),
-                  5000
-                )
-            ),
-          ]);
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("first_name,last_name,full_name,phone,branch_id,last_address")
+            .eq("id", uid)
+            .maybeSingle();
 
-          const profile = profileResult.data;
           if (profile) {
             user = {
               id: uid,
@@ -325,7 +295,6 @@ export const useAuth = create<AuthState>()(
               email: userEmail,
               first_name: fallbackUser.firstName,
               last_name: fallbackUser.lastName,
-              role: "customer",
             });
           }
         } catch (err) {
@@ -524,25 +493,24 @@ async function buildUserFromSupabase(
     if (!profile) {
       const nameParts = email.split("@")[0].split(".");
       const firstName =
-        nameParts[0]?.charAt(0).toUpperCase() +
-        nameParts[0]?.slice(1) ?? "";
+        (nameParts[0]?.charAt(0).toUpperCase() ?? "") +
+        (nameParts[0]?.slice(1) ?? "");
       const lastName =
-        nameParts[1]?.charAt(0).toUpperCase() +
-        nameParts[1]?.slice(1) ?? "";
+        (nameParts[1]?.charAt(0).toUpperCase() ?? "") +
+        (nameParts[1]?.slice(1) ?? "");
       void supabase.from("profiles").upsert({
         id,
         email,
         first_name: firstName,
         last_name: lastName,
         full_name: (firstName + " " + lastName).trim(),
-        role: "customer",
         created_at: new Date().toISOString(),
       });
       return {
         id,
         email,
-        firstName,
-        lastName,
+        firstName: firstName as string,
+        lastName: lastName as string,
         phone: undefined,
         branchId: undefined,
         lastAddress: null,
