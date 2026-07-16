@@ -5,8 +5,8 @@ import {
   type StaffDelivery,
   type StaffDriver,
 } from "@/data/staffDemo";
-import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
-import { useSharedOrders } from "@/store/sharedOrders";
+import { useSharedPrescriptions, refreshPrescriptions as refreshRx, type SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
+import { useSharedOrders, type SharedOrderStatus } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -1517,17 +1517,25 @@ function BranchOverview({
 
     const table =
       assigningOrder.kind === "Rx" ? "prescriptions" : "shared_orders";
-    const { error } = await supabase
-      .from(table as "shared_orders")
-      .update({
-        status: assigningOrder.kind === "Rx" ? "Assigned" : "Assigned",
-        driver_name: driver.name,
-        driver_phone: driver.phone,
-        driver_vehicle: driver.vehicle,
-        dispatched_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", assigningOrder.id);
+    const updateData = {
+      status: "Assigned",
+      driver_name: driver.name,
+      driver_phone: driver.phone,
+      driver_vehicle: driver.vehicle,
+      dispatched_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } =
+      assigningOrder.kind === "Rx"
+        ? await supabase
+            .from("prescriptions")
+            .update(updateData as never)
+            .eq("id", assigningOrder.id)
+        : await supabase
+            .from("shared_orders")
+            .update(updateData as never)
+            .eq("id", assigningOrder.id);
 
     if (error) {
       toast.error("Failed to assign: " + error.message);
@@ -1563,7 +1571,7 @@ function BranchOverview({
             o.id === assigningOrder.id
               ? {
                   ...o,
-                  status: "Assigned" as import("@/store/sharedOrders").SharedOrderStatus,
+                  status: "Assigned" as SharedOrderStatus,
                   driverName: driver.name,
                   driverPhone: driver.phone,
                   driverVehicle: driver.vehicle,
@@ -1577,7 +1585,7 @@ function BranchOverview({
             p.id === assigningOrder.id
               ? {
                   ...p,
-                  status: "Assigned" as import("@/store/sharedPrescriptions").SharedPrescriptionStatus,
+                  status: "Assigned" as SharedPrescriptionStatus,
                   driverName: driver.name,
                   driverPhone: driver.phone,
                   driverVehicle: driver.vehicle,
