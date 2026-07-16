@@ -505,10 +505,22 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       />
     );
 
-  const newCount = deliveries.filter((d) => d.status === "Confirmed").length;
+  const newCount = filteredDeliveries.filter((d) => d.status === "Confirmed").length;
 
   return (
     <div>
+      {/* Branch indicator — always visible */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border-2 border-[#1E5BC6]/25 bg-[#EAF3FF] px-4 py-3">
+        <Store className="h-5 w-5 text-[#1B3A6B]" />
+        <span className="rounded-full bg-[#1B3A6B] px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white">
+          {branchName.toUpperCase()}
+        </span>
+        <span className="text-xs font-semibold text-[#1B3A6B]">Dispatch Board</span>
+        <span className="ml-auto text-[11px] text-slate-600">
+          Viewing orders across all branches — operating from {branchName}
+        </span>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <PageHeader
           title="Dispatch Board"
@@ -526,6 +538,26 @@ export function DispatcherDashboard({ view }: { view?: string }) {
             {newCount} New Order{newCount === 1 ? "" : "s"}
           </a>
         )}
+      </div>
+
+      {/* Branch filter chips */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Branch:</span>
+        {["all", ...DISPATCH_BRANCHES].map((b) => (
+          <button
+            key={b}
+            type="button"
+            onClick={() => setBranchFilter(b)}
+            className={
+              "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+              (branchFilter === b
+                ? "bg-[#1B3A6B] text-white"
+                : "border border-slate-200 bg-white text-slate-600 hover:border-[#1B3A6B]")
+            }
+          >
+            {b === "all" ? "All Branches" : b}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
