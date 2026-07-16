@@ -91,16 +91,50 @@ function bannerFor(status: SharedOrderStatus): { text: string; tone: "info" | "s
 
 function sharedHistory(o: SharedOrder | null) {
   if (!o) return [] as { status: LiveStatus; at: number }[];
+  // Parse timestamp values that may be numbers (ms), ISO strings, or pretty
+  // display strings like "16 Jul, 14:41". Falls back to `undefined` when
+  // unparseable so the caller can substitute a synthetic offset.
+  const parseTs = (v: string | number | null | undefined): number | undefined => {
+    if (v == null) return undefined;
+    if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+    const n = Number(v);
+    if (!Number.isNaN(n) && n > 1_000_000_000_000) return n;
+    const iso = Date.parse(v);
+    if (!Number.isNaN(iso)) return iso;
+    // Pretty format e.g. "16 Jul, 14:41" — assume current year, local tz.
+    const m = /^(\d{1,2})\s+([A-Za-z]{3})[,\s]+(\d{1,2}):(\d{2})/.exec(v);
+    if (m) {
+      const [, d, mon, h, min] = m;
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const mi = months.indexOf(mon.slice(0, 1).toUpperCase() + mon.slice(1, 3).toLowerCase());
+      if (mi >= 0) {
+        const now = new Date();
+        const t = new Date(now.getFullYear(), mi, Number(d), Number(h), Number(min)).getTime();
+        if (!Number.isNaN(t)) return t;
+      }
+    }
+    return undefined;
+  };
+
   const out: { status: LiveStatus; at: number }[] = [];
-  out.push({ status: "Order Confirmed", at: o.placedTs });
-  if (o.packedAt || ["Packed", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
-    out.push({ status: "Preparing Order", at: o.placedTs + 60_000 });
-  if (o.dispatchedAt || ["Assigned", "Out for delivery", "Delivered"].includes(o.status))
-    out.push({ status: "Driver Assigned", at: o.placedTs + 120_000 });
-  if (o.outForDeliveryTs || ["Out for delivery", "Delivered"].includes(o.status))
-    out.push({ status: "Out for Delivery", at: o.outForDeliveryTs ?? o.placedTs + 180_000 });
-  if (o.status === "Delivered")
-    out.push({ status: "Delivered", at: o.placedTs + 480_000 });
+  const placed = parseTs(o.placedTs) ?? parseTs(o.placedAt) ?? Date.now();
+  out.push({ status: "Order Confirmed", at: placed });
+
+  const packedTs = parseTs(o.packedAt);
+  if (packedTs || ["Packed", "Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Preparing Order", at: packedTs ?? placed + 60_000 });
+
+  const dispatchedTs = parseTs(o.dispatchedAt) ?? parseTs(o.acceptedAt);
+  if (dispatchedTs || ["Assigned", "Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Driver Assigned", at: dispatchedTs ?? placed + 120_000 });
+
+  const outTs = parseTs(o.outForDeliveryTs) ?? parseTs(o.collectedAt);
+  if (outTs || ["Out for delivery", "Delivered"].includes(o.status))
+    out.push({ status: "Out for Delivery", at: outTs ?? placed + 180_000 });
+
+  const deliveredTs = parseTs(o.deliveredAt);
+  if (deliveredTs || o.status === "Delivered")
+    out.push({ status: "Delivered", at: deliveredTs ?? placed + 480_000 });
   return out;
 }
 
