@@ -48,83 +48,9 @@ const ADDR_NOMSA = "3 Polokwane Street, Polokwane, Limpopo";
 const ADDR_RUAN = "45 Menlyn Park Avenue, Pretoria";
 
 export const DEMO_CUSTOMERS: DemoCustomer[] = [
-  {
-    email: "thabo.nkosi@demo.kingspharmacy.com",
-    password: "Demo1234!",
-    address: ADDR_THABO,
-    healthProfile: "Hypertension, Diabetes",
-    medicalAid: "Discovery Health · Comprehensive · #DIS2045123",
-    wishlist: ["oralb", "neutrogena", "himalaya"],
-    user: { id: "c_thabo", email: "thabo.nkosi@demo.kingspharmacy.com", firstName: "Thabo", lastName: "Nkosi", phone: "071 234 5678", points: 1820, tier: "Gold" },
-    orders: [
-      mkOrder({ id: "P2-001", date: "3 days ago", total: 48.97, status: "Delivered", address: ADDR_THABO, items: [{ name: "Panado 500mg 24s", qty: 2, price: 29.99 }, { name: "Vitaforce Multivitamin", qty: 1, price: 149.99 }, { name: "Dettol Antiseptic", qty: 1, price: 64.99 }] }),
-      mkOrder({ id: "P2-002", date: "Today 11:30", total: 137.97, status: "Out for delivery", address: ADDR_THABO, items: [{ name: "USN Whey Protein 1kg", qty: 1, price: 499.99 }, { name: "Bioplus Energy", qty: 2, price: 89.99 }], driver: { name: "Siphamandla Dube", phone: "+263 77 334 5566", vehicle: "VW Polo · AEB 7790" } }),
-    ],
-    prescriptions: [
-      { id: "RX-2025-000021", fileName: "amlodipine.pdf", patientName: "Thabo Nkosi", doctorName: "Dr Patel", status: "Approved — Awaiting Payment", uploadedAt: "2 days ago", notes: "Amlodipine 10mg" },
-    ],
-  },
-  {
-    email: "priya.naidoo@demo.kingspharmacy.com",
-    password: "Demo1234!",
-    address: ADDR_PRIYA,
-    healthProfile: "Asthma",
-    medicalAid: "Momentum Health · Ingwe · #MOM3318844",
-    wishlist: ["natio", "dove", "biooil"],
-    user: { id: "c_priya", email: "priya.naidoo@demo.kingspharmacy.com", firstName: "Priya", lastName: "Naidoo", phone: "082 567 8901", points: 940, tier: "Silver" },
-    orders: [
-      mkOrder({ id: "P2-003", date: "5 days ago", total: 169.97, status: "Delivered", address: ADDR_PRIYA, items: [{ name: "Dove Body Wash", qty: 2, price: 79.99 }, { name: "Bio-Oil 125ml", qty: 1, price: 179.99 }, { name: "Neutrogena Hydro Boost", qty: 1, price: 229.99 }] }),
-      mkOrder({ id: "P2-004", date: "Yesterday", total: 489.97, status: "Processing", address: ADDR_PRIYA, items: [{ name: "Johnson's Baby Shampoo", qty: 3, price: 69.99 }, { name: "Huggies Gold Nappies", qty: 1, price: 349.99 }, { name: "Pampers Active", qty: 1, price: 249.99 }] }),
-    ],
-    prescriptions: [
-      { id: "RX-2025-000034", fileName: "ventolin.pdf", patientName: "Priya Naidoo", doctorName: "Dr Singh", status: "Dispensed", uploadedAt: "5 days ago", notes: "Ventolin Inhaler 100mcg" },
-    ],
-  },
-  {
-    email: "james.vdm@demo.kingspharmacy.com",
-    password: "Demo1234!",
-    address: ADDR_JAMES,
-    healthProfile: "None",
-    medicalAid: "None",
-    wishlist: ["bioplus", "panado"],
-    user: { id: "c_james", email: "james.vdm@demo.kingspharmacy.com", firstName: "James", lastName: "van der Merwe", phone: "064 321 9870", points: 410, tier: "Silver" },
-    orders: [
-      mkOrder({ id: "P2-005", date: "1 week ago", total: 659.97, status: "Delivered", address: ADDR_JAMES, items: [{ name: "Oral-B Electric Toothbrush", qty: 1, price: 549.99 }, { name: "Nurofen 200mg", qty: 2, price: 44.99 }, { name: "Rennies Antacid", qty: 1, price: 34.99 }] }),
-      mkOrder({ id: "P2-006", date: "2 hours ago", total: 1149.98, status: "Processing", address: ADDR_JAMES, items: [{ name: "Herbalife Formula 1 Shake", qty: 1, price: 649.99 }, { name: "USN Whey Protein", qty: 1, price: 499.99 }] }),
-    ],
-    prescriptions: [],
-  },
-  {
-    email: "nomsa.dlamini@demo.kingspharmacy.com",
-    password: "Demo1234!",
-    address: ADDR_NOMSA,
-    healthProfile: "Diabetes, Heart Disease",
-    medicalAid: "Bonitas · BonEssential · #BON7723981",
-    wishlist: ["caltrate", "dettol"],
-    user: { id: "c_nomsa", email: "nomsa.dlamini@demo.kingspharmacy.com", firstName: "Nomsa", lastName: "Dlamini", phone: "073 890 1234", points: 2640, tier: "Gold" },
-    orders: [
-      mkOrder({ id: "P2-007", date: "2 weeks ago", total: 429.97, status: "Delivered", address: ADDR_NOMSA, items: [{ name: "Caltrate Calcium", qty: 2, price: 99.99 }, { name: "Vitaforce Multivitamin", qty: 1, price: 149.99 }, { name: "Himalaya Liv.52", qty: 1, price: 179.99 }] }),
-      mkOrder({ id: "P2-008", date: "Today", total: 209.95, status: "Packed", address: "Collect: Sandton Branch", items: [{ name: "Panado 500mg", qty: 3, price: 29.99 }, { name: "Lennon Wonderkruid", qty: 2, price: 59.99 }] }),
-    ],
-    prescriptions: [
-      { id: "RX-2025-000047", fileName: "metformin.pdf", patientName: "Nomsa Dlamini", doctorName: "Dr Khumalo", status: "Pending", uploadedAt: "Today 08:45", notes: "Metformin 850mg + Aspirin 75mg" },
-    ],
-  },
-  {
-    email: "ruan.botha@demo.kingspharmacy.com",
-    password: "Demo1234!",
-    address: ADDR_RUAN,
-    healthProfile: "None",
-    medicalAid: "None",
-    wishlist: ["usn", "herbalife"],
-    user: { id: "c_ruan", email: "ruan.botha@demo.kingspharmacy.com", firstName: "Ruan", lastName: "Botha", phone: "083 456 7890", points: 1180, tier: "Silver" },
-    orders: [
-      mkOrder({ id: "P2-009", date: "10 days ago", total: 694.97, status: "Delivered", address: ADDR_RUAN, items: [{ name: "Dettol Antiseptic", qty: 2, price: 64.99 }, { name: "Dove Body Wash", qty: 1, price: 79.99 }, { name: "Oral-B Toothbrush", qty: 1, price: 549.99 }] }),
-      mkOrder({ id: "P2-010", date: "4 days ago", total: 609.97, status: "Delivered", address: ADDR_RUAN, items: [{ name: "Natio Rosehip Oil", qty: 1, price: 199.99 }, { name: "Neutrogena Hydro Boost", qty: 1, price: 229.99 }, { name: "Bio-Oil", qty: 1, price: 179.99 }] }),
-    ],
-    prescriptions: [],
-  },
+  // Seed data removed — real customer accounts only
 ];
+
 
 export const DEMO_STAFF: DemoStaff[] = [
   { email: "sysadmin@kingspharmacy.co.zw", staffId: "STF-0000", name: "Tendai Moyo", role: "system_admin", roleLabel: "Systems Administrator", branch: "Head Office — Bulawayo", access: ["User management", "Password resets", "Audit logs", "System settings", "All modules"] },
