@@ -40,7 +40,15 @@ function CartPage() {
   const hasRx = items.some((i) => i.product.isPrescription);
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.qty, 0);
   const discount = promoCode === "PLUS10" ? subtotal * 0.1 : 0;
+  // Delivery: FREE over $50, FREE within 10km of branch,
+  // otherwise $5 standard rate
+  // Note: radius check not available in cart without address
+  // — shows $5 as estimate, actual fee confirmed at checkout
   const delivery = subtotal >= 50 ? 0 : subtotal === 0 ? 0 : 5;
+  const deliveryNote =
+    subtotal >= 50
+      ? "Free — order over $50"
+      : "Free within 10km · Free over $50";
   const total = subtotal - discount + delivery;
   const upsell = PRODUCTS.filter((p) => !cart.some((c) => c.id === p.id)).slice(0, 4);
 
@@ -108,7 +116,15 @@ function CartPage() {
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-semibold">{money(subtotal)}</span></div>
               {discount > 0 && <div className="flex justify-between text-success"><span>Discount (PLUS10)</span><span>− {money(discount)}</span></div>}
-              <div className="flex justify-between"><span className="text-muted-foreground">Delivery</span><span className="font-semibold">{delivery === 0 ? "FREE" : money(delivery)}</span></div>
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <span className="text-muted-foreground">Delivery</span>
+                  <div className="text-xs text-muted-foreground/70 mt-0.5">
+                    {deliveryNote}
+                  </div>
+                </div>
+                <span className="font-semibold">{delivery === 0 ? "FREE" : money(delivery) + " est."}</span>
+              </div>
             </div>
             <div className="mt-4 flex gap-2">
               <div className="relative flex-1">
