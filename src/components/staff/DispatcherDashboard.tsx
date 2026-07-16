@@ -5,8 +5,8 @@ import {
   type StaffDelivery,
   type StaffDriver,
 } from "@/data/staffDemo";
-import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
-import { useSharedOrders } from "@/store/sharedOrders";
+import { useSharedPrescriptions, refreshPrescriptions as refreshRx, type SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
+import { useSharedOrders, type SharedOrderStatus } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -153,6 +153,16 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [assignFor, setAssignFor] = useState<StaffDelivery | null>(null);
   const [branchFilter, setBranchFilter] = useState<string>("all");
+
+  const filteredDeliveries = useMemo(
+    () =>
+      branchFilter === "all"
+        ? liveDeliveries
+        : liveDeliveries.filter(
+            (d) => (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
+          ),
+    [liveDeliveries, branchFilter],
+  );
 
   // Live drivers from Supabase — replaces the hardcoded list when available.
   useEffect(() => {
