@@ -132,6 +132,9 @@ export const DEMO_STAFF: DemoStaff[] = [
   { email: "pharmacist@kingspharmacy.co.zw", staffId: "STF-0042", name: "Dr. Aisha Moosa (B.Pharm)", role: "pharmacist", roleLabel: "Pharmacist", branch: "Bulawayo CBD Branch", access: ["Prescriptions", "Orders (Rx approval)"] },
   { email: "manager@kingspharmacy.co.zw", staffId: "STF-0018", name: "Michael Pretorius", role: "store_manager", roleLabel: "Store Manager", branch: "Bulawayo CBD Branch", access: ["Products", "Inventory", "Sales", "Expenses", "Reports"] },
   { email: "dispatcher@kingspharmacy.co.zw", staffId: "STF-0073", name: "Lungelo Zulu", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "Bulawayo CBD Branch", access: ["Delivery management"] },
+  { email: "dispatcher.6thave@kingspharmacy.co.zw", staffId: "STF-0074", name: "Chido Moyo", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "6th Ave Branch CBD", access: ["Delivery management"] },
+  { email: "dispatcher.oldmutual@kingspharmacy.co.zw", staffId: "STF-0075", name: "Farai Ncube", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "Old Mutual Centre, Jason Moyo Ave", access: ["Delivery management"] },
+  { email: "dispatcher.ascot@kingspharmacy.co.zw", staffId: "STF-0076", name: "Sibongile Dube", role: "dispatcher", roleLabel: "Delivery Dispatcher", branch: "Ascot Shopping Centre", access: ["Delivery management"] },
   { email: "cashier@kingspharmacy.co.zw", staffId: "STF-0091", name: "Kefilwe Sithole", role: "cashier", roleLabel: "Cashier", branch: "Bulawayo CBD Branch", access: ["Sales", "Orders (view)"] },
   { email: "inventory@kingspharmacy.co.zw", staffId: "STF-0056", name: "Sipho Mahlangu", role: "inventory_clerk", roleLabel: "Inventory Clerk", branch: "Bulawayo CBD Branch", access: ["Inventory", "Stock take", "POs"] },
 ];
@@ -160,6 +163,9 @@ export const DEMO_STAFF_PASSWORDS: Record<string, string> = {
   "pharmacist@kingspharmacy.co.zw": "Staff1234!",
   "manager@kingspharmacy.co.zw": "Staff1234!",
   "dispatcher@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.6thave@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.oldmutual@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.ascot@kingspharmacy.co.zw": "Staff1234!",
   "cashier@kingspharmacy.co.zw": "Staff1234!",
   "inventory@kingspharmacy.co.zw": "Staff1234!",
 };

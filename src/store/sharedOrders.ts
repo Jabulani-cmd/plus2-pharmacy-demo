@@ -406,6 +406,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
             .eq("id", id);
         }
         if (driverAuthId) {
+          const collectionBranch = o.branchName ?? "9th Ave Branch CBD";
           await supabase.from("driver_notifications").insert({
             driver_auth_id: driverAuthId,
             order_id: id,
@@ -414,7 +415,8 @@ export const useSharedOrders = create<State>()((set, get) => ({
               "Order " + id + " for " + o.customer +
               " · " + o.itemCount + " item" + (o.itemCount === 1 ? "" : "s") +
               " · $" + o.total.toFixed(2) +
-              (o.address ? " · " + o.address : ""),
+              " · collect from " + collectionBranch +
+              (o.address ? " · deliver to " + o.address : ""),
           });
         }
       } catch (e) {

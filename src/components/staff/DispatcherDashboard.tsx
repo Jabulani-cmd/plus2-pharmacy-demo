@@ -7,13 +7,14 @@ import {
 } from "@/data/staffDemo";
 import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
+import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
 import { DriverPortalView } from "./DriverPortalView";
 import { DispatcherRxQueue } from "./DispatcherRxQueue";
 import {
   Truck, MapPin, Phone, Package, CheckCircle2,
-  X, Clock, UserCheck, FileText, User, Search, CalendarDays,
+  X, Clock, UserCheck, FileText, User, Search, CalendarDays, Store,
 } from "lucide-react";
 
 const PRODUCTION_DOMAIN = "https://www.kingspharmacy-mavingtech.online";
@@ -90,7 +91,18 @@ const COLUMNS: {
   { key: "Out for delivery", label: "Out for delivery", color: "#7C3AED" },
 ];
 
+// Kings Pharmacy branches — used for the dispatch branch filter.
+const DISPATCH_BRANCHES = [
+  "9th Ave Branch CBD",
+  "6th Ave Branch CBD",
+  "Old Mutual Centre, Jason Moyo Ave",
+  "Ascot Shopping Centre",
+] as const;
+
 export function DispatcherDashboard({ view }: { view?: string }) {
+  const staff = useStaffAuth((s) => s.staff);
+  const branchName = staff?.branch ?? "Head Office — Bulawayo";
+
   const sharedOrders = useSharedOrders((s) => s.orders);
   const markPackedShared = useSharedOrders((s) => s.markPacked);
   const assignDriverSharedOrder = useSharedOrders((s) => s.assignDriver);
@@ -124,6 +136,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           driverLat: o.driverLat,
           driverLng: o.driverLng,
           driverHeading: o.driverHeading,
+            branchName: o.branchName ?? "9th Ave Branch CBD",
         };
       }),
     [sharedOrders]
@@ -177,6 +190,27 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [assignFor, setAssignFor] =
     useState<StaffDelivery | null>(null);
+
+  // Branch filter — defaults to dispatcher's own branch when known.
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  useEffect(() => {
+    if (
+      staff?.branch &&
+      (DISPATCH_BRANCHES as readonly string[]).includes(staff.branch)
+    ) {
+      setBranchFilter(staff.branch);
+    }
+  }, [staff?.branch]);
+
+  const filteredDeliveries = useMemo(
+    () =>
+      branchFilter === "all"
+        ? deliveries
+        : deliveries.filter(
+            (d) => (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
+          ),
+    [deliveries, branchFilter],
+  );
 
   // Staff notifications realtime — driver acceptance / delivery confirmations
   useEffect(() => {
@@ -345,12 +379,18 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     (s) => s.updateStatus
   );
 
-  const rxOrders = sharedPrescriptions.filter(
-    (p) =>
-      p.status === "Paid" ||
-      p.status === "Dispensing" ||
-      p.status === "Out for Delivery"
-  );
+  const rxOrders = sharedPrescriptions
+    .filter(
+      (p) =>
+        p.status === "Paid" ||
+        p.status === "Dispensing" ||
+        p.status === "Out for Delivery"
+    )
+    .filter(
+      (p) =>
+        branchFilter === "all" ||
+        (p.branchName ?? "9th Ave Branch CBD") === branchFilter,
+    );
 
   const [assignRxFor, setAssignRxFor] = useState(
     null as (typeof sharedPrescriptions)[0] | null
@@ -465,10 +505,22 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       />
     );
 
-  const newCount = deliveries.filter((d) => d.status === "Confirmed").length;
+  const newCount = filteredDeliveries.filter((d) => d.status === "Confirmed").length;
 
   return (
     <div>
+      {/* Branch indicator — always visible */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border-2 border-[#1E5BC6]/25 bg-[#EAF3FF] px-4 py-3">
+        <Store className="h-5 w-5 text-[#1B3A6B]" />
+        <span className="rounded-full bg-[#1B3A6B] px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white">
+          {branchName.toUpperCase()}
+        </span>
+        <span className="text-xs font-semibold text-[#1B3A6B]">Dispatch Board</span>
+        <span className="ml-auto text-[11px] text-slate-600">
+          Viewing orders across all branches — operating from {branchName}
+        </span>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <PageHeader
           title="Dispatch Board"
@@ -486,6 +538,26 @@ export function DispatcherDashboard({ view }: { view?: string }) {
             {newCount} New Order{newCount === 1 ? "" : "s"}
           </a>
         )}
+      </div>
+
+      {/* Branch filter chips */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Branch:</span>
+        {["all", ...DISPATCH_BRANCHES].map((b) => (
+          <button
+            key={b}
+            type="button"
+            onClick={() => setBranchFilter(b)}
+            className={
+              "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+              (branchFilter === b
+                ? "bg-[#1B3A6B] text-white"
+                : "border border-slate-200 bg-white text-slate-600 hover:border-[#1B3A6B]")
+            }
+          >
+            {b === "all" ? "All Branches" : b}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -564,6 +636,11 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         <User className="h-3 w-3 text-muted-foreground" />
                         {rx.patientName}
                       </div>
+                      {rx.branchName && (
+                        <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#EAF3FF] px-2 py-0.5 text-[10px] font-bold text-[#1B3A6B]">
+                          🏪 {rx.branchName}
+                        </div>
+                      )}
                     </div>
                     {rx.quotation && (
                       <div className="text-right">
@@ -710,7 +787,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         </div>
         <div className="grid gap-4 lg:grid-cols-4">
           {COLUMNS.map((col) => {
-            const cards = deliveries.filter(
+            const cards = filteredDeliveries.filter(
               (d) => d.status === col.key
             );
             return (
@@ -762,6 +839,11 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         <div className="mt-1 text-xs font-semibold text-foreground">
                           {d.customer}
                         </div>
+                        {d.branchName && (
+                          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#EAF3FF] px-2 py-0.5 text-[10px] font-bold text-[#1B3A6B]">
+                            🏪 {d.branchName}
+                          </div>
+                        )}
                         {(() => {
                           const da = d.deliveryAddress;
                           const recipient = da
@@ -1023,6 +1105,17 @@ function AssignDriverModal({
           </button>
         </header>
         <div className="space-y-2 p-5">
+          <div className="rounded-lg border-2 border-[#1E5BC6]/30 bg-[#EAF3FF] p-2">
+            <div className="text-[9px] font-black uppercase tracking-wider text-[#1B3A6B]">
+              Collection Branch
+            </div>
+            <div className="text-sm font-bold text-[#1B3A6B]">
+              🏪 {delivery.branchName ?? "9th Ave Branch CBD"}
+            </div>
+            <div className="text-[10px] text-slate-600">
+              Driver must collect from this branch before delivery
+            </div>
+          </div>
           {drivers.length === 0 && (
             <p className="text-center text-sm text-muted-foreground">
               No drivers available right now.

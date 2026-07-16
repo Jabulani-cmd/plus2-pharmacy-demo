@@ -187,6 +187,9 @@ function StaffLogin() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs font-bold text-foreground">{s.roleLabel}</div>
                     <div className="truncate text-[11px] text-muted-foreground">{s.email}</div>
+                    {s.role === "dispatcher" && (
+                      <div className="truncate text-[10px] font-semibold text-primary">🏪 {s.branch}</div>
+                    )}
                   </div>
                   <span className="shrink-0 rounded border border-primary px-2 py-1 text-[10px] font-bold text-primary">Prefill</span>
                 </button>

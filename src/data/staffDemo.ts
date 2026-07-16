@@ -61,6 +61,7 @@ export type StaffDelivery = {
   driverLat?: number;
   driverLng?: number;
   driverHeading?: number;
+  branchName?: string;
 };
 
 export type StaffInventoryItem = {
