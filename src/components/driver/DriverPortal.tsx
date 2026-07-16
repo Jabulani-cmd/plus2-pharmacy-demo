@@ -47,6 +47,23 @@ function cleanDriverName(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
 }
 
+// Distance between two lat/lng points, in metres.
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+) {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 function prescriptionBelongsToDriver(rx: SharedPrescription, driver: DriverRow) {
   return (
     (rx.driverId && rx.driverId === driver.auth_user_id) ||
