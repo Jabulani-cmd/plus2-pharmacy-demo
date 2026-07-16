@@ -572,7 +572,7 @@ if (typeof window !== "undefined") {
     useAuth.setState({ user });
   });
 
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_OUT") {
       const u = useAuth.getState().user;
       if (u?.isReal) useAuth.setState({ user: null });
@@ -583,8 +583,15 @@ if (typeof window !== "undefined") {
     if (event === "SIGNED_IN" && session?.user) {
       const existing = useAuth.getState().user;
       if (existing && !existing.isReal) return; // keep demo session
-      const user = await buildUserFromSupabase(session.user.id, session.user.email ?? "");
-      useAuth.setState({ user });
+      // Defer async Supabase work — awaiting inside onAuthStateChange
+      // deadlocks against the internal auth lock held by signInWithPassword.
+      const uid = session.user.id;
+      const uemail = session.user.email ?? "";
+      setTimeout(() => {
+        void buildUserFromSupabase(uid, uemail).then((user) => {
+          useAuth.setState({ user });
+        });
+      }, 0);
     }
   });
 }
