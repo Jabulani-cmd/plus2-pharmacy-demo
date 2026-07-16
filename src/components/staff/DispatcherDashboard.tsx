@@ -151,6 +151,9 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [drivers, setDrivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
 
+  const [assignFor, setAssignFor] = useState<StaffDelivery | null>(null);
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+
   // Live drivers from Supabase — replaces the hardcoded list when available.
   useEffect(() => {
     let cancelled = false;
