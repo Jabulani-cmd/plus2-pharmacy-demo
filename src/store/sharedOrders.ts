@@ -115,6 +115,7 @@ type State = {
   ) => void;
   startDelivery: (id: string) => void;
   updateStatus: (id: string, status: SharedOrderStatus) => void;
+  cancelOrder: (id: string, reason?: string) => Promise<void>;
 };
 
 const stamp = () =>
