@@ -316,6 +316,38 @@ export const useSharedOrders = create<State>()((set, get) => ({
       link: "/staff/dashboard",
       tone: "info",
     });
+
+    // Write to staff_notifications so dispatcher gets
+    // real-time toast on their device via Supabase Realtime
+    void supabase.from("staff_notifications").insert({
+      order_id: order.id,
+      title: "🛍️ New OTC Order — Needs Packing",
+      body:
+        o.customer +
+        " placed an order · $" +
+        o.total.toFixed(2) +
+        " · " +
+        o.itemCount +
+        " item" +
+        (o.itemCount === 1 ? "" : "s") +
+        (o.branchName ? " · " + o.branchName : ""),
+      kind: "new_order",
+    });
+
+    // Write customer notification to Supabase so it
+    // appears on their bell on any device they use
+    if (o.customerId || o.customerEmail) {
+      void supabase.from("notifications").insert({
+        user_id: o.customerId ?? o.customerEmail,
+        kind: "order_confirmed",
+        title: "Order Confirmed",
+        message:
+          "Your order #" + order.id +
+          " has been received and is being packed.",
+        link: "/track",
+        read: false,
+      });
+    }
   },
 
   markPacked: (id) => {
