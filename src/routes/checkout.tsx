@@ -38,26 +38,129 @@ type DeliveryMethod = {
   id: DeliveryMethodId;
   label: string;
   desc: string;
-  price: number; // USD; "standard" uses freeOverFifty()
-  freeOverFifty?: boolean;
+  price: number; // USD
+  freeOverFifty?: boolean;  // free when order >= $50
+  freeWithinRadius?: boolean; // free within 10km of branch
 };
+
+// ── Kings Pharmacy branch location (9th Ave CBD) ─────────
+// Used to calculate distance for free delivery radius
+const BRANCH_LAT = -20.1509; // Bulawayo CBD
+const BRANCH_LNG = 28.5847;
+
+// Haversine formula — returns distance in km
+function distanceKm(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Well-known Bulawayo suburb coordinates for distance check
+// Used as a fallback when GPS is not available
+const SUBURB_COORDS: Record<string, [number, number]> = {
+  "CBD":              [-20.1509, 28.5847],
+  "City Centre":      [-20.1509, 28.5847],
+  "Bellevue":         [-20.1410, 28.5780],
+  "Famona":           [-20.1512, 28.5650],
+  "Suburbs":          [-20.1600, 28.5780],
+  "Hillside":         [-20.1680, 28.5660],
+  "Burnside":         [-20.1720, 28.5480],
+  "Bulawayo":         [-20.1509, 28.5847],
+  "Trenance":         [-20.1400, 28.5950],
+  "Queenspark":       [-20.1350, 28.6100],
+  "Nkulumane":        [-20.1210, 28.5580],
+  "Pumula":           [-20.1100, 28.5400],
+  "Emakhandeni":      [-20.1050, 28.5650],
+  "Luveve":           [-20.0950, 28.5500],
+  "Mpopoma":          [-20.1300, 28.5650],
+  "Makokoba":         [-20.1430, 28.5780],
+  "Njube":            [-20.1580, 28.5720],
+  "Sizinda":          [-20.1630, 28.5900],
+  "Entumbane":        [-20.1190, 28.5450],
+  "Cowdray Park":     [-20.0900, 28.5700],
+  "Selbourne Park":   [-20.1900, 28.6100],
+  "Ascot":            [-20.1750, 28.5950],
+  "Montrose":         [-20.1620, 28.5560],
+  "Kelvin":           [-20.1480, 28.6000],
+  "Sunninghill":      [-20.1700, 28.5700],
+};
+
+// Check if a suburb is within 10km of any branch
+function isWithinFreeRadius(suburb: string): boolean {
+  const key = Object.keys(SUBURB_COORDS).find(
+    (k) => suburb.toLowerCase().includes(k.toLowerCase())
+  );
+  if (!key) return false; // unknown suburb — charge fee
+  const [lat, lng] = SUBURB_COORDS[key];
+  return distanceKm(BRANCH_LAT, BRANCH_LNG, lat, lng) <= 10;
+}
+
 const DELIVERY_METHODS: readonly DeliveryMethod[] = [
-  { id: "standard", label: "Standard Delivery (Bulawayo metro)", desc: "1–2 working days", price: 5, freeOverFifty: true },
-  { id: "express",  label: "Same-day Express (Bulawayo)",         desc: "Within 4 hours",   price: 8 },
-  { id: "national", label: "Nationwide Courier",                  desc: "Bulawayo, Mutare, Gweru — 2–4 days", price: 12 },
-  { id: "collect",  label: "Click & Collect",                     desc: "Borrowdale or Avondale branch",      price: 0 },
+  {
+    id: "standard",
+    label: "Standard Delivery",
+    desc: "FREE within 10km or orders over $50 · 1–2 working days",
+    price: 5,
+    freeOverFifty: true,
+    freeWithinRadius: true,
+  },
+  {
+    id: "express",
+    label: "Same-day Express (Bulawayo)",
+    desc: "Within 4 hours · Always $8",
+    price: 8,
+  },
+  {
+    id: "national",
+    label: "Nationwide Courier",
+    desc: "Bulawayo, Mutare, Gweru — 2–4 days",
+    price: 12,
+  },
+  {
+    id: "collect",
+    label: "Click & Collect",
+    desc: "Collect from any Kings Pharmacy branch · FREE",
+    price: 0,
+  },
 ] as const;
 
-function priceFor(m: DeliveryMethod, subtotal: number) {
+function priceFor(
+  m: DeliveryMethod,
+  subtotal: number,
+  suburb?: string
+) {
+  // Free over $50
   if (m.freeOverFifty && subtotal >= 50) return 0;
+  // Free within 10km radius for standard delivery
+  if (
+    m.freeWithinRadius &&
+    suburb &&
+    isWithinFreeRadius(suburb)
+  ) return 0;
   return m.price;
 }
-function priceLabel(m: DeliveryMethod, subtotal: number) {
-  const p = priceFor(m, subtotal);
+
+function priceLabel(
+  m: DeliveryMethod,
+  subtotal: number,
+  suburb?: string
+) {
+  const p = priceFor(m, subtotal, suburb);
   return p === 0 ? "FREE" : formatUSD(p);
 }
+
 const methodById = (id: string) =>
-  DELIVERY_METHODS.find((m) => m.id === id) ?? DELIVERY_METHODS[0];
+  DELIVERY_METHODS.find((m) => m.id === id) ??
+  DELIVERY_METHODS[0];
 
 function Checkout() {
   const cart = useShop((s) => s.cart);
@@ -105,7 +208,7 @@ function Checkout() {
 
   // Derive the selected delivery method + fee from a single source of truth.
   const selectedMethod = methodById(delivery_.method);
-  const deliveryFee = priceFor(selectedMethod, subtotal);
+  const deliveryFee = priceFor(selectedMethod, subtotal, delivery_.suburb);
   // Spec: total = subtotal + delivery − discount. VAT is inclusive (back-calculated on the receipt).
   const total = parseFloat(
     (subtotal + deliveryFee - discountAmount).toFixed(2)
@@ -447,7 +550,7 @@ function Checkout() {
                         </div>
                       </div>
                       <div className="font-bold text-primary">
-                        {priceLabel(d, subtotal)}
+                        {priceLabel(d, subtotal, delivery_.suburb)}
                       </div>
                     </label>
                   ))}
