@@ -6,6 +6,9 @@ export const STAFF_PASSWORDS: Record<string, string> = {
   "pharmacist@kingspharmacy.co.zw": "Staff1234!",
   "manager@kingspharmacy.co.zw": "Staff1234!",
   "dispatcher@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.6thave@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.oldmutual@kingspharmacy.co.zw": "Staff1234!",
+  "dispatcher.ascot@kingspharmacy.co.zw": "Staff1234!",
   "cashier@kingspharmacy.co.zw": "Staff1234!",
   "inventory@kingspharmacy.co.zw": "Staff1234!",
 };
