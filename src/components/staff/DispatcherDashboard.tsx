@@ -1426,47 +1426,71 @@ function BranchOverview({
 }) {
   const sharedOrders = useSharedOrders((s) => s.orders);
   const prescriptions = useSharedPrescriptions((s) => s.prescriptions);
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] =
+    useState<string | null>(null);
+  const [assigningOrder, setAssigningOrder] =
+    useState<{ id: string; kind: "OTC" | "Rx"; customer: string } | null>(
+      null
+    );
+  const [assigningDriver, setAssigningDriver] = useState<string | null>(
+    null
+  );
 
-  // Group OTC orders by branch
+  // Group OTC orders by branch — exclude Delivered
   const otcByBranch = useMemo(() => {
     const map = new Map<string, typeof sharedOrders>();
     BRANCH_LIST.forEach((b) => map.set(b.id, []));
-    sharedOrders.forEach((o) => {
-      const branch = o.branchName ?? "9th Ave Branch CBD";
-      if (!map.has(branch)) map.set(branch, []);
-      map.get(branch)!.push(o);
-    });
+    sharedOrders
+      .filter((o) => o.status !== "Delivered")
+      .forEach((o) => {
+        const branch = o.branchName ?? "9th Ave Branch CBD";
+        if (!map.has(branch)) map.set(branch, []);
+        map.get(branch)!.push(o);
+      });
     return map;
   }, [sharedOrders]);
 
-  // Group Rx orders by branch
+  // Group Rx orders by branch — exclude Delivered/Rejected
   const rxByBranch = useMemo(() => {
     const map = new Map<string, typeof prescriptions>();
     BRANCH_LIST.forEach((b) => map.set(b.id, []));
-    prescriptions.forEach((p) => {
-      const branch = p.branchName ?? "9th Ave Branch CBD";
-      if (!map.has(branch)) map.set(branch, []);
-      map.get(branch)!.push(p);
-    });
+    prescriptions
+      .filter(
+        (p) => p.status !== "Delivered" && p.status !== "Rejected"
+      )
+      .forEach((p) => {
+        const branch = p.branchName ?? "9th Ave Branch CBD";
+        if (!map.has(branch)) map.set(branch, []);
+        map.get(branch)!.push(p);
+      });
     return map;
   }, [prescriptions]);
 
-  // Drivers by branch
-  const driversByBranch = useMemo(() => {
-    const map = new Map<string, typeof drivers>();
-    BRANCH_LIST.forEach((b) => map.set(b.id, []));
-    drivers.forEach((d) => {
-      const branch = d.zone ?? "9th Ave Branch CBD";
-      const key = BRANCH_LIST.find((b) =>
-        b.label.toLowerCase().includes(branch.toLowerCase()) ||
-        branch.toLowerCase().includes(b.label.toLowerCase())
-      )?.id ?? "9th Ave Branch CBD";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(d);
+  // Each branch has ONE assigned home driver (first online driver
+  // whose zone matches that branch). Others are "available from
+  // other branches" and can be assigned cross-branch.
+  const branchHomeDriver = useMemo(() => {
+    const map = new Map<string, StaffDriver | null>();
+    BRANCH_LIST.forEach((b) => {
+      const match = drivers.find(
+        (d) =>
+          d.status !== "Off duty" &&
+          (d.zone === b.id ||
+            b.label
+              .toLowerCase()
+              .includes(d.zone.toLowerCase()) ||
+            d.zone.toLowerCase().includes(b.label.toLowerCase()))
+      );
+      map.set(b.id, match ?? null);
     });
     return map;
   }, [drivers]);
+
+  // All online drivers available for cross-branch assignment
+  const availableDrivers = useMemo(
+    () => drivers.filter((d) => d.status !== "Off duty"),
+    [drivers]
+  );
 
   const selected = selectedBranch
     ? BRANCH_LIST.find((b) => b.id === selectedBranch)
@@ -1477,12 +1501,104 @@ function BranchOverview({
   const selectedRx = selectedBranch
     ? (rxByBranch.get(selectedBranch) ?? [])
     : [];
+  const homeDriver = selectedBranch
+    ? branchHomeDriver.get(selectedBranch) ?? null
+    : null;
+  const otherDrivers = homeDriver
+    ? availableDrivers.filter((d) => d.id !== homeDriver.id)
+    : availableDrivers;
+
+  // Assign driver to an order
+  const doAssign = async (driverId: string) => {
+    if (!assigningOrder) return;
+    setAssigningDriver(driverId);
+    const driver = drivers.find((d) => d.id === driverId);
+    if (!driver) return;
+
+    const table =
+      assigningOrder.kind === "Rx" ? "prescriptions" : "shared_orders";
+    const { error } = await supabase
+      .from(table as "shared_orders")
+      .update({
+        status: assigningOrder.kind === "Rx" ? "Assigned" : "Assigned",
+        driver_name: driver.name,
+        driver_phone: driver.phone,
+        driver_vehicle: driver.vehicle,
+        dispatched_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", assigningOrder.id);
+
+    if (error) {
+      toast.error("Failed to assign: " + error.message);
+    } else {
+      // Notify driver
+      if (driver.id) {
+        const { data: driverRow } = await supabase
+          .from("drivers")
+          .select("auth_user_id")
+          .eq("id", driverId)
+          .maybeSingle();
+        if (driverRow?.auth_user_id) {
+          await supabase.from("driver_notifications").insert({
+            driver_auth_id: driverRow.auth_user_id,
+            order_id: assigningOrder.id,
+            title: "🛵 New Delivery Assigned!",
+            body:
+              (assigningOrder.kind === "Rx"
+                ? "Prescription #"
+                : "Order #") +
+              assigningOrder.id +
+              " for " +
+              assigningOrder.customer +
+              " — collect from branch and deliver.",
+            read: false,
+          });
+        }
+      }
+      // Update local store
+      if (assigningOrder.kind === "OTC") {
+        useSharedOrders.setState((s) => ({
+          orders: s.orders.map((o) =>
+            o.id === assigningOrder.id
+              ? {
+                  ...o,
+                  status: "Assigned" as import("@/store/sharedOrders").SharedOrderStatus,
+                  driverName: driver.name,
+                  driverPhone: driver.phone,
+                  driverVehicle: driver.vehicle,
+                }
+              : o
+          ),
+        }));
+      } else {
+        useSharedPrescriptions.setState((s) => ({
+          prescriptions: s.prescriptions.map((p) =>
+            p.id === assigningOrder.id
+              ? {
+                  ...p,
+                  status: "Assigned" as import("@/store/sharedPrescriptions").SharedPrescriptionStatus,
+                  driverName: driver.name,
+                  driverPhone: driver.phone,
+                  driverVehicle: driver.vehicle,
+                }
+              : p
+          ),
+        }));
+      }
+      toast.success(
+        driver.name + " assigned to " + assigningOrder.customer
+      );
+      setAssigningOrder(null);
+    }
+    setAssigningDriver(null);
+  };
 
   return (
     <div>
       <PageHeader
         title="Branch Overview"
-        subtitle="Live order status across all Kings Pharmacy branches."
+        subtitle="Live orders and driver status across all Kings Pharmacy branches."
       />
 
       {/* Branch cards */}
@@ -1490,26 +1606,19 @@ function BranchOverview({
         {BRANCH_LIST.map((branch) => {
           const orders = otcByBranch.get(branch.id) ?? [];
           const rxOrders = rxByBranch.get(branch.id) ?? [];
-          const branchDrivers = driversByBranch.get(branch.id) ?? [];
-          const active = orders.filter(
-            (o) => o.status !== "Delivered"
-          ).length + rxOrders.filter(
-            (p) => p.status !== "Delivered" && p.status !== "Rejected"
-          ).length;
-          const outForDelivery = orders.filter(
-            (o) => o.status === "Out for delivery"
-          ).length + rxOrders.filter(
-            (p) => p.status === "Out for Delivery"
-          ).length;
+          const home = branchHomeDriver.get(branch.id);
+          const active =
+            orders.length + rxOrders.length;
+          const unassigned =
+            orders.filter((o) => !o.driverName).length +
+            rxOrders.filter((p) => !p.driverName).length;
           const isSelected = selectedBranch === branch.id;
 
           return (
             <button
               key={branch.id}
               onClick={() =>
-                setSelectedBranch(
-                  isSelected ? null : branch.id
-                )
+                setSelectedBranch(isSelected ? null : branch.id)
               }
               className={`rounded-2xl p-4 text-left transition border-2 ${
                 isSelected
@@ -1517,31 +1626,46 @@ function BranchOverview({
                   : "border-slate-100 bg-white hover:border-[#1E5BC6]/40"
               }`}
             >
-              <div className="text-2xl mb-2">{branch.icon}</div>
+              <div className="text-2xl mb-1">{branch.icon}</div>
               <div className="font-black text-[#1B3A6B] text-sm leading-tight mb-2">
                 {branch.label}
               </div>
-              <div className="space-y-1">
+
+              {/* Branch home driver */}
+              {home ? (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <span className="text-[11px] font-bold text-green-700 truncate">
+                    {home.name.split(" ")[0]}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    (home driver)
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="text-[11px] text-amber-600 font-bold">
+                    No home driver
+                  </span>
+                </div>
+              )}
+
+              <div className="space-y-0.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Active orders</span>
+                  <span className="text-slate-500">Active</span>
                   <span className="font-bold text-[#1B3A6B]">
                     {active}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Out for delivery</span>
-                  <span className="font-bold text-violet-600">
-                    {outForDelivery}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Drivers</span>
-                  <span className="font-bold text-emerald-600">
-                    {branchDrivers.filter(
-                      (d) => d.status !== "Off duty"
-                    ).length}/{branchDrivers.length}
-                  </span>
-                </div>
+                {unassigned > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-amber-600">Unassigned</span>
+                    <span className="font-bold text-amber-600">
+                      {unassigned}
+                    </span>
+                  </div>
+                )}
               </div>
             </button>
           );
@@ -1551,121 +1675,334 @@ function BranchOverview({
       {/* Selected branch detail */}
       {selected && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-[#1E5BC6] animate-pulse" />
-            <h2 className="font-black text-[#1B3A6B] text-lg">
-              {selected.icon} {selected.label} — Live Orders
-            </h2>
+          {/* Branch header with home driver info */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100">
+            <div className="flex items-center justify-between">
+              <h2 className="font-black text-[#1B3A6B] text-base">
+                {selected.icon} {selected.label}
+              </h2>
+              <div className="h-2 w-2 rounded-full bg-[#1E5BC6] animate-pulse" />
+            </div>
+
+            {/* Home driver section */}
+            <div className="mt-3 border-t pt-3">
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                Branch Home Driver
+              </div>
+              {homeDriver ? (
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-black text-xs shrink-0">
+                    {homeDriver.name.split(" ").map((n) => n[0]).join("").slice(0,2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-[#1B3A6B] text-sm">
+                      {homeDriver.name}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {homeDriver.vehicle}
+                    </div>
+                    <div className="text-[10px] text-green-600 font-bold">
+                      ● Online — available for this branch
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <a
+                      href={"tel:" + homeDriver.phone}
+                      className="h-8 w-8 rounded-full bg-[#1E5BC6]/10 text-[#1E5BC6] flex items-center justify-center hover:bg-[#1E5BC6] hover:text-white transition"
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                    </a>
+                    <a
+                      href={`https://wa.me/${homeDriver.phone.replace(/\D/g, "")}?text=${encodeURIComponent("Hi " + homeDriver.name.split(" ")[0] + ", Kings Pharmacy dispatch.")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="h-8 w-8 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366] hover:text-white transition text-sm"
+                    >
+                      💬
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-amber-600 font-semibold">
+                  ⚠️ No home driver online for this branch.
+                  Use an available driver from another branch.
+                </div>
+              )}
+            </div>
+
+            {/* Other available drivers from other branches */}
+            {otherDrivers.length > 0 && (
+              <div className="mt-3 border-t pt-3">
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                  Available from other branches ({otherDrivers.length})
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {otherDrivers.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5"
+                    >
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <span className="text-xs font-bold text-slate-700">
+                        {d.name.split(" ")[0]}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        · {d.zone}
+                      </span>
+                      <div className="flex gap-1 ml-1">
+                        <a
+                          href={"tel:" + d.phone}
+                          className="text-[#1E5BC6] hover:opacity-70"
+                          title={"Call " + d.name}
+                        >
+                          <Phone className="h-3 w-3" />
+                        </a>
+                        <a
+                          href={`https://wa.me/${d.phone.replace(/\D/g, "")}?text=${encodeURIComponent("Hi " + d.name.split(" ")[0] + ", Kings Pharmacy dispatch.")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#25D366] hover:opacity-70 text-[11px]"
+                          title={"WhatsApp " + d.name}
+                        >
+                          💬
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* OTC Orders for this branch */}
+          {/* OTC Orders */}
           {selectedOtc.length > 0 && (
             <div>
-              <div className="text-xs font-bold text-slate-500
-                uppercase tracking-wider mb-2">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 OTC Orders ({selectedOtc.length})
               </div>
               <div className="space-y-2">
                 {selectedOtc.map((o) => (
                   <div
                     key={o.id}
-                    className="bg-white rounded-xl border border-slate-100
-                      p-3 flex items-center justify-between gap-3"
+                    className="bg-white rounded-xl border border-slate-100 p-3"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-[#1B3A6B] text-sm truncate">
-                        {o.customer}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        #{String(o.id).slice(-8).toUpperCase()}
-                      </div>
-                      {o.address && (
-                        <div className="text-xs text-slate-500 truncate">
-                          📍 {o.address}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[#1B3A6B] text-sm truncate">
+                          {o.customer}
                         </div>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-black text-[#1B3A6B] text-sm">
-                        ${Number(o.total).toFixed(2)}
-                      </div>
-                      <div
-                        className="text-[10px] font-bold px-2 py-0.5
-                          rounded-full mt-1 inline-block text-white"
-                        style={{
-                          background:
-                            STATUS_COLORS[o.status] ?? "#64748b",
-                        }}
-                      >
-                        {o.status}
-                      </div>
-                      {o.driverName && (
-                        <div className="text-[10px] text-slate-400 mt-1">
-                          🚗 {o.driverName}
+                        <div className="text-xs text-slate-400">
+                          #{String(o.id).slice(-8).toUpperCase()}
                         </div>
-                      )}
+                        {o.address && (
+                          <div className="text-xs text-slate-500 truncate">
+                            📍 {o.address}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-black text-[#1B3A6B] text-sm">
+                          ${Number(o.total).toFixed(2)}
+                        </div>
+                        <div
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block text-white"
+                          style={{
+                            background: STATUS_COLORS[o.status] ?? "#64748b",
+                          }}
+                        >
+                          {o.status}
+                        </div>
+                      </div>
                     </div>
+                    {/* Driver info or assign button */}
+                    {o.driverName ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                        <span>🚗 {o.driverName}</span>
+                        <span className="text-slate-300">·</span>
+                        <span>{o.driverVehicle}</span>
+                      </div>
+                    ) : (
+                      availableDrivers.length > 0 && (
+                        <div className="mt-2">
+                          {assigningOrder?.id === o.id ? (
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-bold text-slate-500 uppercase">
+                                Select driver:
+                              </div>
+                              {/* Home driver first */}
+                              {homeDriver && (
+                                <button
+                                  key={homeDriver.id}
+                                  onClick={() => void doAssign(homeDriver.id)}
+                                  disabled={assigningDriver !== null}
+                                  className="w-full flex items-center justify-between rounded-lg border-2 border-[#1E5BC6] bg-[#EAF3FF] px-3 py-1.5 text-left mb-1"
+                                >
+                                  <span className="text-xs font-bold text-[#1B3A6B]">
+                                    ⭐ {homeDriver.name} (home)
+                                  </span>
+                                  <span className="text-[10px] font-bold text-[#1E5BC6]">
+                                    {assigningDriver === homeDriver.id ? "Assigning…" : "Assign"}
+                                  </span>
+                                </button>
+                              )}
+                              {otherDrivers.map((d) => (
+                                <button
+                                  key={d.id}
+                                  onClick={() => void doAssign(d.id)}
+                                  disabled={assigningDriver !== null}
+                                  className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left hover:border-[#1E5BC6] mb-1"
+                                >
+                                  <span className="text-xs font-bold text-slate-700">
+                                    {d.name}
+                                    <span className="text-slate-400 font-normal ml-1">
+                                      · {d.zone}
+                                    </span>
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-500">
+                                    {assigningDriver === d.id ? "Assigning…" : "Assign"}
+                                  </span>
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setAssigningOrder(null)}
+                                className="text-[10px] text-slate-400 hover:text-slate-600 mt-1"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setAssigningOrder({
+                                  id: o.id,
+                                  kind: "OTC",
+                                  customer: o.customer,
+                                })
+                              }
+                              className="w-full h-8 rounded-full bg-[#1E5BC6] text-white text-xs font-bold hover:bg-[#1B3A6B] transition"
+                            >
+                              🚗 Assign Driver
+                            </button>
+                          )}
+                        </div>
+                      )
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Rx Orders for this branch */}
+          {/* Rx Orders */}
           {selectedRx.length > 0 && (
             <div>
-              <div className="text-xs font-bold text-slate-500
-                uppercase tracking-wider mb-2">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Prescriptions ({selectedRx.length})
               </div>
               <div className="space-y-2">
                 {selectedRx.map((p) => (
                   <div
                     key={p.id}
-                    className="bg-white rounded-xl border border-slate-100
-                      p-3 flex items-center justify-between gap-3"
+                    className="bg-white rounded-xl border border-slate-100 p-3"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-[#1B3A6B] text-sm">
-                        {p.patientName ?? p.customerName}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        #{p.id}
-                      </div>
-                      {p.quotation?.medicationName && (
-                        <div className="text-xs text-slate-500">
-                          💊 {p.quotation.medicationName}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[#1B3A6B] text-sm">
+                          {p.patientName ?? p.customerName}
                         </div>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-black text-[#1B3A6B] text-sm">
-                        ${Number(p.quotation?.total ?? 0).toFixed(2)}
+                        <div className="text-xs text-slate-400">#{p.id}</div>
+                        {p.quotation?.medicationName && (
+                          <div className="text-xs text-slate-500">
+                            💊 {p.quotation.medicationName}
+                          </div>
+                        )}
                       </div>
-                      <div
-                        className="text-[10px] font-bold px-2 py-0.5
-                          rounded-full mt-1 inline-block text-white"
-                        style={{
-                          background:
-                            p.status === "Delivered"
-                              ? "#10B981"
-                              : p.status === "Paid"
-                              ? "#10B981"
-                              : p.status === "Out for Delivery"
-                              ? "#7C3AED"
-                              : p.status === "Assigned"
-                              ? "#6366F1"
+                      <div className="text-right shrink-0">
+                        <div className="font-black text-[#1B3A6B] text-sm">
+                          ${Number(p.quotation?.total ?? 0).toFixed(2)}
+                        </div>
+                        <div
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block text-white"
+                          style={{
+                            background:
+                              p.status === "Paid" ? "#10B981"
+                              : p.status === "Out for Delivery" ? "#7C3AED"
+                              : p.status === "Assigned" ? "#6366F1"
                               : "#F59E0B",
-                        }}
-                      >
-                        {p.status}
-                      </div>
-                      {p.driverName && (
-                        <div className="text-[10px] text-slate-400 mt-1">
-                          🚗 {p.driverName}
+                          }}
+                        >
+                          {p.status}
                         </div>
-                      )}
+                      </div>
                     </div>
+                    {p.driverName ? (
+                      <div className="mt-2 text-xs text-slate-500">
+                        🚗 {p.driverName} · {p.driverVehicle}
+                      </div>
+                    ) : p.status === "Paid" && availableDrivers.length > 0 ? (
+                      <div className="mt-2">
+                        {assigningOrder?.id === p.id ? (
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase">
+                              Select driver:
+                            </div>
+                            {homeDriver && (
+                              <button
+                                key={homeDriver.id}
+                                onClick={() => void doAssign(homeDriver.id)}
+                                disabled={assigningDriver !== null}
+                                className="w-full flex items-center justify-between rounded-lg border-2 border-[#1E5BC6] bg-[#EAF3FF] px-3 py-1.5 text-left mb-1"
+                              >
+                                <span className="text-xs font-bold text-[#1B3A6B]">
+                                  ⭐ {homeDriver.name} (home)
+                                </span>
+                                <span className="text-[10px] font-bold text-[#1E5BC6]">
+                                  {assigningDriver === homeDriver.id ? "Assigning…" : "Assign"}
+                                </span>
+                              </button>
+                            )}
+                            {otherDrivers.map((d) => (
+                              <button
+                                key={d.id}
+                                onClick={() => void doAssign(d.id)}
+                                disabled={assigningDriver !== null}
+                                className="w-full flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left hover:border-[#1E5BC6] mb-1"
+                              >
+                                <span className="text-xs font-bold text-slate-700">
+                                  {d.name}
+                                  <span className="text-slate-400 font-normal ml-1">
+                                    · {d.zone}
+                                  </span>
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500">
+                                  {assigningDriver === d.id ? "Assigning…" : "Assign"}
+                                </span>
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => setAssigningOrder(null)}
+                              className="text-[10px] text-slate-400 hover:text-slate-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setAssigningOrder({
+                                id: p.id,
+                                kind: "Rx",
+                                customer:
+                                  p.patientName ?? p.customerName,
+                              })
+                            }
+                            className="w-full h-8 rounded-full bg-[#1E5BC6] text-white text-xs font-bold hover:bg-[#1B3A6B] transition"
+                          >
+                            🚗 Assign Driver
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -1673,24 +2010,22 @@ function BranchOverview({
           )}
 
           {selectedOtc.length === 0 && selectedRx.length === 0 && (
-            <div className="bg-white rounded-2xl p-8 text-center
-              text-slate-400 text-sm">
+            <div className="bg-white rounded-2xl p-8 text-center text-slate-400 text-sm">
               No active orders at this branch
             </div>
           )}
         </div>
       )}
 
-      {/* All branches summary when none selected */}
       {!selected && (
-        <div className="bg-white rounded-2xl p-6 text-center
-          text-slate-500 text-sm">
-          Select a branch above to see its live orders
+        <div className="bg-white rounded-2xl p-6 text-center text-slate-500 text-sm">
+          Tap a branch to see its live orders and drivers
         </div>
       )}
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Driver Map View — all drivers on a single Bulawayo SVG map
