@@ -27,14 +27,15 @@ type ColDef = {
 };
 
 const COLUMNS: ColDef[] = [
-  { key: "Pending", label: "NEW", color: "#0EA5E9" },
-  { key: "Printing", label: "PRINTING", color: "#F59E0B" },
-  { key: "Ready to Quote", label: "READY TO QUOTE", color: "#8B5CF6" },
-  { key: "Approved — Awaiting Payment", label: "QUOTED", color: "#F97316" },
-  { key: "Paid", label: "PAID", color: "#10B981" },
-  { key: "Assigned", label: "ASSIGNED", color: "#6366F1" },
-  { key: "Out for Delivery", label: "OUT FOR DELIVERY", color: "#7C3AED" },
-  { key: "Delivered", label: "DELIVERED", color: "#059669" },
+  { key: "Pending",                      label: "NEW",              color: "#0EA5E9" },
+  { key: "Printing",                     label: "PRINTING",         color: "#F59E0B" },
+  { key: "Ready to Quote",               label: "READY TO QUOTE",   color: "#8B5CF6" },
+  { key: "Approved — Awaiting Payment",  label: "QUOTED",           color: "#F97316" },
+  { key: "Paid",                         label: "PAID",             color: "#10B981" },
+  { key: "Assigned",                     label: "ASSIGNED",         color: "#6366F1" },
+  { key: "Out for Delivery",             label: "OUT FOR DELIVERY", color: "#7C3AED" },
+  // "Delivered" is intentionally excluded —
+  // delivered prescriptions go to History tab only
 ];
 
 export function DispatcherRxQueue() {
@@ -89,8 +90,15 @@ export function DispatcherRxQueue() {
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [assignFor, setAssignFor] = useState<SharedPrescription | null>(null);
 
-  const totalActive = COLUMNS.filter((c) => c.key !== "Delivered")
-    .reduce((a, c) => a + grouped[c.key].length, 0);
+  // Count all queued prescriptions
+  // (Delivered are excluded from COLUMNS so not counted)
+  const totalActive = COLUMNS
+    .reduce((a, c) => a + (grouped[c.key]?.length ?? 0), 0);
+
+  // Count delivered prescriptions for the info banner
+  const deliveredCount = prescriptions.filter(
+    (p) => p.status === "Delivered"
+  ).length;
 
   return (
     <div>
@@ -98,6 +106,35 @@ export function DispatcherRxQueue() {
         title="Prescription Dispatch Queue"
         subtitle="Print scripts, hand to pharmacist, enter quotation, and dispatch — all from here."
       />
+
+      {/* Info banner — delivered prescriptions move to History */}
+      {deliveredCount > 0 && (
+        <div className="mb-4 flex items-center justify-between
+          rounded-xl bg-green-50 border border-green-200
+          px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm
+            text-green-700">
+            <span>✅</span>
+            <span className="font-semibold">
+              {deliveredCount} delivered prescription
+              {deliveredCount !== 1 ? "s" : ""} moved to History
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              // Navigate to History tab
+              const url = new URL(window.location.href);
+              url.searchParams.set("view", "history");
+              window.history.pushState({}, "", url);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+            className="text-xs font-bold text-green-700
+              hover:text-green-900 underline"
+          >
+            View History →
+          </button>
+        </div>
+      )}
 
       <div className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-600">
         <FileText className="h-4 w-4" style={{ color: BRAND_LIGHT }} />
@@ -503,11 +540,8 @@ function ActionButtons({
   }
 
   if (status === "Delivered") {
-    return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-[11px] font-bold text-emerald-700">
-        ✅ Delivered
-      </div>
-    );
+    // Delivered prescriptions go to History — not shown in queue
+    return null;
   }
 
   if (status === "Rejected") {
