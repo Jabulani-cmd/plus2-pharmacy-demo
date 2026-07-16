@@ -338,6 +338,7 @@ export const useSharedOrders = create<State>()((set, get) => ({
     // appears on their bell on any device they use
     if (o.customerId || o.customerEmail) {
       void supabase.from("notifications").insert({
+        audience: "customer",
         user_id: o.customerId ?? o.customerEmail,
         kind: "order_confirmed",
         title: "Order Confirmed",
