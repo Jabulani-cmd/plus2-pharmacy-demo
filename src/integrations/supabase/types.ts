@@ -49,7 +49,11 @@ export type Database = {
           auth_user_id: string | null
           branch: string
           created_at: string
+          current_lat: number | null
+          current_lng: number | null
+          heading: number | null
           id: string
+          location_updated_at: string | null
           name: string
           off_duty: boolean
           phone: string
@@ -61,7 +65,11 @@ export type Database = {
           auth_user_id?: string | null
           branch?: string
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
+          heading?: number | null
           id?: string
+          location_updated_at?: string | null
           name: string
           off_duty?: boolean
           phone: string
@@ -73,7 +81,11 @@ export type Database = {
           auth_user_id?: string | null
           branch?: string
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
+          heading?: number | null
           id?: string
+          location_updated_at?: string | null
           name?: string
           off_duty?: boolean
           phone?: string

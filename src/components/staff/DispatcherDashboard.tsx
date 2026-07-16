@@ -170,6 +170,10 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           zone: d.branch ?? "—",
           activeOrders: 0,
           completedToday: 0,
+          currentLat: (d as any).current_lat ?? null,
+          currentLng: (d as any).current_lng ?? null,
+          heading: (d as any).heading ?? null,
+          locationUpdatedAt: (d as any).location_updated_at ?? null,
         }))
       );
     };
@@ -179,7 +183,28 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "drivers" },
-        () => load()
+        (payload) => {
+          // For location-only pings, patch in place to avoid a full refetch.
+          if (payload.eventType === "UPDATE" && payload.new) {
+            const n: any = payload.new;
+            setDrivers((prev) =>
+              prev.map((d) =>
+                d.id === n.id
+                  ? {
+                      ...d,
+                      status: n.off_duty ? "Off duty" : d.status === "Off duty" ? "Available" : d.status,
+                      currentLat: n.current_lat ?? null,
+                      currentLng: n.current_lng ?? null,
+                      heading: n.heading ?? null,
+                      locationUpdatedAt: n.location_updated_at ?? null,
+                    }
+                  : d,
+              ),
+            );
+            return;
+          }
+          void load();
+        }
       )
       .subscribe();
     return () => {
@@ -1054,6 +1079,7 @@ function AssignRxDriverModal({
                 <div className="text-[11px] text-muted-foreground">
                   {d.vehicle} · {d.zone}
                 </div>
+                <AssignDriverLocBadge driver={d} />
               </div>
               <div className="text-right text-[10px]">
                 <div className="font-bold text-emerald-600">
@@ -1141,6 +1167,7 @@ function AssignDriverModal({
                 <div className="text-[11px] text-muted-foreground">
                   {d.vehicle} · {d.zone}
                 </div>
+                <AssignDriverLocBadge driver={d} />
               </div>
               <div className="text-right text-[10px]">
                 <div className="font-bold text-emerald-600">Free</div>
@@ -1339,6 +1366,7 @@ function DriversView({
                   </div>
                 </div>
               </div>
+              <DriverLiveLocation driver={d} />
               {s.active.length > 0 && !expanded && (
                 <div className="mt-3 space-y-1">
                   {s.active.map((a) => (
@@ -1472,6 +1500,125 @@ function Row({
     <div className="flex items-start justify-between gap-3">
       <span className="shrink-0 font-bold text-muted-foreground">{label}</span>
       <span className="text-right text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function timeAgo(iso?: string | null): string {
+  if (!iso) return "never";
+  const ms = Date.now() - Date.parse(iso);
+  if (isNaN(ms)) return "never";
+  const s = Math.max(1, Math.floor(ms / 1000));
+  if (s < 60) return s + "s ago";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m ago";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h ago";
+  return Math.floor(h / 24) + "d ago";
+}
+
+function DriverLiveLocation({ driver }: { driver: StaffDriver }) {
+  const { currentLat, currentLng, locationUpdatedAt, status } = driver;
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
+  // reference tick to keep timeAgo refreshing
+  void tick;
+
+  if (status === "Off duty") {
+    return (
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+        📴 Driver is offline — location unavailable
+      </div>
+    );
+  }
+  if (currentLat == null || currentLng == null) {
+    return (
+      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+        📡 Waiting for first location ping…
+      </div>
+    );
+  }
+  const stale =
+    locationUpdatedAt &&
+    Date.now() - Date.parse(locationUpdatedAt) > 2 * 60 * 1000;
+  return (
+    <div
+      className={
+        "mt-3 rounded-lg border px-3 py-2 " +
+        (stale
+          ? "border-amber-200 bg-amber-50"
+          : "border-[#1E5BC6]/25 bg-[#EAF3FF]")
+      }
+    >
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#1B3A6B]">
+        <span className="relative flex h-2 w-2">
+          {!stale && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+          )}
+          <span
+            className={
+              "relative inline-flex h-2 w-2 rounded-full " +
+              (stale ? "bg-amber-500" : "bg-emerald-600")
+            }
+          />
+        </span>
+        📡 Live Location · {timeAgo(locationUpdatedAt)}
+        {stale && <span className="text-amber-700">(stale)</span>}
+      </div>
+      <div className="text-[11px] tabular-nums text-[#1B3A6B]">
+        {currentLat.toFixed(5)}, {currentLng.toFixed(5)}
+      </div>
+      <a
+        href={`https://www.google.com/maps?q=${currentLat},${currentLng}`}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="mt-1 inline-block text-[11px] font-bold text-[#1E5BC6] hover:underline"
+      >
+        Open in Google Maps ↗
+      </a>
+    </div>
+  );
+}
+
+function AssignDriverLocBadge({ driver }: { driver: StaffDriver }) {
+  const { currentLat, currentLng, locationUpdatedAt, status } = driver;
+  if (status === "Off duty") return null;
+  if (currentLat == null || currentLng == null) {
+    return (
+      <div className="mt-1 text-[10px] font-semibold text-amber-700">
+        📡 waiting for location…
+      </div>
+    );
+  }
+  const stale =
+    locationUpdatedAt &&
+    Date.now() - Date.parse(locationUpdatedAt) > 2 * 60 * 1000;
+  return (
+    <div
+      className={
+        "mt-1 flex items-center gap-1 text-[10px] font-semibold " +
+        (stale ? "text-amber-700" : "text-emerald-700")
+      }
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        {!stale && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+        )}
+        <span
+          className={
+            "relative inline-flex h-1.5 w-1.5 rounded-full " +
+            (stale ? "bg-amber-500" : "bg-emerald-600")
+          }
+        />
+      </span>
+      📡 live · {timeAgo(locationUpdatedAt)}
+      <span className="ml-1 tabular-nums text-slate-500">
+        {currentLat.toFixed(3)},{currentLng.toFixed(3)}
+      </span>
     </div>
   );
 }
