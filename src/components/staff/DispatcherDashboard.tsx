@@ -379,12 +379,18 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     (s) => s.updateStatus
   );
 
-  const rxOrders = sharedPrescriptions.filter(
-    (p) =>
-      p.status === "Paid" ||
-      p.status === "Dispensing" ||
-      p.status === "Out for Delivery"
-  );
+  const rxOrders = sharedPrescriptions
+    .filter(
+      (p) =>
+        p.status === "Paid" ||
+        p.status === "Dispensing" ||
+        p.status === "Out for Delivery"
+    )
+    .filter(
+      (p) =>
+        branchFilter === "all" ||
+        (p.branchName ?? "9th Ave Branch CBD") === branchFilter,
+    );
 
   const [assignRxFor, setAssignRxFor] = useState(
     null as (typeof sharedPrescriptions)[0] | null
