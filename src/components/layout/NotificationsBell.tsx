@@ -32,7 +32,7 @@ export function NotificationsBell({
   const [open, setOpen] = useState(false);
   const items = useNotifications((s) => s.items);
   const markAllRead = useNotifications((s) => s.markAllRead);
-  const markRead = useNotifications((s) => s.markRead);
+  const removeNotification = useNotifications((s) => s.remove);
 
   // Cross-device realtime notifications for the signed-in customer.
   // Bridges Supabase `notifications` rows (written by pharmacist/dispatcher on
@@ -56,6 +56,7 @@ export function NotificationsBell({
       .select("*")
       .eq("audience", "customer")
       .eq("user_id", userId!)
+      .eq("read", false)
       .order("created_at", { ascending: false })
       .limit(20)
       .then(({ data }) => {
@@ -80,6 +81,21 @@ export function NotificationsBell({
 
     const ch = supabase
       .channel("customer_notifications_" + userId)
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notifications",
+          filter: "user_id=eq." + userId,
+        },
+        (payload) => {
+          const r = payload.old as { id?: string };
+          if (!r.id) return;
+          seen.delete(r.id);
+          useNotifications.getState().removeWhere((n) => n.externalId === r.id);
+        },
+      )
       .on(
         "postgres_changes",
         {
@@ -133,6 +149,12 @@ export function NotificationsBell({
 
   const unread = filtered.filter((n) => !n.read).length;
 
+  const removeReadCustomerNotification = (n: AppNotification) => {
+    removeNotification(n.id);
+    if (audience !== "customer" || !n.externalId) return;
+    void supabase.from("notifications").delete().eq("id", n.externalId);
+  };
+
   const toggle = () => {
     setOpen((o) => {
       const next = !o;
@@ -163,7 +185,7 @@ export function NotificationsBell({
       </div>
     );
     const handleClick = () => {
-      markRead(n.id);
+      removeReadCustomerNotification(n);
       setOpen(false);
     };
     if (n.link) {
