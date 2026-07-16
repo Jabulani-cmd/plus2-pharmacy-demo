@@ -910,6 +910,19 @@ function InlineDriverAssign({
         </div>
       ) : (
         <div>
+          {/* Collection branch — helps dispatcher pick the nearest driver */}
+          <div className="mb-2 rounded-lg border-2 border-[#1E5BC6]/30 bg-[#EAF3FF] p-2">
+            <div className="text-[9px] font-black uppercase tracking-wider text-[#1B3A6B]">
+              Collection Branch
+            </div>
+            <div className="text-[12px] font-bold text-[#1B3A6B]">
+              🏪 {rx.branchName ?? "9th Ave Branch CBD"}
+            </div>
+            <div className="text-[10px] text-slate-600">
+              Driver must collect from this branch before delivery
+            </div>
+          </div>
+
           <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide" style={{ color: BRAND }}>
             Assign Driver:
           </p>
