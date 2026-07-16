@@ -226,18 +226,34 @@ export const useAuth = create<AuthState>()(
         if (!email || !password)
           return { ok: false, error: "Email and password are required" };
 
-        // Single clean Supabase auth call — no demo bypass
-        const { data, error } =
-          await supabase.auth.signInWithPassword({
+        // Auth call with 8s timeout to prevent infinite hang
+        type AuthResult = Awaited<
+          ReturnType<typeof supabase.auth.signInWithPassword>
+        >;
+        const authResult = await Promise.race([
+          supabase.auth.signInWithPassword({
             email: email.trim().toLowerCase(),
             password,
-          });
+          }),
+          new Promise<AuthResult>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Login timed out — please check your internet connection and try again.")),
+              8000
+            )
+          ),
+        ]).catch((err: Error) => ({
+          data: { user: null, session: null },
+          error: { message: err.message } as { message: string },
+        }));
+
+        const { data, error } = authResult;
 
         if (error || !data?.user) {
           return {
             ok: false,
             error:
-              error?.message ?? "Invalid email or password",
+              (error as { message?: string } | null)?.message ??
+              "Invalid email or password",
           };
         }
 
