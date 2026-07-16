@@ -8,6 +8,8 @@ export type AppNotification = {
   audience: NotificationAudience;
   /** Optional: when set, only this customer (by id or email) sees it. */
   userId?: string;
+  /** Optional stable id from an external source (e.g. a Supabase row id) used for dedupe. */
+  externalId?: string;
   title: string;
   body: string;
   /** Tanstack-router URL path to navigate to when clicked. */
@@ -33,17 +35,27 @@ export const useNotifications = create<State>()(
     (set) => ({
       items: [],
       add: (n) =>
-        set((s) => ({
-          items: [
-            {
-              ...n,
-              id: "ntf_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-              ts: Date.now(),
-              read: false,
-            },
-            ...s.items,
-          ].slice(0, 200),
-        })),
+        set((s) => {
+          // Dedupe by externalId when provided — prevents the same DB row
+          // from stacking up on every bell hydration / page navigation.
+          if (n.externalId && s.items.some((i) => i.externalId === n.externalId)) {
+            return {} as Partial<State>;
+          }
+          return {
+            items: [
+              {
+                ...n,
+                id:
+                  "ntf_" +
+                  Date.now().toString(36) +
+                  Math.random().toString(36).slice(2, 6),
+                ts: Date.now(),
+                read: false,
+              },
+              ...s.items,
+            ].slice(0, 200),
+          };
+        }),
       markRead: (id) =>
         set((s) => ({
           items: s.items.map((i) => (i.id === id ? { ...i, read: true } : i)),

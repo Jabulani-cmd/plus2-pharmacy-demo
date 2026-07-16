@@ -67,6 +67,7 @@ export function NotificationsBell({
           if (seen.has(r.id)) return;
           seen.add(r.id);
           pushNotification({
+            externalId: r.id,
             audience: "customer",
             userId,
             title: r.title,
@@ -96,6 +97,7 @@ export function NotificationsBell({
           if (seen.has(r.id)) return;
           seen.add(r.id);
           pushNotification({
+            externalId: r.id,
             audience: "customer",
             userId,
             title: r.title,

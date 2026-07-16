@@ -262,6 +262,7 @@ function AccountPage() {
   const sharedPrescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const markSharedPaid = useSharedPrescriptions((s) => s.markPaid);
   const allSharedOrders = useSharedOrders((s) => s.orders);
+  const cancelSharedOrder = useSharedOrders((s) => s.cancelOrder);
   const allRatings = useOrderExtras((s) => s.ratings);
   const wishlist = useShop((s) => s.wishlist).map(getProduct).filter(Boolean);
   const [tab, setTab] = useState("dash");
@@ -270,6 +271,11 @@ function AccountPage() {
   const [cancellingRx, setCancellingRx] = useState(null as SharedPrescription | null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(
+    null as (typeof allSharedOrders)[number] | null,
+  );
+  const [cancelOrderReason, setCancelOrderReason] = useState("");
+  const [cancellingOrderBusy, setCancellingOrderBusy] = useState(false);
 
   // Sync the auth-store prescriptions with the pharmacist's quotation from
   // Supabase, and toast when a fresh "Approved — Awaiting Payment" arrives.
@@ -351,6 +357,9 @@ function AccountPage() {
       });
 
     // Realtime — fires when the pharmacist approves / dispatcher updates.
+    // Track already-toasted prescription ids so repeated UPDATE events on the
+    // same "Approved — Awaiting Payment" row don't spam another toast.
+    const toastedAwaitingPayment = new Set<string>();
     const ch = supabase
       .channel("customer_rx_sync_" + user.id)
       .on(
@@ -364,11 +373,17 @@ function AccountPage() {
         (payload) => {
           const fresh = payload.new as unknown as RxRow;
           mergeRow(fresh);
-          if (fresh.status === "Approved — Awaiting Payment") {
+          if (
+            fresh.status === "Approved — Awaiting Payment" &&
+            !toastedAwaitingPayment.has(fresh.id)
+          ) {
+            toastedAwaitingPayment.add(fresh.id);
             toast.success("Quotation ready from your pharmacist", {
               description: "Check your prescriptions to pay.",
               duration: 5000,
             });
+          } else if (fresh.status !== "Approved — Awaiting Payment") {
+            toastedAwaitingPayment.delete(fresh.id);
           }
         },
       )
@@ -841,6 +856,13 @@ function AccountPage() {
                 <tbody className="divide-y divide-border">
                   {mySharedOrders.map((o) => {
                     const isDelivered = o.status === "Delivered";
+                    // Customers can cancel while the order is still with the
+                    // pharmacy — once a driver is assigned or on the way,
+                    // cancellation goes through support instead.
+                    const canCancel =
+                      o.status === "Confirmed" ||
+                      o.status === "Ready to dispatch" ||
+                      o.status === "Packed";
                     return (
                       <tr key={o.id} className={isDelivered ? "bg-[#F0F9F4]/40" : ""}>
                         <td className="px-4 py-3 font-bold">{o.id}</td>
@@ -859,7 +881,7 @@ function AccountPage() {
                         </td>
                         <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <Link
                               to="/receipt"
                               search={{ id: o.id }}
@@ -867,6 +889,17 @@ function AccountPage() {
                             >
                               <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
                             </Link>
+                            {canCancel && (
+                              <button
+                                onClick={() => {
+                                  setCancellingOrder(o);
+                                  setCancelOrderReason("");
+                                }}
+                                className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-100"
+                              >
+                                <X className="h-3.5 w-3.5" /> Cancel
+                              </button>
+                            )}
                             <Link
                               to="/track"
                               search={{ id: o.id }}
@@ -1084,6 +1117,85 @@ function AccountPage() {
           receipt={activeReceipt}
           onClose={() => setActiveReceipt(null)}
         />
+      )}
+
+      {cancellingOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            if (!cancellingOrderBusy) {
+              setCancellingOrder(null);
+              setCancelOrderReason("");
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-red-100 bg-red-50 px-5 py-4">
+              <div className="text-base font-black text-red-700">Cancel Order?</div>
+              <div className="mt-1 text-sm text-red-500">
+                #{cancellingOrder.id} · {formatUSD(cancellingOrder.total)}
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="text-sm leading-relaxed text-slate-600">
+                Are you sure you want to cancel this order? The pharmacy team
+                will be notified and this order will be removed from your list.
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Reason for cancelling (optional)
+                </label>
+                <textarea
+                  value={cancelOrderReason}
+                  onChange={(e) => setCancelOrderReason(e.target.value)}
+                  placeholder="e.g. Ordered by mistake, changed my mind..."
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-red-300"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => {
+                    if (!cancellingOrderBusy) {
+                      setCancellingOrder(null);
+                      setCancelOrderReason("");
+                    }
+                  }}
+                  disabled={cancellingOrderBusy}
+                  className="h-11 flex-1 rounded-full border-2 border-slate-200 text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!cancellingOrder) return;
+                    setCancellingOrderBusy(true);
+                    try {
+                      await cancelSharedOrder(
+                        cancellingOrder.id,
+                        cancelOrderReason.trim() || undefined,
+                      );
+                      toast.success("Order cancelled.");
+                      setCancellingOrder(null);
+                      setCancelOrderReason("");
+                    } catch {
+                      toast.error("Couldn't cancel order. Please try again.");
+                    } finally {
+                      setCancellingOrderBusy(false);
+                    }
+                  }}
+                  disabled={cancellingOrderBusy}
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-red-600 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancellingOrderBusy ? "Cancelling..." : "Yes, Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {cancellingRx && (

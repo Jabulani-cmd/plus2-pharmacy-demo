@@ -6,7 +6,9 @@ import {
   type StaffDriver,
 } from "@/data/staffDemo";
 import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
+import type { SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
+import type { SharedOrder, SharedOrderStatus } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -148,6 +150,19 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   const setDeliveries: (
     updater: (prev: StaffDelivery[]) => StaffDelivery[]
   ) => void = () => {};
+
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [assignFor, setAssignFor] = useState<StaffDelivery | null>(null);
+
+  const filteredDeliveries = useMemo(
+    () =>
+      liveDeliveries.filter(
+        (d) =>
+          branchFilter === "all" ||
+          (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
+      ),
+    [liveDeliveries, branchFilter],
+  );
 
   const [drivers, setDrivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
 
