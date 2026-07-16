@@ -5,8 +5,8 @@ import {
   type StaffDelivery,
   type StaffDriver,
 } from "@/data/staffDemo";
-import { useSharedPrescriptions, refreshPrescriptions as refreshRx, type SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
-import { useSharedOrders, type SharedOrderStatus } from "@/store/sharedOrders";
+import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
+import { useSharedOrders } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -151,19 +151,6 @@ export function DispatcherDashboard({ view }: { view?: string }) {
 
   const [drivers, setDrivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
 
-  const [assignFor, setAssignFor] = useState<StaffDelivery | null>(null);
-  const [branchFilter, setBranchFilter] = useState<string>("all");
-
-  const filteredDeliveries = useMemo(
-    () =>
-      branchFilter === "all"
-        ? liveDeliveries
-        : liveDeliveries.filter(
-            (d) => (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
-          ),
-    [liveDeliveries, branchFilter],
-  );
-
   // Live drivers from Supabase — replaces the hardcoded list when available.
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +195,73 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     };
   }, []);
 
+  // ── Fetch ALL active OTC orders from Supabase on mount ──────────────
+  // This ensures dispatcher sees orders placed on other devices/sessions
+  // The Zustand store bootstraps only once — this is a safety refresh
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const { data, error } = await supabase
+        .from("shared_orders")
+        .select("*")
+        .not("status", "in", "(Delivered,Archived)")
+        .order("placed_ts", { ascending: false });
+      if (error || !data) return;
+      if (data.length === 0) return;
+      useSharedOrders.setState((s) => {
+        const existing = new Set(s.orders.map((o) => o.id));
+        const incoming = data
+          .filter((r) => !existing.has(r.id as string))
+          .map((r) => {
+            const g = (k: string) => (r as Record<string, unknown>)[k];
+            return {
+              id: String(g("id") ?? ""),
+              customer: String(g("customer") ?? ""),
+              phone: String(g("phone") ?? ""),
+              address: String(g("address") ?? ""),
+              items: (g("items") as SharedOrder["items"]) ?? [],
+              itemCount: Number(g("item_count") ?? 0),
+              deliveryMethod: String(g("delivery_method") ?? ""),
+              paymentMethod: String(g("payment_method") ?? ""),
+              paymentRef: String(g("payment_ref") ?? ""),
+              subtotal: Number(g("subtotal") ?? 0),
+              deliveryFee: Number(g("delivery_fee") ?? 0),
+              discountAmount: Number(g("discount_amount") ?? 0),
+              total: Number(g("total") ?? 0),
+              status: (g("status") ?? "Confirmed") as SharedOrderStatus,
+              placedAt: String(g("placed_at") ?? ""),
+              placedTs: Number(g("placed_ts") ?? Date.now()),
+              branchName:
+                (g("branch_name") as string | null) ?? undefined,
+              customerId:
+                (g("customer_id") as string | null) ?? undefined,
+              customerEmail:
+                (g("customer_email") as string | null) ?? undefined,
+              driverName:
+                (g("driver_name") as string | null) ?? undefined,
+              driverPhone:
+                (g("driver_phone") as string | null) ?? undefined,
+              driverVehicle:
+                (g("driver_vehicle") as string | null) ?? undefined,
+              driverLat:
+                g("driver_lat") != null
+                  ? Number(g("driver_lat"))
+                  : undefined,
+              driverLng:
+                g("driver_lng") != null
+                  ? Number(g("driver_lng"))
+                  : undefined,
+            } as SharedOrder;
+          });
+        if (incoming.length === 0) return s;
+        return { orders: [...incoming, ...s.orders] };
+      });
+    };
+    void fetchOrders();
+    // Refresh every 30 seconds as safety net
+    const interval = setInterval(() => void fetchOrders(), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Prescription notifications subscription
   useEffect(() => {
     const ch = supabase
@@ -216,10 +270,79 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "staff_notifications" },
         (payload) => {
-          const kind =
-            (payload.new as { kind?: string }).kind ?? "";
-          const orderId =
-            (payload.new as { order_id?: string }).order_id ?? "";
+          const notif = payload.new as {
+            kind?: string;
+            order_id?: string;
+            title?: string;
+            body?: string;
+          };
+          const kind = notif.kind ?? "";
+          const orderId = notif.order_id ?? "";
+
+          // New OTC order — fetch it immediately
+          if (kind === "new_order" && orderId) {
+            void supabase
+              .from("shared_orders")
+              .select("*")
+              .eq("id", orderId)
+              .maybeSingle()
+              .then(({ data: row }) => {
+                if (!row) return;
+                useSharedOrders.setState((s) => {
+                  if (s.orders.some((o) => o.id === row.id))
+                    return s;
+                  const g = (k: string) =>
+                    (row as Record<string, unknown>)[k];
+                  const newOrder: SharedOrder = {
+                    id: String(g("id") ?? ""),
+                    customer: String(g("customer") ?? ""),
+                    phone: String(g("phone") ?? ""),
+                    address: String(g("address") ?? ""),
+                    items:
+                      (g("items") as SharedOrder["items"]) ?? [],
+                    itemCount: Number(g("item_count") ?? 0),
+                    deliveryMethod: String(g("delivery_method") ?? ""),
+                    paymentMethod: String(g("payment_method") ?? ""),
+                    paymentRef: String(g("payment_ref") ?? ""),
+                    subtotal: Number(g("subtotal") ?? 0),
+                    deliveryFee: Number(g("delivery_fee") ?? 0),
+                    discountAmount: Number(g("discount_amount") ?? 0),
+                    total: Number(g("total") ?? 0),
+                    status: (g("status") ?? "Confirmed") as SharedOrderStatus,
+                    placedAt: String(g("placed_at") ?? ""),
+                    placedTs: Number(g("placed_ts") ?? Date.now()),
+                    branchName:
+                      (g("branch_name") as string | null) ?? undefined,
+                    customerId:
+                      (g("customer_id") as string | null) ?? undefined,
+                    customerEmail:
+                      (g("customer_email") as string | null) ?? undefined,
+                  };
+                  return { orders: [newOrder, ...s.orders] };
+                });
+              });
+          }
+
+          // Delivery confirmed — update order status
+          if (kind === "delivery_confirmed" && orderId) {
+            void supabase
+              .from("shared_orders")
+              .select("*")
+              .eq("id", orderId)
+              .maybeSingle()
+              .then(({ data: row }) => {
+                if (!row) return;
+                useSharedOrders.setState((s) => ({
+                  orders: s.orders.map((o) =>
+                    o.id === orderId
+                      ? { ...o, status: "Delivered" as SharedOrderStatus }
+                      : o
+                  ),
+                }));
+              });
+            void refreshRx();
+          }
+
           if (
             kind === "prescription_paid" ||
             kind === "prescription_approved" ||
