@@ -7,6 +7,7 @@ import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders } from "@/store/sharedOrders";
+import { useNotifications } from "@/store/notifications";
 import PaymentModal from "@/components/checkout/PaymentModal";
 import { getProduct } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
