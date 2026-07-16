@@ -32,7 +32,6 @@ export function NotificationsBell({
   const [open, setOpen] = useState(false);
   const items = useNotifications((s) => s.items);
   const markAllRead = useNotifications((s) => s.markAllRead);
-  const markRead = useNotifications((s) => s.markRead);
   const removeNotification = useNotifications((s) => s.remove);
 
   // Cross-device realtime notifications for the signed-in customer.
@@ -57,6 +56,7 @@ export function NotificationsBell({
       .select("*")
       .eq("audience", "customer")
       .eq("user_id", userId!)
+      .eq("read", false)
       .order("created_at", { ascending: false })
       .limit(20)
       .then(({ data }) => {
