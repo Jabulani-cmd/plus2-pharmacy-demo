@@ -856,6 +856,13 @@ function AccountPage() {
                 <tbody className="divide-y divide-border">
                   {mySharedOrders.map((o) => {
                     const isDelivered = o.status === "Delivered";
+                    // Customers can cancel while the order is still with the
+                    // pharmacy — once a driver is assigned or on the way,
+                    // cancellation goes through support instead.
+                    const canCancel =
+                      o.status === "Confirmed" ||
+                      o.status === "Ready to dispatch" ||
+                      o.status === "Packed";
                     return (
                       <tr key={o.id} className={isDelivered ? "bg-[#F0F9F4]/40" : ""}>
                         <td className="px-4 py-3 font-bold">{o.id}</td>
@@ -874,7 +881,7 @@ function AccountPage() {
                         </td>
                         <td className="px-4 py-3 font-bold">{formatUSD(o.total)}</td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <Link
                               to="/receipt"
                               search={{ id: o.id }}
@@ -882,6 +889,17 @@ function AccountPage() {
                             >
                               <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
                             </Link>
+                            {canCancel && (
+                              <button
+                                onClick={() => {
+                                  setCancellingOrder(o);
+                                  setCancelOrderReason("");
+                                }}
+                                className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-100"
+                              >
+                                <X className="h-3.5 w-3.5" /> Cancel
+                              </button>
+                            )}
                             <Link
                               to="/track"
                               search={{ id: o.id }}
