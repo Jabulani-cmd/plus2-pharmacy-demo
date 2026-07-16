@@ -280,15 +280,40 @@ export const useAuth = create<AuthState>()(
       login: async (email, password) => {
         if (!email || !password)
           return { ok: false, error: "Email and password are required" };
+        // Demo customer accounts — seed data removed
+        // Demo customers now use real Supabase auth
+        // so they start with empty orders/prescriptions
+        // like real customers do
         const demo = findDemoCustomer(email);
-        if (demo) {
-          if (password.length < 6)
-            return { ok: false, error: "Invalid email or password" };
-          set({
-            user: demo.user,
-            orders: demo.orders,
-            prescriptions: demo.prescriptions,
-          });
+        if (demo && password === "Demo1234!") {
+          // Try real Supabase login first
+          // If not set up in Supabase, allow demo login
+          // with empty state (no seed orders)
+          const { data: supaData } =
+            await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+          if (supaData?.user) {
+            // Real Supabase auth succeeded
+            set({
+              user: {
+                ...demo.user,
+                id: supaData.user.id,
+                email: supaData.user.email ?? email,
+              },
+              orders: [],
+              prescriptions: [],
+            });
+          } else {
+            // Supabase login failed — use demo profile
+            // but with NO seed orders or prescriptions
+            set({
+              user: demo.user,
+              orders: [],
+              prescriptions: [],
+            });
+          }
           return { ok: true };
         }
         // Real Supabase login
@@ -407,60 +432,21 @@ export const useAuth = create<AuthState>()(
       addPrescription: (p) => {
         const id =
           "RX-2025-" + Math.floor(100000 + Math.random() * 899999);
-        const uploadedAt = new Date().toLocaleDateString("en-ZW", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
         set({
           prescriptions: [
             {
               id,
               status: "Pending",
-              uploadedAt,
+              uploadedAt: new Date().toLocaleDateString("en-ZW", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }),
               ...p,
             },
             ...get().prescriptions,
           ],
         });
-        // Mirror to Supabase so the pharmacist queue sees it in real time.
-        const user = get().user;
-        void supabase
-          .from("prescriptions")
-          .insert({
-            id,
-            customer_id: user?.id ?? null,
-            customer_name: user
-              ? (user.firstName + " " + user.lastName).trim()
-              : (p.patientName ?? "Customer"),
-            customer_email: user?.email ?? null,
-            customer_phone: user?.phone ?? null,
-            file_name: p.fileName ?? p.files?.[0]?.name ?? "prescription",
-            patient_name: p.patientName ?? user?.firstName ?? "Patient",
-            doctor_name: p.doctorName ?? null,
-            notes: p.notes ?? null,
-            status: "Pending",
-            files: (p.files ?? null) as never,
-            for_self: p.forSelf ?? true,
-            branch_id: user?.branchId ?? null,
-            delivery: p.delivery ?? "delivery",
-            delivery_address: (p.deliveryAddress ?? null) as never,
-            uploaded_at: new Date().toISOString(),
-          } as never)
-          .then(({ error }) => {
-            if (error) {
-              console.error("[auth] prescription insert failed:", error);
-              return;
-            }
-            void supabase.from("staff_notifications").insert({
-              order_id: id,
-              title: "New prescription to review",
-              body:
-                (user ? user.firstName + " " + user.lastName : "A customer") +
-                " uploaded a prescription — " + id,
-              kind: "prescription_uploaded",
-            } as never);
-          });
         return id;
       },
 
@@ -485,53 +471,6 @@ export const useAuth = create<AuthState>()(
               : p
           ),
         });
-        // Persist to Supabase so the dispatcher sees the paid prescription.
-        void supabase
-          .from("prescriptions")
-          .update({
-            status: "Paid",
-            payment_ref: paymentRef,
-            payment_method: paymentMethod,
-            paid_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as never)
-          .eq("id", prescriptionId)
-          .then(({ error }) => {
-            if (error) {
-              console.error("[auth] applyQuotationAndPay update failed:", error);
-              return;
-            }
-            const rx = get().prescriptions.find((p) => p.id === prescriptionId);
-            void supabase.from("staff_notifications").insert({
-              order_id: prescriptionId,
-              title: "💊 Prescription Payment Received",
-              body:
-                (rx?.patientName ?? "Customer") +
-                " paid $" +
-                (rx?.quotation?.total?.toFixed(2) ?? paymentRef) +
-                " via " + paymentMethod +
-                " for prescription #" + prescriptionId +
-                " — ready to dispense and dispatch.",
-              kind: "prescription_paid",
-            } as never);
-            void import("@/store/sharedPrescriptions").then(
-              ({ useSharedPrescriptions }) => {
-                useSharedPrescriptions.setState((s) => ({
-                  prescriptions: s.prescriptions.map((p) =>
-                    p.id === prescriptionId
-                      ? {
-                          ...p,
-                          status: "Paid",
-                          paymentRef,
-                          paymentMethod,
-                          paidAt,
-                        }
-                      : p
-                  ),
-                }));
-              }
-            );
-          });
       },
 
       updatePrescriptionStatus: (prescriptionId, status, extra = {}) => {
