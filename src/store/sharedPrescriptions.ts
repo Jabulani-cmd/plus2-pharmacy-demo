@@ -147,7 +147,14 @@ export const useSharedPrescriptions = create<SharedState>()(
           link: "/account",
           tone: "info",
         });
-        // Staff bell hydrates from `staff_notifications` — no local push needed here.
+        // Staff bell hydrates from `staff_notifications` — insert a row so
+        // every dispatcher device sees the alert in the bell.
+        void supabase.from("staff_notifications").insert({
+          order_id: p.id,
+          kind: "prescription_uploaded",
+          title: "💊 New prescription to review",
+          body: p.patientName + " uploaded " + p.fileName,
+        });
       },
 
       approvePrescription: (id, quotation, pharmacistNotes) => {
