@@ -212,13 +212,6 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     [deliveries, branchFilter],
   );
 
-  const filteredRxOrdersFor = (list: typeof sharedPrescriptions) =>
-    branchFilter === "all"
-      ? list
-      : list.filter(
-          (p) => (p.branchName ?? "9th Ave Branch CBD") === branchFilter,
-        );
-
   // Staff notifications realtime — driver acceptance / delivery confirmations
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
