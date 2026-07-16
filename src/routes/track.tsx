@@ -896,6 +896,7 @@ function Track() {
   // Per-order realtime channel (used for connection indicator + toast)
   const [shared, setShared] = useState<SharedOrder | null>(null);
   const [connected, setConnected] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [banner, setBanner] = useState<{ text: string; tone: "info" | "success" } | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [demoPaused, setDemoPaused] = useState(false);
@@ -919,6 +920,7 @@ function Track() {
   useEffect(() => {
     if (isRx) return; // prescription rows live in a different table/store
     let cancelled = false;
+    setFetching(true);
 
     // If no trackId, fetch most recent order for this customer
     if (!trackId) {
@@ -951,8 +953,9 @@ function Track() {
           data = result.data;
         }
 
-        if (cancelled || !data) return;
-        setShared(rowToShared(data));
+        if (cancelled) return;
+        if (data) setShared(rowToShared(data));
+        setFetching(false);
       };
       void fetchRecent();
       return () => { cancelled = true; };
@@ -965,8 +968,9 @@ function Track() {
       .eq("id", trackId)
       .maybeSingle()
       .then(({ data }) => {
-        if (cancelled || !data) return;
-        setShared(rowToShared(data));
+        if (cancelled) return;
+        if (data) setShared(rowToShared(data));
+        setFetching(false);
       });
 
     const channel = supabase
@@ -1029,11 +1033,7 @@ function Track() {
   // Show loading state briefly while Supabase fetch completes
   // This prevents false "no orders" on mobile/cross-device
   if (!liveShared && !localOrder) {
-    // If we have a trackId or we haven't connected yet,
-    // show a loading state instead of "no orders"
-    // to give the Supabase fetch time to complete
-    const isLoading = !connected && (!!trackId || !shared);
-    if (isLoading) {
+    if (fetching) {
       return (
         <div className="max-w-3xl mx-auto px-4 py-16
           text-center">
