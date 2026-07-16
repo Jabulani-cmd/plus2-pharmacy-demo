@@ -1079,6 +1079,7 @@ function AssignRxDriverModal({
                 <div className="text-[11px] text-muted-foreground">
                   {d.vehicle} · {d.zone}
                 </div>
+                <AssignDriverLocBadge driver={d} />
               </div>
               <div className="text-right text-[10px]">
                 <div className="font-bold text-emerald-600">
