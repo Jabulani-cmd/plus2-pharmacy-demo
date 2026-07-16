@@ -390,6 +390,18 @@ export const useSharedPrescriptions = create<SharedState>()(
             " — ready to dispense and dispatch.",
           kind: "prescription_paid",
         } as never);
+
+        // Clean up any "Quotation Ready — Pay Now" customer notifications
+        // for this prescription so they stop appearing in the bell after
+        // payment has been made.
+        if (rx?.customerId) {
+          void supabase
+            .from("notifications")
+            .delete()
+            .eq("audience", "customer")
+            .eq("user_id", rx.customerId)
+            .ilike("message", "%" + id + "%");
+        }
       },
 
       assignDriver: async (

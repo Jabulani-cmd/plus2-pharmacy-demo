@@ -7,6 +7,7 @@ import { useSharedPrescriptions } from "@/store/sharedPrescriptions";
 import type { SharedPrescription, SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { supabase } from "@/integrations/supabase/client";
 import { useSharedOrders } from "@/store/sharedOrders";
+import { useNotifications } from "@/store/notifications";
 import PaymentModal from "@/components/checkout/PaymentModal";
 import { getProduct } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -499,6 +500,41 @@ function AccountPage() {
   const handleTrackRx = (id: string) => {
     navigate({ to: "/track", search: { id } });
   };
+
+  // Sweep stale "Quotation Ready — Pay Now" notifications for prescriptions
+  // that are no longer awaiting payment (paid, dispensing, delivered, etc.).
+  // This cleans up duplicate rows in the DB and stops them from re-appearing
+  // in the bell after the customer has already paid.
+  useEffect(() => {
+    if (!user?.id) return;
+    const paidOrLater = mySharedPrescriptions.filter(
+      (p) =>
+        p.status !== "Approved — Awaiting Payment" &&
+        p.status !== "Pending" &&
+        p.status !== "Under Review",
+    );
+    if (paidOrLater.length === 0) return;
+    // Remove matching items from the local notification store.
+    useNotifications.getState().removeWhere((n) =>
+      n.audience === "customer" &&
+      paidOrLater.some(
+        (p) =>
+          (n.title.toLowerCase().includes("quotation") ||
+            n.title.toLowerCase().includes("pay")) &&
+          n.body.includes(p.id),
+      ),
+    );
+    // Remove matching rows from the DB so they don't rehydrate on next load.
+    paidOrLater.forEach((p) => {
+      void supabase
+        .from("notifications")
+        .delete()
+        .eq("audience", "customer")
+        .eq("user_id", user.id)
+        .ilike("message", "%" + p.id + "%");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, mySharedPrescriptions.map((p) => p.id + ":" + p.status).join("|")]);
 
   const openReceiptFor = (orderId: string) => {
     const o = orders.find((x) => x.id === orderId);
