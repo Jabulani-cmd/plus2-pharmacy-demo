@@ -913,9 +913,7 @@ function Track() {
   const liveShared = shared ?? fromShared ?? null;
   const localOrder = trackId
     ? localOrders.find((o) => o.id === trackId)
-    : !fromShared && !shared && !matchedRx
-      ? localOrders.find((o) => o.status !== "Delivered")
-      : undefined;
+    : undefined;
 
   // Initial fetch + per-order Supabase Realtime subscription
   useEffect(() => {
