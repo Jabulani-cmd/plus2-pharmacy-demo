@@ -242,8 +242,8 @@ function Field({ label, type, ...rest }: { label: string } & React.InputHTMLAttr
 
 function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: () => void }) {
   const login = useAuth((s) => s.login);
-  const [email, setEmail] = useState("demo@kingspharmacy.co.za");
-  const [password, setPassword] = useState("Demo1234!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
