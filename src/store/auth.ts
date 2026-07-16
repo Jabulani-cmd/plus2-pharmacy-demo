@@ -225,81 +225,98 @@ export const useAuth = create<AuthState>()(
       login: async (email, password) => {
         if (!email || !password)
           return { ok: false, error: "Email and password are required" };
-        // Demo customer accounts — seed data removed
-        // Demo customers now use real Supabase auth
-        // so they start with empty orders/prescriptions
-        // like real customers do
-        const demo = findDemoCustomer(email);
-        if (demo && password === "Demo1234!") {
-          // Try real Supabase login first
-          // If not set up in Supabase, allow demo login
-          // with empty state (no seed orders)
-          const { data: supaData } =
-            await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-          if (supaData?.user) {
-            // Real Supabase auth succeeded
-            set({
-              user: {
-                ...demo.user,
-                id: supaData.user.id,
-                email: supaData.user.email ?? email,
-              },
-              orders: [],
-              prescriptions: [],
-            });
-          } else {
-            // Supabase login failed — use demo profile
-            // but with NO seed orders or prescriptions
-            set({
-              user: demo.user,
-              orders: [],
-              prescriptions: [],
-            });
-          }
-          return { ok: true };
-        }
-        // Real Supabase login
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error || !data.user) {
+
+        // Single clean Supabase auth call — no demo bypass
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+
+        if (error || !data?.user) {
           return {
             ok: false,
-            error: error?.message ?? "Invalid email or password",
+            error:
+              error?.message ?? "Invalid email or password",
           };
         }
-        // Build user profile with timeout so login never hangs
-        const user = await Promise.race([
-          buildUserFromSupabase(
-            data.user.id,
-            data.user.email ?? email
-          ),
-          new Promise<User>((resolve) =>
-            setTimeout(() => {
-              const nameParts = email.split("@")[0].split(".");
-              resolve({
-                id: data.user.id,
-                email,
-                firstName:
-                  nameParts[0]?.charAt(0).toUpperCase() +
-                  (nameParts[0]?.slice(1) ?? ""),
-                lastName:
-                  nameParts[1]?.charAt(0).toUpperCase() +
-                  (nameParts[1]?.slice(1) ?? ""),
-                phone: undefined,
-                branchId: undefined,
-                lastAddress: null,
-                points: 0,
-                tier: "Silver",
-                isReal: true,
-              });
-            }, 4000) // 4 second timeout
-          ),
-        ]);
+
+        // Build user from profile — 5s timeout prevents hanging
+        const uid = data.user.id;
+        const userEmail = data.user.email ?? email;
+
+        const fallbackUser: User = {
+          id: uid,
+          email: userEmail,
+          firstName:
+            userEmail.split("@")[0].split(".")[0]
+              .replace(/^./, (c) => c.toUpperCase()),
+          lastName:
+            (userEmail.split("@")[0].split(".")[1] ?? "")
+              .replace(/^./, (c) => c.toUpperCase()),
+          phone: undefined,
+          branchId: undefined,
+          lastAddress: null,
+          points: 0,
+          tier: "Silver",
+          isReal: true,
+        };
+
+        let user: User = fallbackUser;
+
+        try {
+          const profileResult = await Promise.race([
+            supabase
+              .from("profiles")
+              .select(
+                "first_name,last_name,full_name," +
+                "phone,branch_id,last_address"
+              )
+              .eq("id", uid)
+              .maybeSingle(),
+            new Promise<{ data: null; error: null }>(
+              (resolve) =>
+                setTimeout(
+                  () => resolve({ data: null, error: null }),
+                  5000
+                )
+            ),
+          ]);
+
+          const profile = profileResult.data;
+          if (profile) {
+            user = {
+              id: uid,
+              email: userEmail,
+              firstName:
+                profile.first_name ??
+                fallbackUser.firstName,
+              lastName:
+                profile.last_name ?? fallbackUser.lastName,
+              phone: profile.phone ?? undefined,
+              branchId: profile.branch_id ?? undefined,
+              lastAddress:
+                (profile.last_address as SavedAddress | null) ??
+                null,
+              points: 0,
+              tier: "Silver",
+              isReal: true,
+            };
+          } else {
+            // Auto-create profile for new customers
+            void supabase.from("profiles").upsert({
+              id: uid,
+              email: userEmail,
+              first_name: fallbackUser.firstName,
+              last_name: fallbackUser.lastName,
+              role: "customer",
+            });
+          }
+        } catch (err) {
+          console.error("[auth] profile lookup failed:", err);
+          // Use fallback user — login still succeeds
+        }
+
         set({ user, orders: [], prescriptions: [] });
         return { ok: true };
       },
