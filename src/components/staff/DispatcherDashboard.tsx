@@ -636,6 +636,11 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         <User className="h-3 w-3 text-muted-foreground" />
                         {rx.patientName}
                       </div>
+                      {rx.branchName && (
+                        <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#EAF3FF] px-2 py-0.5 text-[10px] font-bold text-[#1B3A6B]">
+                          🏪 {rx.branchName}
+                        </div>
+                      )}
                     </div>
                     {rx.quotation && (
                       <div className="text-right">
