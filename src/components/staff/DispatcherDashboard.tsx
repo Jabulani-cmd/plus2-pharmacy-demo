@@ -782,7 +782,7 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         </div>
         <div className="grid gap-4 lg:grid-cols-4">
           {COLUMNS.map((col) => {
-            const cards = deliveries.filter(
+            const cards = filteredDeliveries.filter(
               (d) => d.status === col.key
             );
             return (
@@ -834,6 +834,11 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         <div className="mt-1 text-xs font-semibold text-foreground">
                           {d.customer}
                         </div>
+                        {d.branchName && (
+                          <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#EAF3FF] px-2 py-0.5 text-[10px] font-bold text-[#1B3A6B]">
+                            🏪 {d.branchName}
+                          </div>
+                        )}
                         {(() => {
                           const da = d.deliveryAddress;
                           const recipient = da
