@@ -31,7 +31,6 @@ export function NotificationsBell({
 }: Props) {
   const [open, setOpen] = useState(false);
   const items = useNotifications((s) => s.items);
-  const markAllRead = useNotifications((s) => s.markAllRead);
   const removeNotification = useNotifications((s) => s.remove);
 
   // Cross-device realtime notifications for the signed-in customer.
@@ -155,12 +154,25 @@ export function NotificationsBell({
     void supabase.from("notifications").delete().eq("id", n.externalId);
   };
 
+  const removeAllVisible = () => {
+    const externalIds: string[] = [];
+    filtered.forEach((n) => {
+      removeNotification(n.id);
+      if (audience === "customer" && n.externalId) externalIds.push(n.externalId);
+    });
+    if (externalIds.length > 0) {
+      void supabase.from("notifications").delete().in("id", externalIds);
+    }
+  };
+
   const toggle = () => {
     setOpen((o) => {
       const next = !o;
       if (next && unread > 0) {
-        // Clear unread count when the panel opens.
-        setTimeout(() => markAllRead(audience, userId), 200);
+        // Opening the panel counts as reading — permanently delete the
+        // visible notifications from both the local store and the backend
+        // so they don't reappear on refresh or across devices.
+        setTimeout(() => removeAllVisible(), 1500);
       }
       return next;
     });
