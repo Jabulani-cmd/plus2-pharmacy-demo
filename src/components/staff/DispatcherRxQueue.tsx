@@ -817,6 +817,12 @@ function InlineDriverAssign({
 
       // 3. Notify KP Driver app
       if (d.auth_user_id) {
+        const collectionBranch =
+          rx.branchName ?? "9th Ave Branch CBD";
+        const deliverTo =
+          rx.deliveryAddress
+            ? [rx.deliveryAddress.streetAddress, rx.deliveryAddress.suburb, rx.deliveryAddress.city].filter(Boolean).join(", ")
+            : "customer address";
         const { error: notifErr } = await supabase
           .from("driver_notifications")
           .insert({
@@ -828,7 +834,11 @@ function InlineDriverAssign({
               rx.id +
               " for " +
               (rx.patientName ?? "patient") +
-              " — collect from branch and deliver.",
+              " — collect from " +
+              collectionBranch +
+              " and deliver to " +
+              deliverTo +
+              ". Tap to accept.",
             read: false,
           });
         if (notifErr) {
