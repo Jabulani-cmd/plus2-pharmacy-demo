@@ -117,8 +117,49 @@ function PrescriptionTracker({
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-4 overflow-x-auto pb-1">
+      {/* Mobile: vertical timeline */}
+      <div className="mt-4 sm:hidden">
+        <div className="space-y-0">
+          {RX_STAGES.map((stage, i) => {
+            const done = i <= stageIdx;
+            const active = i === stageIdx;
+            const last = i === RX_STAGES.length - 1;
+            return (
+              <div key={stage.key} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                    style={{
+                      background: done ? "#0EA5E9" : "#E5E7EB",
+                      color: done ? "white" : "#9CA3AF",
+                      boxShadow: active ? "0 0 0 3px #BBF7D0" : "none",
+                    }}
+                  >
+                    {done && !active ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                  </div>
+                  {!last && (
+                    <div
+                      className="my-1 w-0.5 flex-1 min-h-[16px]"
+                      style={{ background: i < stageIdx ? "#0EA5E9" : "#E5E7EB" }}
+                    />
+                  )}
+                </div>
+                <div className="pb-3">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: active ? "#0EA5E9" : done ? "#374151" : "#9CA3AF" }}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop: horizontal progress bar */}
+      <div className="mt-4 hidden overflow-x-auto pb-1 sm:block">
         <div className="flex min-w-[480px] items-center">
           {RX_STAGES.map((stage, i) => {
             const done = i <= stageIdx;
@@ -154,6 +195,7 @@ function PrescriptionTracker({
           })}
         </div>
       </div>
+
 
       {/* Driver info */}
       {(isOutForDelivery || isDelivered) && rx.driverName && (
@@ -232,7 +274,7 @@ function PrescriptionTracker({
       {rx.delivery === "delivery" && rx.deliveryAddress && (
         <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          <span>
+          <span className="min-w-0 break-words">
             {rx.deliveryAddress.firstName} {rx.deliveryAddress.lastName} &middot;{" "}
             {rx.deliveryAddress.streetAddress}, {rx.deliveryAddress.suburb},{" "}
             {rx.deliveryAddress.city}
@@ -242,7 +284,7 @@ function PrescriptionTracker({
       {rx.delivery === "collect" && (
         <div className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <Store className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-          <span>
+          <span className="min-w-0 break-words">
             Collection:{" "}
             {rx.collectionBranchId
               ? rx.collectionBranchId.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
@@ -250,6 +292,7 @@ function PrescriptionTracker({
           </span>
         </div>
       )}
+
     </div>
   );
 }
@@ -745,7 +788,8 @@ function AccountPage() {
           </nav>
         </aside>
 
-        <div>
+        <div className="min-w-0">
+
           {tab === "dash" && (
             <div className="grid gap-4 sm:grid-cols-2">
               {activeSharedOrder && (
