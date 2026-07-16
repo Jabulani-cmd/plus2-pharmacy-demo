@@ -27,6 +27,7 @@ type State = {
   add: (n: Omit<AppNotification, "id" | "ts" | "read">) => void;
   markRead: (id: string) => void;
   markAllRead: (audience?: NotificationAudience, userId?: string) => void;
+  remove: (id: string) => void;
   clearAll: () => void;
   removeWhere: (predicate: (n: AppNotification) => boolean) => void;
 };
@@ -70,6 +71,8 @@ export const useNotifications = create<State>()(
               : i
           ),
         })),
+      remove: (id) =>
+        set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       clearAll: () => set({ items: [] }),
       removeWhere: (predicate) =>
         set((s) => ({ items: s.items.filter((n) => !predicate(n)) })),
