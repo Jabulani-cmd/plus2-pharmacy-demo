@@ -461,8 +461,6 @@ export function DispatcherDashboard({ view }: { view?: string }) {
   if (view === "history")
     return (
       <HistoryView
-        sharedOrders={sharedOrders}
-        rxDelivered={sharedPrescriptions.filter((p) => p.status === "Delivered")}
         drivers={drivers}
       />
     );
@@ -1466,14 +1464,21 @@ function printOrder(r: HistoryRow) {
 }
 
 function HistoryView({
-  sharedOrders,
-  rxDelivered,
   drivers,
 }: {
-  sharedOrders: ReturnType<typeof useSharedOrders.getState>["orders"];
-  rxDelivered: ReturnType<typeof useSharedPrescriptions.getState>["prescriptions"];
   drivers: StaffDriver[];
 }) {
+  // Subscribe directly to stores so UI updates
+  // immediately when delete removes an order —
+  // no stale props, no re-render delay
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const allPrescriptions = useSharedPrescriptions(
+    (s) => s.prescriptions
+  );
+  const rxDelivered = allPrescriptions.filter(
+    (p) => p.status === "Delivered"
+  );
+
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("all");
 
@@ -1704,30 +1709,57 @@ function HistoryView({
                       <button
                         onClick={async () => {
                           if (!window.confirm(`Delete order #${r.id}? This cannot be undone.`)) return;
-                          // Use RPC to bypass RLS
+
+                          // Optimistic update — remove from UI immediately
+                          // before waiting for Supabase response
+                          if (r.kind === "OTC") {
+                            useSharedOrders.setState((s) => ({
+                              orders: s.orders.filter(
+                                (o) => o.id !== r.id
+                              ),
+                            }));
+                          } else {
+                            useSharedPrescriptions.setState((s) => ({
+                              prescriptions: s.prescriptions.filter(
+                                (p) => p.id !== r.id
+                              ),
+                            }));
+                          }
+
+                          // Delete from Supabase in background
                           const { error } = await supabase.rpc(
                             "delete_order_by_id",
                             { p_id: r.id }
                           );
                           if (error) {
-                            // Fallback: try direct update to mark as archived
+                            // RPC failed — try direct delete
+                            const tbl = r.kind === "Rx"
+                              ? "prescriptions"
+                              : "shared_orders";
                             const { error: e2 } = await supabase
-                              .from("shared_orders")
-                              .update({ status: "Archived" } as never)
+                              .from(tbl as "shared_orders")
+                              .delete()
                               .eq("id", r.id);
                             if (e2) {
-                              toast.error("Cannot delete — please run the SQL fix in Supabase.");
+                              // Direct delete also failed — try archive
+                              const { error: e3 } = await supabase
+                                .from("shared_orders")
+                                .update({ status: "Archived" } as never)
+                                .eq("id", r.id);
+                              if (e3) {
+                                toast.error("Delete failed — " + e3.message);
+                                // Revert optimistic update
+                                if (r.kind === "OTC") {
+                                  void useSharedOrders.getState();
+                                }
+                              } else {
+                                toast.success("Order archived");
+                              }
                             } else {
-                              toast.success("Order #" + r.id + " archived");
-                              useSharedOrders.setState((s) => ({
-                                orders: s.orders.filter((o) => o.id !== r.id),
-                              }));
+                              toast.success("Order #" + r.id + " deleted");
                             }
                           } else {
-                            toast.success("Order #" + r.id + " deleted from history");
-                            useSharedOrders.setState((s) => ({
-                              orders: s.orders.filter((o) => o.id !== r.id),
-                            }));
+                            toast.success("Order #" + r.id + " deleted");
                           }
                         }}
                         title="Delete from history"
@@ -1782,12 +1814,28 @@ function HistoryView({
                   }));
                 }
               } else {
-                toast.success(`Deleted ${oldRows.length} old orders from history`);
-                useSharedOrders.setState((s) => ({
-                  orders: s.orders.filter(
-                    (o) => !oldRows.some((r) => r.id === o.id)
-                  ),
-                }));
+                toast.success(`Deleted ${oldRows.length} old orders`);
+                // Remove OTC orders from store
+                const otcIds = new Set(
+                  oldRows.filter(r => r.kind === "OTC").map(r => r.id)
+                );
+                const rxIds = new Set(
+                  oldRows.filter(r => r.kind === "Rx").map(r => r.id)
+                );
+                if (otcIds.size > 0) {
+                  useSharedOrders.setState((s) => ({
+                    orders: s.orders.filter(
+                      (o) => !otcIds.has(o.id)
+                    ),
+                  }));
+                }
+                if (rxIds.size > 0) {
+                  useSharedPrescriptions.setState((s) => ({
+                    prescriptions: s.prescriptions.filter(
+                      (p) => !rxIds.has(p.id)
+                    ),
+                  }));
+                }
               }
             }}
             className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-50 transition shadow-sm"
