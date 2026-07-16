@@ -1502,6 +1502,86 @@ function Row({
   );
 }
 
+function timeAgo(iso?: string | null): string {
+  if (!iso) return "never";
+  const ms = Date.now() - Date.parse(iso);
+  if (isNaN(ms)) return "never";
+  const s = Math.max(1, Math.floor(ms / 1000));
+  if (s < 60) return s + "s ago";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m ago";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h ago";
+  return Math.floor(h / 24) + "d ago";
+}
+
+function DriverLiveLocation({ driver }: { driver: StaffDriver }) {
+  const { currentLat, currentLng, locationUpdatedAt, status } = driver;
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
+  // reference tick to keep timeAgo refreshing
+  void tick;
+
+  if (status === "Off duty") {
+    return (
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+        📴 Driver is offline — location unavailable
+      </div>
+    );
+  }
+  if (currentLat == null || currentLng == null) {
+    return (
+      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+        📡 Waiting for first location ping…
+      </div>
+    );
+  }
+  const stale =
+    locationUpdatedAt &&
+    Date.now() - Date.parse(locationUpdatedAt) > 2 * 60 * 1000;
+  return (
+    <div
+      className={
+        "mt-3 rounded-lg border px-3 py-2 " +
+        (stale
+          ? "border-amber-200 bg-amber-50"
+          : "border-[#1E5BC6]/25 bg-[#EAF3FF]")
+      }
+    >
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#1B3A6B]">
+        <span className="relative flex h-2 w-2">
+          {!stale && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+          )}
+          <span
+            className={
+              "relative inline-flex h-2 w-2 rounded-full " +
+              (stale ? "bg-amber-500" : "bg-emerald-600")
+            }
+          />
+        </span>
+        📡 Live Location · {timeAgo(locationUpdatedAt)}
+        {stale && <span className="text-amber-700">(stale)</span>}
+      </div>
+      <div className="text-[11px] tabular-nums text-[#1B3A6B]">
+        {currentLat.toFixed(5)}, {currentLng.toFixed(5)}
+      </div>
+      <a
+        href={`https://www.google.com/maps?q=${currentLat},${currentLng}`}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="mt-1 inline-block text-[11px] font-bold text-[#1E5BC6] hover:underline"
+      >
+        Open in Google Maps ↗
+      </a>
+    </div>
+  );
+}
+
 type HistoryRow = {
   id: string;
   kind: "OTC" | "Rx";
