@@ -493,11 +493,11 @@ async function buildUserFromSupabase(
     if (!profile) {
       const nameParts = email.split("@")[0].split(".");
       const firstName =
-        nameParts[0]?.charAt(0).toUpperCase() +
-        nameParts[0]?.slice(1) ?? "";
+        (nameParts[0]?.charAt(0).toUpperCase() ?? "") +
+        (nameParts[0]?.slice(1) ?? "");
       const lastName =
-        nameParts[1]?.charAt(0).toUpperCase() +
-        nameParts[1]?.slice(1) ?? "";
+        (nameParts[1]?.charAt(0).toUpperCase() ?? "") +
+        (nameParts[1]?.slice(1) ?? "");
       void supabase.from("profiles").upsert({
         id,
         email,
