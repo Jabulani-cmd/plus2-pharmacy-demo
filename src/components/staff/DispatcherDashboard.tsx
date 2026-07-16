@@ -170,6 +170,10 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           zone: d.branch ?? "—",
           activeOrders: 0,
           completedToday: 0,
+          currentLat: (d as any).current_lat ?? null,
+          currentLng: (d as any).current_lng ?? null,
+          heading: (d as any).heading ?? null,
+          locationUpdatedAt: (d as any).location_updated_at ?? null,
         }))
       );
     };
@@ -179,7 +183,28 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "drivers" },
-        () => load()
+        (payload) => {
+          // For location-only pings, patch in place to avoid a full refetch.
+          if (payload.eventType === "UPDATE" && payload.new) {
+            const n: any = payload.new;
+            setDrivers((prev) =>
+              prev.map((d) =>
+                d.id === n.id
+                  ? {
+                      ...d,
+                      status: n.off_duty ? "Off duty" : d.status === "Off duty" ? "Available" : d.status,
+                      currentLat: n.current_lat ?? null,
+                      currentLng: n.current_lng ?? null,
+                      heading: n.heading ?? null,
+                      locationUpdatedAt: n.location_updated_at ?? null,
+                    }
+                  : d,
+              ),
+            );
+            return;
+          }
+          void load();
+        }
       )
       .subscribe();
     return () => {
