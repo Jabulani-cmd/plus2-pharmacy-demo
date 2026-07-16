@@ -151,6 +151,19 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     updater: (prev: StaffDelivery[]) => StaffDelivery[]
   ) => void = () => {};
 
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [assignFor, setAssignFor] = useState<StaffDelivery | null>(null);
+
+  const filteredDeliveries = useMemo(
+    () =>
+      liveDeliveries.filter(
+        (d) =>
+          branchFilter === "all" ||
+          (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
+      ),
+    [liveDeliveries, branchFilter],
+  );
+
   const [drivers, setDrivers] = useState<StaffDriver[]>(STAFF_DRIVERS);
 
   // Live drivers from Supabase — replaces the hardcoded list when available.
