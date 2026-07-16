@@ -29,6 +29,7 @@ import {
   Tag,
   Repeat,
   X,
+  MapPin,
 } from "lucide-react";
 
 export const Route = createFileRoute("/staff")({
