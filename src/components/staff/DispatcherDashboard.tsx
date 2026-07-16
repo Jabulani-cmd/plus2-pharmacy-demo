@@ -1364,6 +1364,7 @@ function DriversView({
                   </div>
                 </div>
               </div>
+              <DriverLiveLocation driver={d} />
               {s.active.length > 0 && !expanded && (
                 <div className="mt-3 space-y-1">
                   {s.active.map((a) => (
