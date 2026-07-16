@@ -351,6 +351,9 @@ function AccountPage() {
       });
 
     // Realtime — fires when the pharmacist approves / dispatcher updates.
+    // Track already-toasted prescription ids so repeated UPDATE events on the
+    // same "Approved — Awaiting Payment" row don't spam another toast.
+    const toastedAwaitingPayment = new Set<string>();
     const ch = supabase
       .channel("customer_rx_sync_" + user.id)
       .on(
@@ -364,11 +367,17 @@ function AccountPage() {
         (payload) => {
           const fresh = payload.new as unknown as RxRow;
           mergeRow(fresh);
-          if (fresh.status === "Approved — Awaiting Payment") {
+          if (
+            fresh.status === "Approved — Awaiting Payment" &&
+            !toastedAwaitingPayment.has(fresh.id)
+          ) {
+            toastedAwaitingPayment.add(fresh.id);
             toast.success("Quotation ready from your pharmacist", {
               description: "Check your prescriptions to pay.",
               duration: 5000,
             });
+          } else if (fresh.status !== "Approved — Awaiting Payment") {
+            toastedAwaitingPayment.delete(fresh.id);
           }
         },
       )
