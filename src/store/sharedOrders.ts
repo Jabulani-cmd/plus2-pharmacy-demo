@@ -553,6 +553,38 @@ export const useSharedOrders = create<State>()((set, get) => ({
       });
     }
   },
+
+  cancelOrder: async (id, reason) => {
+    const o = get().orders.find((x) => x.id === id);
+    if (!o) return;
+    // Optimistically remove from local state.
+    set((s) => ({ orders: s.orders.filter((x) => x.id !== id) }));
+    // Use the SECURITY DEFINER RPC so the customer can remove their own row
+    // without needing a dedicated delete RLS policy.
+    const { error } = await supabase.rpc("delete_order_by_id", { p_id: id });
+    if (error) {
+      console.error("[sharedOrders] cancelOrder rpc failed", error);
+      // Roll back on failure so the UI still shows the order.
+      set((s) => ({ orders: [o, ...s.orders.filter((x) => x.id !== id)] }));
+      throw error;
+    }
+    pushNotification({
+      audience: "customer",
+      userId: o.customerId ?? o.customerEmail,
+      title: "Order cancelled",
+      body: "Order " + id + " has been cancelled.",
+      tone: "warning",
+    });
+    void supabase.from("staff_notifications").insert({
+      order_id: id,
+      title: "❌ OTC Order Cancelled",
+      body:
+        o.customer +
+        " cancelled order #" + id +
+        (reason ? " — Reason: " + reason : ""),
+      kind: "order_cancelled",
+    });
+  },
 }));
 
 // ─── Initial fetch + realtime subscription (browser only) ───────────────────
