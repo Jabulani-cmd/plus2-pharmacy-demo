@@ -872,6 +872,10 @@ function Track() {
     ? sharedOrders.find((o) => o.id === trackId) ??
       (matchedRx ? rxToSharedOrder(matchedRx) : undefined)
     : sharedOrders[0];
+  // Use the directly-fetched shared order (from Supabase)
+  // OR the one from the Zustand store
+  // This ensures cross-device tracking works even when
+  // the Zustand store is empty on a fresh mobile session
   const liveShared = shared ?? fromShared ?? null;
   const localOrder = trackId
     ? localOrders.find((o) => o.id === trackId)
@@ -884,21 +888,43 @@ function Track() {
     if (isRx) return; // prescription rows live in a different table/store
     let cancelled = false;
 
-    // If no trackId, fetch most recent order from shared_orders as fallback
+    // If no trackId, fetch most recent order for this customer
     if (!trackId) {
-      void supabase
-        .from("shared_orders")
-        .select("*")
-        .order("placed_ts", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (cancelled || !data) return;
-          setShared(rowToShared(data));
-        });
+      const fetchRecent = async () => {
+        // Try by customer_id first (logged-in customer)
+        const { data: { user } } = await supabase.auth.getUser();
+        let data = null;
+
+        if (user?.id) {
+          const result = await supabase
+            .from("shared_orders")
+            .select("*")
+            .eq("customer_id", user.id)
+            .order("placed_ts", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          data = result.data;
+        }
+
+        // Fallback: most recent order overall
+        if (!data) {
+          const result = await supabase
+            .from("shared_orders")
+            .select("*")
+            .order("placed_ts", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          data = result.data;
+        }
+
+        if (cancelled || !data) return;
+        setShared(rowToShared(data));
+      };
+      void fetchRecent();
       return () => { cancelled = true; };
     }
 
+    // Fetch by order ID
     void supabase
       .from("shared_orders")
       .select("*")
@@ -966,7 +992,30 @@ function Track() {
   const driverProgress = useDriverPosition(preliminaryStatus, liveShared?.outForDeliveryTs);
 
   // Handle missing order (no shared + no local)
+  // Show loading state briefly while Supabase fetch completes
+  // This prevents false "no orders" on mobile/cross-device
   if (!liveShared && !localOrder) {
+    // If we have a trackId or we haven't connected yet,
+    // show a loading state instead of "no orders"
+    // to give the Supabase fetch time to complete
+    const isLoading = !connected && (!!trackId || !shared);
+    if (isLoading) {
+      return (
+        <div className="max-w-3xl mx-auto px-4 py-16
+          text-center">
+          <div className="h-12 w-12 border-4
+            border-[#1E5BC6]/20 border-t-[#1E5BC6]
+            rounded-full animate-spin mx-auto mb-4" />
+          <div className="text-base font-bold
+            text-[#1B3A6B]">
+            Loading your order...
+          </div>
+          <div className="text-sm text-slate-500 mt-1">
+            Fetching your order details
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
