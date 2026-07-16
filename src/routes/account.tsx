@@ -879,7 +879,101 @@ function AccountPage() {
                 </div>
               )}
               {(mySharedOrders.length > 0 || orders.length > 0) && (
-              <table className="w-full text-sm">
+              <>
+              {/* Mobile: card layout */}
+              <ul className="divide-y divide-border sm:hidden">
+                {mySharedOrders.map((o) => {
+                  const isDelivered = o.status === "Delivered";
+                  const canCancel =
+                    o.status === "Confirmed" ||
+                    o.status === "Ready to dispatch" ||
+                    o.status === "Packed";
+                  return (
+                    <li key={o.id} className={`p-4 ${isDelivered ? "bg-[#F0F9F4]/40" : ""}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-bold text-foreground">{o.id}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">{o.placedAt}</div>
+                        </div>
+                        <div className="shrink-0 text-right text-sm font-bold">{formatUSD(o.total)}</div>
+                      </div>
+                      <div className="mt-2">
+                        {isDelivered ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Delivered{o.deliveredAt ? " · " + o.deliveredAt : ""}
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+                            {o.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link
+                          to="/receipt"
+                          search={{ id: o.id }}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:border-primary hover:text-primary"
+                        >
+                          <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
+                        </Link>
+                        {canCancel && (
+                          <button
+                            onClick={() => {
+                              setCancellingOrder(o);
+                              setCancelOrderReason("");
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-100"
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </button>
+                        )}
+                        <Link
+                          to="/track"
+                          search={{ id: o.id }}
+                          className="ml-auto text-sm font-bold text-primary hover:underline"
+                        >
+                          Track &rarr;
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+                {orders.map((o) => (
+                  <li key={o.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-foreground">{o.id}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{o.date}</div>
+                      </div>
+                      <div className="shrink-0 text-right text-sm font-bold">{formatUSD(o.total)}</div>
+                    </div>
+                    <div className="mt-2">
+                      {o.status === "Delivered" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                          <CheckCircle2 className="h-3 w-3" /> Delivered
+                        </span>
+                      ) : (
+                        <StatusPill status={o.status} />
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => openReceiptFor(o.id)}
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:border-primary hover:text-primary"
+                      >
+                        <ReceiptIcon className="h-3.5 w-3.5" /> Receipt
+                      </button>
+                      <Link to="/track" search={{ id: o.id }} className="ml-auto text-sm font-bold text-primary hover:underline">
+                        Track &rarr;
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Desktop: table layout */}
+              <table className="hidden w-full text-sm sm:table">
                 <thead className="bg-surface text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Order</th>
@@ -980,6 +1074,7 @@ function AccountPage() {
                   ))}
                 </tbody>
               </table>
+              </>
               )}
             </div>
           )}
