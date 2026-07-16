@@ -203,13 +203,59 @@ export function DispatcherDashboard({ view }: { view?: string }) {
             try { new Notification(title, { body }); } catch { /* ignore */ }
           }
           const kind = (payload.new as { kind?: string }).kind ?? "";
+          const orderId =
+            (payload.new as { order_id?: string }).order_id ?? "";
+
+          // ── Delivery confirmed by driver ──────────────────
+          if (kind === "delivery_confirmed") {
+            // Refresh OTC orders so dispatch board moves
+            // the order from "Out for delivery" to History
+            void supabase
+              .from("shared_orders")
+              .select("*")
+              .eq("id", orderId)
+              .maybeSingle()
+              .then(({ data: updatedOrder }) => {
+                if (updatedOrder) {
+                  useSharedOrders.setState((s) => ({
+                    orders: s.orders.map((o) =>
+                      o.id === updatedOrder.id
+                        ? {
+                            ...o,
+                            status:
+                              "Delivered" as import("@/store/sharedOrders").SharedOrderStatus,
+                            deliveredAt:
+                              updatedOrder.delivered_at
+                                ? new Date(
+                                    String(updatedOrder.delivered_at)
+                                  ).toLocaleString("en-ZW", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : undefined,
+                          }
+                        : o
+                    ),
+                  }));
+                }
+              });
+
+            // Also refresh prescriptions in case it
+            // was a prescription delivery
+            void refreshRx();
+          }
+
+          // ── Prescription flow notifications ───────────────
           if (
             kind === "prescription_paid" ||
             kind === "prescription_approved" ||
-            kind === "prescription_uploaded"
+            kind === "prescription_uploaded" ||
+            kind === "driver_assigned" ||
+            kind === "driver_collected"
           ) {
             void refreshRx();
-            const orderId = (payload.new as { order_id?: string }).order_id;
             if (orderId) {
               void supabase
                 .from("prescriptions")
@@ -219,7 +265,9 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                 .then(({ data }) => {
                   if (!data) return;
                   useSharedPrescriptions.setState((s) => {
-                    const exists = s.prescriptions.some((p) => p.id === data.id);
+                    const exists = s.prescriptions.some(
+                      (p) => p.id === data.id
+                    );
                     if (!exists) {
                       void refreshRx();
                       return s;
@@ -229,10 +277,18 @@ export function DispatcherDashboard({ view }: { view?: string }) {
                         p.id === data.id
                           ? {
                               ...p,
-                              status: (data.status as typeof p.status) ?? p.status,
-                              paymentMethod: data.payment_method ?? p.paymentMethod,
+                              status:
+                                (data.status as typeof p.status) ??
+                                p.status,
+                              driverName:
+                                data.driver_name ?? p.driverName,
+                              paymentMethod:
+                                data.payment_method ??
+                                p.paymentMethod,
                               paidAt: data.paid_at
-                                ? new Date(String(data.paid_at)).toLocaleString("en-ZW")
+                                ? new Date(
+                                    String(data.paid_at)
+                                  ).toLocaleString("en-ZW")
                                 : p.paidAt,
                             }
                           : p
