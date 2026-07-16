@@ -262,6 +262,7 @@ function AccountPage() {
   const sharedPrescriptions = useSharedPrescriptions((s) => s.prescriptions);
   const markSharedPaid = useSharedPrescriptions((s) => s.markPaid);
   const allSharedOrders = useSharedOrders((s) => s.orders);
+  const cancelSharedOrder = useSharedOrders((s) => s.cancelOrder);
   const allRatings = useOrderExtras((s) => s.ratings);
   const wishlist = useShop((s) => s.wishlist).map(getProduct).filter(Boolean);
   const [tab, setTab] = useState("dash");
@@ -270,6 +271,11 @@ function AccountPage() {
   const [cancellingRx, setCancellingRx] = useState(null as SharedPrescription | null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(
+    null as (typeof allSharedOrders)[number] | null,
+  );
+  const [cancelOrderReason, setCancelOrderReason] = useState("");
+  const [cancellingOrderBusy, setCancellingOrderBusy] = useState(false);
 
   // Sync the auth-store prescriptions with the pharmacist's quotation from
   // Supabase, and toast when a fresh "Approved — Awaiting Payment" arrives.
