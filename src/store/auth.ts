@@ -152,62 +152,7 @@ type AuthState = {
   ) => void;
 };
 
-const DEMO_ORDERS: Order[] = [
-  {
-    id: "P2-184221",
-    date: "12 May 2026",
-    total: 489.97,
-    status: "Delivered",
-    items: [
-      { name: "Panado 500mg 24s", qty: 2, price: 39.99 },
-      { name: "Centrum Multivitamin 30s", qty: 1, price: 209.99 },
-      { name: "Nivea Body Lotion 400ml", qty: 1, price: 99.99 },
-    ],
-    address: "14 Samora Machel Ave, Bulawayo",
-    tracking: [
-      { label: "Order placed", at: "12 May, 09:14", done: true },
-      { label: "Packed at pharmacy", at: "12 May, 10:42", done: true },
-      { label: "Out for delivery", at: "12 May, 12:08", done: true },
-      { label: "Delivered", at: "12 May, 14:23", done: true },
-    ],
-  },
-  {
-    id: "P2-183904",
-    date: "28 Apr 2026",
-    total: 234.5,
-    status: "Out for delivery",
-    items: [
-      { name: "Allergex 30s", qty: 1, price: 64.99 },
-      { name: "Vicks VapoRub 50g", qty: 1, price: 79.99 },
-    ],
-    address: "14 Samora Machel Ave, Bulawayo",
-    tracking: [
-      { label: "Order placed", at: "07 Jun, 08:02", done: true },
-      { label: "Packed at pharmacy", at: "07 Jun, 09:31", done: true },
-      { label: "Out for delivery", at: "07 Jun, 11:15", done: true },
-      { label: "Delivered", at: "Est. today, 15:00", done: false },
-    ],
-    driver: {
-      name: "Sipho M.",
-      phone: "+263 78 555 0119",
-      vehicle: "Toyota Hilux · ACJ 4821",
-    },
-  },
-  {
-    id: "P2-182117",
-    date: "06 Jun 2026",
-    total: 1289.0,
-    status: "Packed",
-    items: [{ name: "Omron Blood Pressure Monitor", qty: 1, price: 1289.0 }],
-    address: "14 Samora Machel Ave, Bulawayo",
-    tracking: [
-      { label: "Order placed", at: "06 Jun, 19:47", done: true },
-      { label: "Packed at pharmacy", at: "07 Jun, 07:21", done: true },
-      { label: "Out for delivery", at: "Pending", done: false },
-      { label: "Delivered", at: "Pending", done: false },
-    ],
-  },
-];
+const DEMO_ORDERS: Order[] = [];
 
 const DEMO_PRESCRIPTIONS: Prescription[] = [
   {
@@ -321,9 +266,40 @@ export const useAuth = create<AuthState>()(
           email,
           password,
         });
-        if (error || !data.user)
-          return { ok: false, error: error?.message ?? "Invalid email or password" };
-        const user = await buildUserFromSupabase(data.user.id, data.user.email ?? email);
+        if (error || !data.user) {
+          return {
+            ok: false,
+            error: error?.message ?? "Invalid email or password",
+          };
+        }
+        // Build user profile with timeout so login never hangs
+        const user = await Promise.race([
+          buildUserFromSupabase(
+            data.user.id,
+            data.user.email ?? email
+          ),
+          new Promise<User>((resolve) =>
+            setTimeout(() => {
+              const nameParts = email.split("@")[0].split(".");
+              resolve({
+                id: data.user.id,
+                email,
+                firstName:
+                  nameParts[0]?.charAt(0).toUpperCase() +
+                  (nameParts[0]?.slice(1) ?? ""),
+                lastName:
+                  nameParts[1]?.charAt(0).toUpperCase() +
+                  (nameParts[1]?.slice(1) ?? ""),
+                phone: undefined,
+                branchId: undefined,
+                lastAddress: null,
+                points: 0,
+                tier: "Silver",
+                isReal: true,
+              });
+            }, 4000) // 4 second timeout
+          ),
+        ]);
         set({ user, orders: [], prescriptions: [] });
         return { ok: true };
       },
@@ -494,26 +470,93 @@ export const useAuth = create<AuthState>()(
 );
 
 // ---- Supabase session hydration ----
-async function buildUserFromSupabase(id: string, email: string): Promise<User> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("first_name,last_name,full_name,phone,branch_id,last_address")
-    .eq("id", id)
-    .maybeSingle();
-  const fullName = profile?.full_name ?? "";
-  const parts = fullName.split(" ");
-  return {
-    id,
-    email,
-    firstName: profile?.first_name ?? parts[0] ?? email.split("@")[0],
-    lastName: profile?.last_name ?? parts.slice(1).join(" ") ?? "",
-    phone: profile?.phone ?? undefined,
-    branchId: profile?.branch_id ?? undefined,
-    lastAddress: (profile?.last_address as SavedAddress | null) ?? null,
-    points: 0,
-    tier: "Silver",
-    isReal: true,
-  };
+async function buildUserFromSupabase(
+  id: string,
+  email: string
+): Promise<User> {
+  try {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select(
+        "first_name,last_name,full_name,phone,branch_id,last_address"
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[auth] profile fetch error:", error);
+    }
+
+    // If no profile exists yet, create one automatically
+    if (!profile) {
+      const nameParts = email.split("@")[0].split(".");
+      const firstName =
+        nameParts[0]?.charAt(0).toUpperCase() +
+        nameParts[0]?.slice(1) ?? "";
+      const lastName =
+        nameParts[1]?.charAt(0).toUpperCase() +
+        nameParts[1]?.slice(1) ?? "";
+      void supabase.from("profiles").upsert({
+        id,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        full_name: (firstName + " " + lastName).trim(),
+        role: "customer",
+        created_at: new Date().toISOString(),
+      });
+      return {
+        id,
+        email,
+        firstName,
+        lastName,
+        phone: undefined,
+        branchId: undefined,
+        lastAddress: null,
+        points: 0,
+        tier: "Silver",
+        isReal: true,
+      };
+    }
+
+    const fullName = profile.full_name ?? "";
+    const parts = fullName.split(" ");
+    return {
+      id,
+      email,
+      firstName:
+        profile.first_name ?? parts[0] ?? email.split("@")[0],
+      lastName:
+        profile.last_name ?? parts.slice(1).join(" ") ?? "",
+      phone: profile.phone ?? undefined,
+      branchId: profile.branch_id ?? undefined,
+      lastAddress:
+        (profile.last_address as SavedAddress | null) ?? null,
+      points: 0,
+      tier: "Silver",
+      isReal: true,
+    };
+  } catch (err) {
+    console.error("[auth] buildUserFromSupabase error:", err);
+    // Return minimal user so login doesn't hang
+    const nameParts = email.split("@")[0].split(".");
+    return {
+      id,
+      email,
+      firstName:
+        nameParts[0]?.charAt(0).toUpperCase() +
+        (nameParts[0]?.slice(1) ?? ""),
+      lastName:
+        nameParts[1]?.charAt(0).toUpperCase() +
+        (nameParts[1]?.slice(1) ?? ""),
+      phone: undefined,
+      branchId: undefined,
+      lastAddress: null,
+      points: 0,
+      tier: "Silver",
+      isReal: true,
+    };
+  }
 }
 
 if (typeof window !== "undefined") {
