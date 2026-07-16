@@ -1584,6 +1584,45 @@ function DriverLiveLocation({ driver }: { driver: StaffDriver }) {
   );
 }
 
+function AssignDriverLocBadge({ driver }: { driver: StaffDriver }) {
+  const { currentLat, currentLng, locationUpdatedAt, status } = driver;
+  if (status === "Off duty") return null;
+  if (currentLat == null || currentLng == null) {
+    return (
+      <div className="mt-1 text-[10px] font-semibold text-amber-700">
+        📡 waiting for location…
+      </div>
+    );
+  }
+  const stale =
+    locationUpdatedAt &&
+    Date.now() - Date.parse(locationUpdatedAt) > 2 * 60 * 1000;
+  return (
+    <div
+      className={
+        "mt-1 flex items-center gap-1 text-[10px] font-semibold " +
+        (stale ? "text-amber-700" : "text-emerald-700")
+      }
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        {!stale && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+        )}
+        <span
+          className={
+            "relative inline-flex h-1.5 w-1.5 rounded-full " +
+            (stale ? "bg-amber-500" : "bg-emerald-600")
+          }
+        />
+      </span>
+      📡 live · {timeAgo(locationUpdatedAt)}
+      <span className="ml-1 tabular-nums text-slate-500">
+        {currentLat.toFixed(3)},{currentLng.toFixed(3)}
+      </span>
+    </div>
+  );
+}
+
 type HistoryRow = {
   id: string;
   kind: "OTC" | "Rx";
