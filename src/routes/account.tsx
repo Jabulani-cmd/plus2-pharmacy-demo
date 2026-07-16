@@ -117,8 +117,49 @@ function PrescriptionTracker({
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-4 overflow-x-auto pb-1">
+      {/* Mobile: vertical timeline */}
+      <div className="mt-4 sm:hidden">
+        <div className="space-y-0">
+          {RX_STAGES.map((stage, i) => {
+            const done = i <= stageIdx;
+            const active = i === stageIdx;
+            const last = i === RX_STAGES.length - 1;
+            return (
+              <div key={stage.key} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                    style={{
+                      background: done ? "#0EA5E9" : "#E5E7EB",
+                      color: done ? "white" : "#9CA3AF",
+                      boxShadow: active ? "0 0 0 3px #BBF7D0" : "none",
+                    }}
+                  >
+                    {done && !active ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                  </div>
+                  {!last && (
+                    <div
+                      className="my-1 w-0.5 flex-1 min-h-[16px]"
+                      style={{ background: i < stageIdx ? "#0EA5E9" : "#E5E7EB" }}
+                    />
+                  )}
+                </div>
+                <div className="pb-3">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: active ? "#0EA5E9" : done ? "#374151" : "#9CA3AF" }}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop: horizontal progress bar */}
+      <div className="mt-4 hidden overflow-x-auto pb-1 sm:block">
         <div className="flex min-w-[480px] items-center">
           {RX_STAGES.map((stage, i) => {
             const done = i <= stageIdx;
@@ -154,6 +195,7 @@ function PrescriptionTracker({
           })}
         </div>
       </div>
+
 
       {/* Driver info */}
       {(isOutForDelivery || isDelivered) && rx.driverName && (
