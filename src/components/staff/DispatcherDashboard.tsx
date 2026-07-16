@@ -161,144 +161,28 @@ export function DispatcherDashboard({ view }: { view?: string }) {
         .order("name");
       if (cancelled || error || !data || data.length === 0) return;
       setDrivers(
-        data.map((d) => ({
-          id: d.id,
-          name: d.name,
-          phone: d.phone,
-          vehicle: d.vehicle + " · " + d.plate,
-          status: d.off_duty ? "Off duty" : "Available",
-          zone: d.branch ?? "—",
-          activeOrders: 0,
-          completedToday: 0,
-          currentLat: (d as any).current_lat ?? null,
-          currentLng: (d as any).current_lng ?? null,
-          heading: (d as any).heading ?? null,
-          locationUpdatedAt: (d as any).location_updated_at ?? null,
-        }))
-      );
-    };
-    load();
-    const ch = supabase
-      .channel("dispatch_drivers")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "drivers" },
-        (payload) => {
-          // For location-only pings, patch in place to avoid a full refetch.
-          if (payload.eventType === "UPDATE" && payload.new) {
-            const n: any = payload.new;
-            setDrivers((prev) =>
-              prev.map((d) =>
-                d.id === n.id
-                  ? {
-                      ...d,
-                      status: n.off_duty ? "Off duty" : d.status === "Off duty" ? "Available" : d.status,
-                      currentLat: n.current_lat ?? null,
-                      currentLng: n.current_lng ?? null,
-                      heading: n.heading ?? null,
-                      locationUpdatedAt: n.location_updated_at ?? null,
-                    }
-                  : d,
-              ),
-            );
-            return;
-          }
-          void load();
-        }
-      )
-      .subscribe();
-    return () => {
-      cancelled = true;
-      void supabase.removeChannel(ch);
-    };
-  }, []);
-
-  const [assignFor, setAssignFor] =
-    useState<StaffDelivery | null>(null);
-
-  // Branch filter — defaults to dispatcher's own branch when known.
-  const [branchFilter, setBranchFilter] = useState<string>("all");
-  useEffect(() => {
-    if (
-      staff?.branch &&
-      (DISPATCH_BRANCHES as readonly string[]).includes(staff.branch)
-    ) {
-      setBranchFilter(staff.branch);
-    }
-  }, [staff?.branch]);
-
-  const filteredDeliveries = useMemo(
-    () =>
-      branchFilter === "all"
-        ? deliveries
-        : deliveries.filter(
-            (d) => (d.branchName ?? "9th Ave Branch CBD") === branchFilter,
-          ),
-    [deliveries, branchFilter],
-  );
-
-  // Staff notifications realtime — driver acceptance / delivery confirmations
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        try { void Notification.requestPermission(); } catch { /* ignore */ }
-      }
-    }
-    const ch = supabase
-      .channel("staff_notifications_dispatch")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "staff_notifications" },
-        (payload) => {
-          const n = payload.new as { title?: string; body?: string };
-          const title = n.title ?? "Update";
-          const body = n.body ?? "";
-          toast.success(title, { description: body });
-          if (
-            typeof window !== "undefined" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            try { new Notification(title, { body }); } catch { /* ignore */ }
-          }
-          const kind = (payload.new as { kind?: string }).kind ?? "";
-          const orderId =
-            (payload.new as { order_id?: string }).order_id ?? "";
-
-          // ── Delivery confirmed by driver ──────────────────
-          if (kind === "delivery_confirmed") {
-            // Refresh OTC orders so dispatch board moves
-            // the order from "Out for delivery" to History
-            void supabase
-              .from("shared_orders")
-              .select("*")
-              .eq("id", orderId)
-              .maybeSingle()
-              .then(({ data: updatedOrder }) => {
-                if (updatedOrder) {
-                  useSharedOrders.setState((s) => ({
-                    orders: s.orders.map((o) =>
-                      o.id === updatedOrder.id
-                        ? {
-                            ...o,
-                            status:
-                              "Delivered" as import("@/store/sharedOrders").SharedOrderStatus,
-                            deliveredAt:
-                              updatedOrder.delivered_at
-                                ? new Date(
-                                    String(updatedOrder.delivered_at)
-                                  ).toLocaleString("en-ZW", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })
-                                : undefined,
-                          }
-                        : o
-                    ),
-                  }));
-                }
+        [...data]
+          .sort((a, b) => {
+            // Online drivers first, off duty last
+            if (a.off_duty && !b.off_duty) return 1;
+            if (!a.off_duty && b.off_duty) return -1;
+            return String(a.name).localeCompare(String(b.name));
+          })
+          .map((d) => ({
+            id: d.id,
+            name: d.name,
+            phone: d.phone,
+            vehicle: d.vehicle + (d.plate ? " · " + d.plate : ""),
+            status: (d.off_duty ? "Off duty" : "Available") as
+              "Available" | "On delivery" | "Off duty",
+            zone: d.branch ?? "—",
+            activeOrders: 0,
+            completedToday: 0,
+            currentLat: d.current_lat ?? null,
+            currentLng: d.current_lng ?? null,
+            locationUpdatedAt: d.location_updated_at ?? null,
+          }))
+      );                }
               });
 
             // Also refresh prescriptions in case it
