@@ -163,34 +163,50 @@ export function DispatcherDashboard({ view }: { view?: string }) {
       setDrivers(
         [...data]
           .sort((a, b) => {
-            // Online drivers first, off duty last
             if (a.off_duty && !b.off_duty) return 1;
             if (!a.off_duty && b.off_duty) return -1;
             return String(a.name).localeCompare(String(b.name));
           })
           .map((d) => ({
-            id: d.id,
-            name: d.name,
-            phone: d.phone,
-            vehicle: d.vehicle + (d.plate ? " · " + d.plate : ""),
-            status: (d.off_duty ? "Off duty" : "Available") as
-              "Available" | "On delivery" | "Off duty",
-            zone: d.branch ?? "—",
+            id: String(d.id ?? ""),
+            name: String(d.name ?? ""),
+            phone: String(d.phone ?? ""),
+            vehicle:
+              String(d.vehicle ?? "") +
+              (d.plate ? " · " + String(d.plate) : ""),
+            status: (d.off_duty
+              ? "Off duty"
+              : "Available") as "Available" | "On delivery" | "Off duty",
+            zone: String(d.branch ?? "—"),
             activeOrders: 0,
             completedToday: 0,
-            currentLat: d.current_lat ?? null,
-            currentLng: d.current_lng ?? null,
-            locationUpdatedAt: d.location_updated_at ?? null,
+            currentLat: (d as any).current_lat ?? null,
+            currentLng: (d as any).current_lng ?? null,
+            locationUpdatedAt:
+              (d as any).location_updated_at ?? null,
           }))
-      );                }
-              });
+      );
+    };
+    void load();
+    const interval = setInterval(() => void load(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
-            // Also refresh prescriptions in case it
-            // was a prescription delivery
-            void refreshRx();
-          }
-
-          // ── Prescription flow notifications ───────────────
+  // Prescription notifications subscription
+  useEffect(() => {
+    const ch = supabase
+      .channel("dispatcher_rx_notifs")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "staff_notifications" },
+        (payload) => {
+          const kind =
+            (payload.new as { kind?: string }).kind ?? "";
+          const orderId =
+            (payload.new as { order_id?: string }).order_id ?? "";
           if (
             kind === "prescription_paid" ||
             kind === "prescription_approved" ||
