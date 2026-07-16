@@ -523,6 +523,15 @@ export function DispatcherDashboard({ view }: { view?: string }) {
     return <DriversView drivers={drivers} />;
   if (view === "driver-portal") return <DriverPortalView />;
   if (view === "prescriptions") return <DispatcherRxQueue />;
+  if (view === "branch-overview")
+    return (
+      <BranchOverview
+        deliveries={deliveries}
+        drivers={drivers}
+      />
+    );
+  if (view === "driver-map")
+    return <DriverMapView drivers={drivers} />;
   if (view === "history")
     return (
       <HistoryView
@@ -1482,6 +1491,737 @@ function DriversView({
                 </div>
               )}
             </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Branch Overview — orders grouped by branch with status counts
+// ─────────────────────────────────────────────────────────────────────────────
+const BRANCH_LIST = [
+  { id: "9th Ave Branch CBD",                label: "9th Ave CBD",    icon: "🏪" },
+  { id: "6th Ave Branch CBD",                label: "6th Ave CBD",    icon: "🏪" },
+  { id: "Old Mutual Centre, Jason Moyo Ave", label: "Old Mutual",     icon: "🏪" },
+  { id: "Ascot Shopping Centre",             label: "Ascot",          icon: "🏪" },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  Confirmed:          "#0EA5E9",
+  "Ready to dispatch": "#F59E0B",
+  Packed:             "#8B5CF6",
+  Assigned:           "#6366F1",
+  "Out for delivery": "#7C3AED",
+  Delivered:          "#10B981",
+};
+
+function BranchOverview({
+  deliveries,
+  drivers,
+}: {
+  deliveries: StaffDelivery[];
+  drivers: StaffDriver[];
+}) {
+  const sharedOrders = useSharedOrders((s) => s.orders);
+  const prescriptions = useSharedPrescriptions((s) => s.prescriptions);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+
+  // Group OTC orders by branch
+  const otcByBranch = useMemo(() => {
+    const map = new Map<string, typeof sharedOrders>();
+    BRANCH_LIST.forEach((b) => map.set(b.id, []));
+    sharedOrders.forEach((o) => {
+      const branch = o.branchName ?? "9th Ave Branch CBD";
+      if (!map.has(branch)) map.set(branch, []);
+      map.get(branch)!.push(o);
+    });
+    return map;
+  }, [sharedOrders]);
+
+  // Group Rx orders by branch
+  const rxByBranch = useMemo(() => {
+    const map = new Map<string, typeof prescriptions>();
+    BRANCH_LIST.forEach((b) => map.set(b.id, []));
+    prescriptions.forEach((p) => {
+      const branch = p.branchName ?? "9th Ave Branch CBD";
+      if (!map.has(branch)) map.set(branch, []);
+      map.get(branch)!.push(p);
+    });
+    return map;
+  }, [prescriptions]);
+
+  // Drivers by branch
+  const driversByBranch = useMemo(() => {
+    const map = new Map<string, typeof drivers>();
+    BRANCH_LIST.forEach((b) => map.set(b.id, []));
+    drivers.forEach((d) => {
+      const branch = d.zone ?? "9th Ave Branch CBD";
+      const key = BRANCH_LIST.find((b) =>
+        b.label.toLowerCase().includes(branch.toLowerCase()) ||
+        branch.toLowerCase().includes(b.label.toLowerCase())
+      )?.id ?? "9th Ave Branch CBD";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    });
+    return map;
+  }, [drivers]);
+
+  const selected = selectedBranch
+    ? BRANCH_LIST.find((b) => b.id === selectedBranch)
+    : null;
+  const selectedOtc = selectedBranch
+    ? (otcByBranch.get(selectedBranch) ?? [])
+    : [];
+  const selectedRx = selectedBranch
+    ? (rxByBranch.get(selectedBranch) ?? [])
+    : [];
+
+  return (
+    <div>
+      <PageHeader
+        title="Branch Overview"
+        subtitle="Live order status across all Kings Pharmacy branches."
+      />
+
+      {/* Branch cards */}
+      <div className="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
+        {BRANCH_LIST.map((branch) => {
+          const orders = otcByBranch.get(branch.id) ?? [];
+          const rxOrders = rxByBranch.get(branch.id) ?? [];
+          const branchDrivers = driversByBranch.get(branch.id) ?? [];
+          const active = orders.filter(
+            (o) => o.status !== "Delivered"
+          ).length + rxOrders.filter(
+            (p) => p.status !== "Delivered" && p.status !== "Rejected"
+          ).length;
+          const outForDelivery = orders.filter(
+            (o) => o.status === "Out for delivery"
+          ).length + rxOrders.filter(
+            (p) => p.status === "Out for Delivery"
+          ).length;
+          const isSelected = selectedBranch === branch.id;
+
+          return (
+            <button
+              key={branch.id}
+              onClick={() =>
+                setSelectedBranch(
+                  isSelected ? null : branch.id
+                )
+              }
+              className={`rounded-2xl p-4 text-left transition border-2 ${
+                isSelected
+                  ? "border-[#1E5BC6] bg-[#EAF3FF]"
+                  : "border-slate-100 bg-white hover:border-[#1E5BC6]/40"
+              }`}
+            >
+              <div className="text-2xl mb-2">{branch.icon}</div>
+              <div className="font-black text-[#1B3A6B] text-sm leading-tight mb-2">
+                {branch.label}
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Active orders</span>
+                  <span className="font-bold text-[#1B3A6B]">
+                    {active}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Out for delivery</span>
+                  <span className="font-bold text-violet-600">
+                    {outForDelivery}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Drivers</span>
+                  <span className="font-bold text-emerald-600">
+                    {branchDrivers.filter(
+                      (d) => d.status !== "Off duty"
+                    ).length}/{branchDrivers.length}
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected branch detail */}
+      {selected && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-[#1E5BC6] animate-pulse" />
+            <h2 className="font-black text-[#1B3A6B] text-lg">
+              {selected.icon} {selected.label} — Live Orders
+            </h2>
+          </div>
+
+          {/* OTC Orders for this branch */}
+          {selectedOtc.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-slate-500
+                uppercase tracking-wider mb-2">
+                OTC Orders ({selectedOtc.length})
+              </div>
+              <div className="space-y-2">
+                {selectedOtc.map((o) => (
+                  <div
+                    key={o.id}
+                    className="bg-white rounded-xl border border-slate-100
+                      p-3 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-[#1B3A6B] text-sm truncate">
+                        {o.customer}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        #{String(o.id).slice(-8).toUpperCase()}
+                      </div>
+                      {o.address && (
+                        <div className="text-xs text-slate-500 truncate">
+                          📍 {o.address}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-black text-[#1B3A6B] text-sm">
+                        ${Number(o.total).toFixed(2)}
+                      </div>
+                      <div
+                        className="text-[10px] font-bold px-2 py-0.5
+                          rounded-full mt-1 inline-block text-white"
+                        style={{
+                          background:
+                            STATUS_COLORS[o.status] ?? "#64748b",
+                        }}
+                      >
+                        {o.status}
+                      </div>
+                      {o.driverName && (
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          🚗 {o.driverName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Rx Orders for this branch */}
+          {selectedRx.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-slate-500
+                uppercase tracking-wider mb-2">
+                Prescriptions ({selectedRx.length})
+              </div>
+              <div className="space-y-2">
+                {selectedRx.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-white rounded-xl border border-slate-100
+                      p-3 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-[#1B3A6B] text-sm">
+                        {p.patientName ?? p.customerName}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        #{p.id}
+                      </div>
+                      {p.quotation?.medicationName && (
+                        <div className="text-xs text-slate-500">
+                          💊 {p.quotation.medicationName}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-black text-[#1B3A6B] text-sm">
+                        ${Number(p.quotation?.total ?? 0).toFixed(2)}
+                      </div>
+                      <div
+                        className="text-[10px] font-bold px-2 py-0.5
+                          rounded-full mt-1 inline-block text-white"
+                        style={{
+                          background:
+                            p.status === "Delivered"
+                              ? "#10B981"
+                              : p.status === "Paid"
+                              ? "#10B981"
+                              : p.status === "Out for Delivery"
+                              ? "#7C3AED"
+                              : p.status === "Assigned"
+                              ? "#6366F1"
+                              : "#F59E0B",
+                        }}
+                      >
+                        {p.status}
+                      </div>
+                      {p.driverName && (
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          🚗 {p.driverName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedOtc.length === 0 && selectedRx.length === 0 && (
+            <div className="bg-white rounded-2xl p-8 text-center
+              text-slate-400 text-sm">
+              No active orders at this branch
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* All branches summary when none selected */}
+      {!selected && (
+        <div className="bg-white rounded-2xl p-6 text-center
+          text-slate-500 text-sm">
+          Select a branch above to see its live orders
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Driver Map View — all drivers on a single Bulawayo SVG map
+// ─────────────────────────────────────────────────────────────────────────────
+const MAP_W = 640;
+const MAP_H = 420;
+const CENTER_LAT = -20.15;
+const CENTER_LNG = 28.58;
+const MAP_SCALE = 5000;
+
+function projectToMap(lat: number, lng: number) {
+  const x = MAP_W / 2 + (lng - CENTER_LNG) * MAP_SCALE;
+  const y = MAP_H / 2 - (lat - CENTER_LAT) * MAP_SCALE;
+  return {
+    x: Math.max(20, Math.min(MAP_W - 20, x)),
+    y: Math.max(20, Math.min(MAP_H - 20, y)),
+  };
+}
+
+const BRANCH_PINS = [
+  { id: "9th Ave Branch CBD",                lat: -20.1509, lng: 28.5766, label: "9th Ave" },
+  { id: "6th Ave Branch CBD",                lat: -20.1450, lng: 28.5766, label: "6th Ave" },
+  { id: "Old Mutual Centre, Jason Moyo Ave", lat: -20.1480, lng: 28.5847, label: "Old Mutual" },
+  { id: "Ascot Shopping Centre",             lat: -20.1720, lng: 28.5950, label: "Ascot" },
+];
+
+const DRIVER_COLORS = [
+  "#1E5BC6", "#7C3AED", "#DC2626", "#059669",
+  "#D97706", "#DB2777", "#0891B2",
+];
+
+function DriverMapView({ drivers }: { drivers: StaffDriver[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 10_000);
+    return () => clearInterval(t);
+  }, []);
+  void tick;
+
+  const activeDrivers = drivers.filter(
+    (d) => d.status !== "Off duty" &&
+      d.currentLat != null && d.currentLng != null
+  );
+
+  const selectedDriver = selected
+    ? drivers.find((d) => d.id === selected)
+    : null;
+
+  return (
+    <div>
+      <PageHeader
+        title="Driver Map"
+        subtitle="Real-time locations of all active drivers across Bulawayo."
+      />
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {activeDrivers.length === 0 ? (
+          <div className="text-sm text-slate-500">
+            No drivers are currently sharing their location.
+            Drivers must be active in the KP Driver app.
+          </div>
+        ) : (
+          activeDrivers.map((d, i) => {
+            const color = DRIVER_COLORS[i % DRIVER_COLORS.length];
+            const stale =
+              d.locationUpdatedAt &&
+              Date.now() - Date.parse(d.locationUpdatedAt) > 120_000;
+            return (
+              <button
+                key={d.id}
+                onClick={() =>
+                  setSelected(selected === d.id ? null : d.id)
+                }
+                className={`flex items-center gap-2 rounded-full
+                  px-3 py-1.5 text-xs font-bold border-2
+                  transition ${
+                  selected === d.id
+                    ? "border-[#1B3A6B] bg-[#1B3A6B] text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-[#1E5BC6]"
+                }`}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: stale ? "#F59E0B" : color }}
+                />
+                {d.name.split(" ")[0]}
+                {stale ? " ⚠️" : ""}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {/* Map */}
+      <div className="bg-white rounded-2xl overflow-hidden border
+        border-slate-100 shadow-sm">
+        <div
+          className="relative w-full"
+          style={{ paddingBottom: "65%" }}
+        >
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Background */}
+            <rect width={MAP_W} height={MAP_H} fill="#EEF2E8" />
+
+            {/* Road grid */}
+            {[80,140,180,240,300,360].map((y) => (
+              <line key={`h${y}`} x1={0} y1={y} x2={MAP_W} y2={y}
+                stroke="white" strokeWidth="5" />
+            ))}
+            {[80,150,240,320,400,480,560].map((x) => (
+              <line key={`v${x}`} x1={x} y1={0} x2={x} y2={MAP_H}
+                stroke="white" strokeWidth="5" />
+            ))}
+
+            {/* Road labels */}
+            <text x="4" y="238" fontSize="8" fill="#999" fontFamily="sans-serif">9th Ave</text>
+            <text x="4" y="178" fontSize="8" fill="#999" fontFamily="sans-serif">6th Ave</text>
+            <text x="4" y="138" fontSize="8" fill="#999" fontFamily="sans-serif">Jason Moyo</text>
+
+            {/* Branch pins */}
+            {BRANCH_PINS.map((b) => {
+              const pos = projectToMap(b.lat, b.lng);
+              return (
+                <g key={b.id}>
+                  <circle cx={pos.x} cy={pos.y} r="14"
+                    fill="#1E5BC6" opacity="0.15">
+                    <animate attributeName="r"
+                      values="12;20;12" dur="3s"
+                      repeatCount="indefinite" />
+                    <animate attributeName="opacity"
+                      values="0.2;0;0.2" dur="3s"
+                      repeatCount="indefinite" />
+                  </circle>
+                  <circle cx={pos.x} cy={pos.y} r="9"
+                    fill="#1B3A6B" />
+                  <text x={pos.x} y={pos.y + 3} fontSize="8"
+                    fill="white" textAnchor="middle"
+                    fontFamily="sans-serif" fontWeight="bold">
+                    Rx
+                  </text>
+                  <rect x={pos.x - 20} y={pos.y + 11}
+                    width={40} height={12} rx={6}
+                    fill="#1B3A6B" />
+                  <text x={pos.x} y={pos.y + 20} fontSize="7"
+                    fill="white" textAnchor="middle"
+                    fontFamily="sans-serif">
+                    {b.label}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Driver pins */}
+            {activeDrivers.map((d, i) => {
+              const color = DRIVER_COLORS[i % DRIVER_COLORS.length];
+              const pos = projectToMap(
+                d.currentLat!, d.currentLng!
+              );
+              const isSelected = selected === d.id;
+              const stale =
+                d.locationUpdatedAt &&
+                Date.now() - Date.parse(d.locationUpdatedAt) > 120_000;
+              const initials = d.name
+                .split(" ").map((n) => n[0]).join("").slice(0, 2);
+
+              return (
+                <g
+                  key={d.id}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setSelected(
+                      isSelected ? null : d.id
+                    )
+                  }
+                >
+                  {/* Pulse ring */}
+                  {!stale && (
+                    <circle cx={pos.x} cy={pos.y}
+                      r="16" fill={color} opacity="0.2">
+                      <animate attributeName="r"
+                        values="14;26;14" dur="2s"
+                        repeatCount="indefinite" />
+                      <animate attributeName="opacity"
+                        values="0.3;0;0.3" dur="2s"
+                        repeatCount="indefinite" />
+                    </circle>
+                  )}
+                  {/* Driver circle */}
+                  <circle cx={pos.x} cy={pos.y}
+                    r={isSelected ? "16" : "13"}
+                    fill={stale ? "#F59E0B" : color}
+                    stroke="white"
+                    strokeWidth={isSelected ? "3" : "2"}
+                  />
+                  <text x={pos.x} y={pos.y + 4}
+                    fontSize="9" fill="white"
+                    textAnchor="middle"
+                    fontFamily="sans-serif"
+                    fontWeight="900">
+                    {initials}
+                  </text>
+                  {/* Name label */}
+                  <rect
+                    x={pos.x - 22}
+                    y={pos.y + 16}
+                    width={44} height={13}
+                    rx={6}
+                    fill={stale ? "#F59E0B" : color}
+                  />
+                  <text
+                    x={pos.x} y={pos.y + 25}
+                    fontSize="7" fill="white"
+                    textAnchor="middle"
+                    fontFamily="sans-serif">
+                    {d.name.split(" ")[0]}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* No GPS drivers note */}
+            {activeDrivers.length === 0 && (
+              <text
+                x={MAP_W / 2} y={MAP_H / 2}
+                fontSize="14" fill="#94a3b8"
+                textAnchor="middle"
+                fontFamily="sans-serif">
+                No live GPS data available
+              </text>
+            )}
+
+            {/* Compass */}
+            <g transform={`translate(${MAP_W - 24}, ${MAP_H - 24})`}>
+              <circle r="12" fill="white" opacity="0.9" />
+              <text x="0" y="4" fontSize="9" textAnchor="middle"
+                fill="#1B3A6B" fontWeight="bold">N</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      {/* Selected driver detail panel */}
+      {selectedDriver && (
+        <div className="mt-4 bg-white rounded-2xl p-4 border
+          border-[#1E5BC6]/20">
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="h-12 w-12 rounded-full flex items-center
+                justify-center text-white font-black text-sm"
+              style={{
+                background:
+                  DRIVER_COLORS[
+                    activeDrivers.findIndex(
+                      (d) => d.id === selectedDriver.id
+                    ) % DRIVER_COLORS.length
+                  ],
+              }}
+            >
+              {selectedDriver.name
+                .split(" ").map((n) => n[0]).join("").slice(0, 2)}
+            </div>
+            <div className="flex-1">
+              <div className="font-black text-[#1B3A6B]">
+                {selectedDriver.name}
+              </div>
+              <div className="text-xs text-slate-500">
+                {selectedDriver.vehicle}
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                📡 Last update:{" "}
+                {timeAgo(selectedDriver.locationUpdatedAt)}
+              </div>
+            </div>
+          </div>
+
+          {/* GPS coordinates */}
+          {selectedDriver.currentLat != null && (
+            <div className="bg-[#EAF3FF] rounded-xl px-3 py-2 mb-3">
+              <div className="text-[10px] font-bold text-[#1B3A6B]
+                uppercase tracking-wide mb-1">
+                Live Coordinates
+              </div>
+              <div className="text-sm font-mono text-[#1B3A6B]">
+                {Number(selectedDriver.currentLat).toFixed(6)},{" "}
+                {Number(selectedDriver.currentLng).toFixed(6)}
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${selectedDriver.currentLat},${selectedDriver.currentLng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-[#1E5BC6] hover:underline mt-1 inline-block"
+              >
+                Open in Google Maps ↗
+              </a>
+            </div>
+          )}
+
+          {/* Call + WhatsApp buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href={`tel:${selectedDriver.phone}`}
+              className="flex items-center justify-center gap-2
+                h-10 rounded-full bg-[#1E5BC6] text-white
+                font-bold text-sm hover:bg-[#1B3A6B] transition"
+            >
+              <Phone className="h-4 w-4" />
+              Call Driver
+            </a>
+            <a
+              href={`https://wa.me/${
+                selectedDriver.phone.replace(/\D/g, "")
+              }?text=${encodeURIComponent(
+                "Hi " + selectedDriver.name.split(" ")[0] +
+                ", this is Kings Pharmacy dispatch. Please advise on your current delivery status."
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2
+                h-10 rounded-full bg-[#25D366] text-white
+                font-bold text-sm hover:opacity-90 transition"
+            >
+              <span>💬</span>
+              WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Driver list below map */}
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {drivers.map((d, i) => {
+          const color = DRIVER_COLORS[i % DRIVER_COLORS.length];
+          const hasGps = d.currentLat != null && d.currentLng != null;
+          const stale =
+            d.locationUpdatedAt &&
+            Date.now() - Date.parse(d.locationUpdatedAt) > 120_000;
+          return (
+            <div
+              key={d.id}
+              className={`bg-white rounded-xl border-2 p-3 cursor-pointer
+                transition ${
+                selected === d.id
+                  ? "border-[#1E5BC6]"
+                  : "border-slate-100 hover:border-slate-300"
+              }`}
+              onClick={() =>
+                setSelected(selected === d.id ? null : d.id)
+              }
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-10 w-10 rounded-full flex items-center
+                    justify-center text-white font-black text-xs shrink-0"
+                  style={{
+                    background:
+                      d.status === "Off duty"
+                        ? "#94a3b8"
+                        : color,
+                  }}
+                >
+                  {d.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-[#1B3A6B] text-sm truncate">
+                    {d.name}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {d.vehicle}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {d.status === "Off duty" ? (
+                    <span className="text-[10px] font-bold text-slate-400
+                      bg-slate-100 px-2 py-0.5 rounded-full">
+                      Off Duty
+                    </span>
+                  ) : hasGps ? (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5
+                        rounded-full ${
+                        stale
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {stale ? "⚠️ Stale" : "📡 Live"}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-700
+                      bg-amber-100 px-2 py-0.5 rounded-full">
+                      No GPS
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <a
+                  href={`tel:${d.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center
+                    gap-1 h-8 rounded-full bg-[#1E5BC6]/10 text-[#1E5BC6]
+                    text-xs font-bold hover:bg-[#1E5BC6] hover:text-white
+                    transition"
+                >
+                  <Phone className="h-3 w-3" /> Call
+                </a>
+                <a
+                  href={`https://wa.me/${
+                    d.phone.replace(/\D/g, "")
+                  }?text=${encodeURIComponent(
+                    "Hi " + d.name.split(" ")[0] + ", Kings Pharmacy dispatch here."
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center
+                    gap-1 h-8 rounded-full bg-[#25D366]/10 text-[#25D366]
+                    text-xs font-bold hover:bg-[#25D366] hover:text-white
+                    transition"
+                >
+                  💬 WhatsApp
+                </a>
+              </div>
+            </div>
           );
         })}
       </div>
