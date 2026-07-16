@@ -147,13 +147,7 @@ export const useSharedPrescriptions = create<SharedState>()(
           link: "/account",
           tone: "info",
         });
-        pushNotification({
-          audience: "staff",
-          title: "New prescription to review",
-          body: p.patientName + " uploaded " + p.fileName,
-          link: "/staff/dashboard",
-          tone: "warning",
-        });
+        // Staff bell hydrates from `staff_notifications` — no local push needed here.
       },
 
       approvePrescription: (id, quotation, pharmacistNotes) => {
