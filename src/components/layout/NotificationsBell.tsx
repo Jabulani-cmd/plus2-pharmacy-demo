@@ -262,10 +262,12 @@ export function NotificationsBell({
     setOpen((o) => {
       const next = !o;
       if (next && unread > 0) {
-        // Opening the panel counts as reading — permanently delete the
-        // visible notifications from both the local store and the backend
-        // so they don't reappear on refresh or across devices.
-        setTimeout(() => removeAllVisible(), 1500);
+        // Opening the panel marks the visible notifications as read so
+        // the unread badge clears, but we keep them around long enough
+        // for the user to actually read them. They are removed either
+        // when the user clicks one, or automatically ~30s after opening.
+        useNotifications.getState().markAllRead(audience, userId);
+        setTimeout(() => removeAllVisible(), 30000);
       }
       return next;
     });
