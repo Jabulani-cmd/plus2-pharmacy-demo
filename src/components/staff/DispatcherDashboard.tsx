@@ -6,9 +6,7 @@ import {
   type StaffDriver,
 } from "@/data/staffDemo";
 import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
-import type { SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
 import { useSharedOrders } from "@/store/sharedOrders";
-import type { SharedOrder, SharedOrderStatus } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
@@ -1039,6 +1037,15 @@ export function DispatcherDashboard({ view }: { view?: string }) {
           })}
         </div>
       </div>
+
+      {assignFor && (
+        <AssignDriverModal
+          delivery={assignFor}
+          drivers={drivers.filter((d) => d.status === "Available")}
+          onCancel={() => setAssignFor(null)}
+          onAssign={(driverId) => assign(assignFor.id, driverId)}
+        />
+      )}
 
       {assignFor && (
         <AssignDriverModal
