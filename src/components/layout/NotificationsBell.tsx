@@ -264,9 +264,26 @@ export function NotificationsBell({
       if (next && unread > 0) {
         // Opening the panel marks the visible notifications as read so
         // the unread badge clears, but we keep them around long enough
-        // for the user to actually read them. They are removed either
-        // when the user clicks one, or automatically ~30s after opening.
+        // for the user to actually read them. Persist read=true to the
+        // backend so they don't re-appear on refresh / across devices,
+        // then remove them locally ~30s later (or on click).
         useNotifications.getState().markAllRead(audience, userId);
+        const externalIds = filtered
+          .filter((n) => !n.read && n.externalId)
+          .map((n) => n.externalId!) as string[];
+        if (externalIds.length > 0) {
+          if (audience === "customer") {
+            void supabase
+              .from("notifications")
+              .update({ read: true })
+              .in("id", externalIds);
+          } else if (audience === "staff") {
+            void supabase
+              .from("staff_notifications")
+              .update({ read: true })
+              .in("id", externalIds);
+          }
+        }
         setTimeout(() => removeAllVisible(), 30000);
       }
       return next;
