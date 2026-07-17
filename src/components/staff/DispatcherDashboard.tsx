@@ -5,8 +5,8 @@ import {
   type StaffDelivery,
   type StaffDriver,
 } from "@/data/staffDemo";
-import { useSharedPrescriptions, refreshPrescriptions as refreshRx } from "@/store/sharedPrescriptions";
-import { useSharedOrders } from "@/store/sharedOrders";
+import { useSharedPrescriptions, refreshPrescriptions as refreshRx, type SharedPrescriptionStatus } from "@/store/sharedPrescriptions";
+import { useSharedOrders, type SharedOrder, type SharedOrderStatus } from "@/store/sharedOrders";
 import { useStaffAuth } from "@/store/staffAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, KPI, Card, StatusPill, fmtUSD } from "./shared";
