@@ -187,7 +187,7 @@ export function NotificationsBell({
       });
 
     const ch = supabase
-      .channel("staff_notifications_bell")
+      .channel("staff_notifications_bell_" + Math.random().toString(36).slice(2))
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "staff_notifications" },
